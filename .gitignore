@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Streamlit
+.streamlit/secrets.toml
+#.streamlit/config.toml (usually safe to commit config, but secrets must be ignored)
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
