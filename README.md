@@ -1,6 +1,6 @@
-# 🏈 NFL Touchdown Tracker
+# 🏈 Fast6 - NFL First TD Prediction Tool
 
-A Streamlit web application that helps users analyze and predict **first touchdown scorers** in NFL games by integrating real-time player statistics with current betting odds.
+A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds. **Phase 1 Complete ✅**
 
 ## Quick Start
 
@@ -26,64 +26,76 @@ The app will be available at **http://localhost:8501**
 
 ## Features
 
-- **📅 Game Schedule**: Browse upcoming NFL games for any season
-- **📊 Player & Team Stats**: View first touchdown scoring rates and historical data
-- **💰 Odds Integration**: Real-time betting odds from integrated API
-- **🎯 Prediction Tracking**: Make picks and track your predictions
-- **📈 Advanced Analysis**: Compare player performance against betting odds to identify +EV opportunities
+### Admin Interface
+- **👥 User Management**: Add/remove group members
+- **📝 Pick Input**: Select week and first TD scorer for each game
+- **✅ Results Tracking**: Mark picks correct/incorrect with ROI calculation
+- **📊 Member Stats**: View individual win %, picks, and returns
+
+### Public Dashboard
+- **🏆 Leaderboard**: Group standings with cumulative ROI
+- **📝 Week Picks**: Browse all picks by member and result
+- **📋 All Touchdowns**: Database of all season TDs
+- **📅 Weekly Schedule**: Game schedules and results
+- **📊 Analysis**: Team/player/position first TD statistics
+- **💰 Odds Integration**: Real-time betting odds from API
 
 ## Tech Stack
 
-- **Streamlit** - Interactive web UI
-- **nflreadpy** - NFL game and player data
-- **pandas** - Data processing and analysis
-- **Python 3** - Core language
+- **Streamlit** v1.52.2 - Interactive web UI
+- **SQLite** - Local database persistence
+- **nflreadpy** v0.1.5 - NFL game and player data
+- **pandas** v2.3.3 - Data processing and analysis
+- **Python 3.13** - Core language
+- **requests** - API calls for odds data
 
 ## Project Structure
 
 ```
 Fast6/
 ├── src/
-│   ├── app.py              # Main Streamlit application
-│   ├── config.py           # Configuration & constants
-│   ├── data_processor.py   # Data fetching & processing logic
-│   └── __pycache__/
+│   ├── app.py                      # Router (90 lines)
+│   ├── database.py                 # SQLite CRUD (550 lines)
+│   ├── config.py                   # Constants & API keys
+│   ├── data_processor.py           # NFL data processing
+│   └── pages/
+│       ├── admin_page.py           # Admin interface (4 tabs)
+│       └── public_dashboard.py     # Public dashboard (6 tabs)
+├── data/
+│   └── fast6.db                    # SQLite database
 ├── tests/
-│   ├── test_logic.py       # Unit tests
-│   └── __pycache__/
-├── requirements.txt        # Python dependencies
-├── DEPLOYMENT.md           # Cloud deployment guide
-├── ROADMAP.md              # Future features & improvements
-└── README.md               # This file
+│   ├── test_logic.py               # Data processor tests
+│   ├── test_database.py            # Database tests
+│   └── test_phase1.py              # Integration tests
+├── requirements.txt                # Dependencies
+├── PHASE1_COMPLETE.md              # Phase 1 documentation
+├── DEPLOYMENT.md                   # Cloud deployment guide
+├── ROADMAP.md                      # Phase 2+ features
+└── README.md                       # This file
 ```
+
+## Phase 1 Status
+
+**✅ COMPLETE** - All Phase 1 features implemented and tested:
+- Database persistence (SQLite)
+- Admin interface with user/pick/result management
+- Public leaderboard and picks viewer
+- ROI tracking and statistics
+- Comprehensive test suite (8 integration tests)
+
+See [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) for detailed documentation.
+
+## Phase 2 & Beyond
+
+See [ROADMAP.md](ROADMAP.md) for planned enhancements:
+- Enhanced ROI analytics and trends
+- Defensive matchup analysis
+- User self-management (optional light auth)
+- Multi-group support
 
 ## Deployment
 
 For cloud deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for planned features including:
-
-### Infrastructure & Backend
-- Database integration for persistence
-- Docker containerization
-- Automated data pipeline (GitHub Actions/Cron)
-
-### Advanced Analysis
-- Implied Probability vs. Actual Rate comparison
-- Defensive matchup analysis
-- +EV (Positive Expected Value) indicators
-
-### User Experience
-- User profiles / simple name selector
-- Leaderboards for gamification
-- Prediction history & ROI tracking
-
-### DevOps & Quality
-- CI/CD pipeline with GitHub Actions
-- Code formatting (black) and linting (ruff)
-- Automated testing on every push
 
 ## Contributing
 
