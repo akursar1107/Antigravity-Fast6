@@ -260,7 +260,7 @@ def show_leaderboard_tab() -> None:
                 'total_return': 'Total ROI',
                 'avg_return': 'Avg Return'
             }),
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "Picks": st.column_config.NumberColumn(format="%d"),
@@ -350,7 +350,7 @@ def show_week_picks_tab(season: int) -> None:
                     })
                 
                 picks_df = pd.DataFrame(picks_data)
-                st.dataframe(picks_df, use_container_width=True, hide_index=True)
+                st.dataframe(picks_df, width='stretch', hide_index=True)
             else:
                 st.info(f"No picks for {selected_user['name']} in Week {selected_week_record['week']}")
         else:
@@ -381,7 +381,7 @@ def show_week_picks_tab(season: int) -> None:
                             })
                         
                         picks_df = pd.DataFrame(picks_data)
-                        st.dataframe(picks_df, use_container_width=True, hide_index=True)
+                        st.dataframe(picks_df, width='stretch', hide_index=True)
             else:
                 st.info(f"No picks recorded for Week {selected_week_record['week']}")
 

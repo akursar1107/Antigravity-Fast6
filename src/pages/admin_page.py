@@ -234,7 +234,7 @@ def show_admin_interface(df: pd.DataFrame, season: int, schedule: pd.DataFrame) 
                 users_df = pd.DataFrame(users)
                 st.dataframe(
                     users_df[['id', 'name', 'email', 'created_at']],
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
                 
