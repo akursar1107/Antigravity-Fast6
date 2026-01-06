@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 from data_processor import load_data, get_game_schedule
-from pages.public_dashboard import show_public_dashboard
-from pages.admin_page import show_admin_interface
+from views.public_dashboard import show_public_dashboard
+from views.admin_page import show_admin_interface
 import config
 
 # Page Configuration
