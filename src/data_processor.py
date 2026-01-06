@@ -5,11 +5,37 @@ import requests
 from typing import Dict, List, Optional, Union, Tuple
 import config
 
-@st.cache_data
-def load_data(season):
+
+def _classify_game_type(start_time_dt: pd.Timestamp) -> str:
+    """
+    Classify a game as 'Main Slate' or 'Standalone' based on start time.
+    
+    Main Slate: Sunday games starting before 8 PM (20:00)
+    Standalone: Everything else (or if time is missing)
+    
+    Args:
+        start_time_dt: Pandas Timestamp of game start time
+        
+    Returns:
+        str: 'Main Slate' or 'Standalone'
+    """
+    if pd.isna(start_time_dt):
+        return "Standalone"
+    
+    is_sunday = start_time_dt.weekday() == 6
+    is_before_8pm = start_time_dt.hour < 20
+    
+    if is_sunday and is_before_8pm:
+        return "Main Slate"
+    return "Standalone"
+
+
+@st.cache_data(ttl=300)
+def load_data(season: int) -> pd.DataFrame:
     """
     Loads NFL play-by-play data for a specific season.
     Uses streamlit caching to avoid reloading on every interaction.
+    Refreshes every 5 minutes for database sync compatibility.
     """
     try:
         # years must be a list
@@ -20,10 +46,11 @@ def load_data(season):
         st.error(f"Error loading data for season {season}: {e}")
         return pd.DataFrame()
 
-@st.cache_data
-def load_rosters(season):
+@st.cache_data(ttl=300)
+def load_rosters(season: int) -> pd.DataFrame:
     """
     Loads roster data to get player names and teams.
+    Refreshes every 5 minutes for database sync compatibility.
     """
     try:
         # years must be a list
@@ -37,7 +64,7 @@ def load_rosters(season):
         st.error(f"Error loading rosters for season {season}: {e}")
         return pd.DataFrame()
 
-def get_touchdowns(df):
+def get_touchdowns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Filters the DataFrame for plays where a touchdown was scored.
     """
@@ -47,7 +74,7 @@ def get_touchdowns(df):
     # nflreadpy has a 'touchdown' column (1.0 for yes, 0.0 for no)
     return df[df['touchdown'] == 1].copy()
 
-def get_first_tds(df):
+def get_first_tds(df: pd.DataFrame) -> pd.DataFrame:
     """
     Identifies the first touchdown scorer for each game.
     """
@@ -65,7 +92,7 @@ def get_first_tds(df):
 
     return first_tds
 
-def process_game_type(df):
+def process_game_type(df: pd.DataFrame) -> pd.DataFrame:
     """
     Adds a 'game_type' column to the dataframe: 'Main Slate' or 'Standalone'.
     Main Slate: Sunday games starting before 8 PM (20:00).
@@ -79,24 +106,11 @@ def process_game_type(df):
     # We specify the format to avoid the UserWarning and improve performance
     df['start_time_dt'] = pd.to_datetime(df['start_time'], format='%m/%d/%y, %H:%M:%S', errors='coerce')
     
-    def classify_game(row):
-        dt = row['start_time_dt']
-        if pd.isna(dt):
-            return "Standalone" # Default fallback
-            
-        # Sunday is 6
-        is_sunday = dt.weekday() == 6
-        # Start before 20:00 (8 PM)
-        is_before_8pm = dt.hour < 20
-        
-        if is_sunday and is_before_8pm:
-            return "Main Slate"
-        return "Standalone"
-
-    df['game_type'] = df.apply(classify_game, axis=1)
+    # Use helper function to classify games
+    df['game_type'] = df['start_time_dt'].apply(_classify_game_type)
     return df
 
-def get_game_schedule(pbp_df, season):
+def get_game_schedule(pbp_df: pd.DataFrame, season: int) -> pd.DataFrame:
     """
     Aggregates game data to show schedule, scores, and first TD.
     Uses nfl.load_schedules to ensure future games are included.
@@ -115,20 +129,8 @@ def get_game_schedule(pbp_df, season):
     # Combine to datetime for game classification
     schedule['start_time_dt'] = pd.to_datetime(schedule['gameday'] + ' ' + schedule['gametime'], errors='coerce')
     
-    # Apply game type logic locally here since format differs from PBP
-    def classify_game(row):
-        dt = row['start_time_dt']
-        if pd.isna(dt):
-            return "Standalone"
-        # Sunday is 6
-        is_sunday = dt.weekday() == 6
-        # Start before 20:00 (8 PM)
-        is_before_8pm = dt.hour < 20
-        if is_sunday and is_before_8pm:
-            return "Main Slate"
-        return "Standalone"
-
-    schedule['game_type'] = schedule.apply(classify_game, axis=1)
+    # Use helper function to classify games
+    schedule['game_type'] = schedule['start_time_dt'].apply(_classify_game_type)
 
     # Select cols
     cols = ['game_id', 'week', 'gameday', 'gametime', 'home_team', 'away_team', 'home_score', 'away_score', 'game_type']
@@ -152,10 +154,6 @@ def get_game_schedule(pbp_df, season):
     
     return schedule
 
-def get_team_abbr(full_name):
-    """
-    Maps full team names (Odds API) to abbreviations (nflreadpy).
-    """
 def get_team_abbr(full_name: str) -> str:
     """
     Maps full team names (Odds API) to abbreviations (nflreadpy).
@@ -172,11 +170,11 @@ def get_team_full_name(abbr: str) -> str:
     return abbr
 
 @st.cache_data(ttl=3600)
-def get_first_td_odds(api_key, week_start_date, week_end_date):
+def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) -> Dict[Tuple[str, str], Dict[str, float]]:
     """
     Fetches First TD odds from The Odds API.
     Matches games based on date window.
-    Returns a dict: {game_id: {player_name: price}}
+    Returns a dict: {(home_team, away_team): {player_name: price}}
     """
     # 1. Get Events
     events_url = f'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events?apiKey={api_key}'
