@@ -1,6 +1,7 @@
 """
 Public Dashboard - Read-only views for all users.
-Displays first TD analysis, all touchdowns, and weekly schedule.
+Displays first TD analysis, leaderboard, picks history, and weekly schedule.
+Data sourced from NFL API and SQLite database.
 """
 
 import streamlit as st
@@ -9,6 +10,10 @@ from data_processor import (
     load_data, get_touchdowns, get_first_tds, get_game_schedule,
     get_team_first_td_counts, get_player_first_td_counts, get_position_first_td_counts,
     load_rosters
+)
+from database import (
+    init_db, get_leaderboard, get_user_stats, get_all_users, get_all_weeks,
+    get_user_week_picks, get_result_for_pick, get_weekly_summary
 )
 
 
@@ -179,6 +184,9 @@ def show_analysis_tab(df: pd.DataFrame, season: int) -> None:
 
 def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame) -> None:
     """Main dashboard view with tabs for different data views."""
+    # Initialize database
+    init_db()
+    
     if df.empty:
         st.warning("No data found for this season or an error occurred.")
         return
@@ -201,21 +209,179 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
     st.markdown("---")
 
     # Tabs
-    tab1, tab2, tab3, tab5 = st.tabs([
-        "🚀 First TD of the Game", 
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "🏆 Leaderboard",
+        "📝 Week Picks",
         "📋 All Touchdowns", 
         "📅 Weekly Schedule", 
-        "📊 Analysis"
+        "📊 Analysis",
+        "🚀 First TD of Game"
     ])
 
     with tab1:
-        show_first_td_tab(first_tds)
+        show_leaderboard_tab()
 
     with tab2:
+        show_week_picks_tab(season)
+
+    with tab3:
         show_all_touchdowns_tab(all_tds)
             
-    with tab3:
+    with tab4:
         show_schedule_tab(schedule)
 
     with tab5:
         show_analysis_tab(df, season)
+
+    with tab6:
+        show_first_td_tab(first_tds)
+
+
+def show_leaderboard_tab() -> None:
+    """Display group leaderboard with cumulative stats."""
+    st.header("🏆 Group Leaderboard")
+    st.markdown("Member statistics and rankings across all weeks.")
+    
+    # Get cumulative leaderboard
+    leaderboard = get_leaderboard()
+    
+    if leaderboard:
+        leaderboard_df = pd.DataFrame(leaderboard)
+        
+        # Display with formatting
+        st.dataframe(
+            leaderboard_df[[
+                'name', 'total_picks', 'wins', 'losses', 'total_return', 'avg_return'
+            ]].rename(columns={
+                'name': 'Member',
+                'total_picks': 'Picks',
+                'wins': 'Wins',
+                'losses': 'Losses',
+                'total_return': 'Total ROI',
+                'avg_return': 'Avg Return'
+            }),
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Picks": st.column_config.NumberColumn(format="%d"),
+                "Wins": st.column_config.NumberColumn(format="%d"),
+                "Losses": st.column_config.NumberColumn(format="%d"),
+                "Total ROI": st.column_config.NumberColumn(format="$%.2f"),
+                "Avg Return": st.column_config.NumberColumn(format="$%.2f")
+            }
+        )
+        
+        # Show individual member stats in expandable sections
+        st.markdown("---")
+        st.subheader("📊 Member Details")
+        
+        users = get_all_users()
+        for user in users:
+            with st.expander(f"{user['name']}"):
+                stats = get_user_stats(user['id'])
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Picks", stats['total_picks'] or 0)
+                with col2:
+                    st.metric("Wins", stats['wins'] or 0)
+                with col3:
+                    st.metric("Losses", stats['losses'] or 0)
+                with col4:
+                    st.metric("ROI", f"${stats['total_return'] or 0:.2f}")
+                
+                # Win percentage
+                total = (stats['wins'] or 0) + (stats['losses'] or 0)
+                if total > 0:
+                    win_pct = (stats['wins'] / total) * 100
+                    st.metric("Win %", f"{win_pct:.1f}%")
+    else:
+        st.info("No picks yet. Start in the Admin Interface!")
+
+
+def show_week_picks_tab(season: int) -> None:
+    """Display picks for a selected week."""
+    st.header("📝 Weekly Picks & Results")
+    
+    # Get available weeks
+    weeks = get_all_weeks(season)
+    
+    if not weeks:
+        st.info("No weeks recorded yet.")
+        return
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        selected_week_record = st.selectbox(
+            "Select Week",
+            options=weeks,
+            format_func=lambda x: f"Week {x['week']}",
+            key="public_week_select"
+        )
+    
+    with col2:
+        users = get_all_users()
+        selected_user = st.selectbox(
+            "Select Member (optional)",
+            options=[None] + users,
+            format_func=lambda x: "All Members" if x is None else x['name'],
+            key="public_member_select"
+        )
+    
+    if selected_week_record:
+        week_id = selected_week_record['id']
+        
+        if selected_user:
+            # Show picks for specific user
+            picks = get_user_week_picks(selected_user['id'], week_id)
+            
+            if picks:
+                st.subheader(f"{selected_user['name']}'s Picks - Week {selected_week_record['week']}")
+                
+                picks_data = []
+                for pick in picks:
+                    result = get_result_for_pick(pick['id'])
+                    picks_data.append({
+                        'Team': pick['team'],
+                        'Player': pick['player_name'],
+                        'Result': '✅ Correct' if result and result['is_correct'] else ('❌ Incorrect' if result and result['is_correct'] is False else '⏳ Pending'),
+                        'Return': f"${result['actual_return']:.2f}" if result else "-"
+                    })
+                
+                picks_df = pd.DataFrame(picks_data)
+                st.dataframe(picks_df, use_container_width=True, hide_index=True)
+            else:
+                st.info(f"No picks for {selected_user['name']} in Week {selected_week_record['week']}")
+        else:
+            # Show all picks for the week
+            st.subheader(f"All Members' Picks - Week {selected_week_record['week']}")
+            
+            all_users = get_all_users()
+            picks_by_user = {}
+            
+            for user in all_users:
+                picks = get_user_week_picks(user['id'], week_id)
+                if picks:
+                    picks_by_user[user['name']] = picks
+            
+            if picks_by_user:
+                for member_name in sorted(picks_by_user.keys()):
+                    with st.expander(f"👤 {member_name}", expanded=True):
+                        picks = picks_by_user[member_name]
+                        picks_data = []
+                        
+                        for pick in picks:
+                            result = get_result_for_pick(pick['id'])
+                            picks_data.append({
+                                'Team': pick['team'],
+                                'Player': pick['player_name'],
+                                'Result': '✅' if result and result['is_correct'] else ('❌' if result and result['is_correct'] is False else '⏳'),
+                                'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "-"
+                            })
+                        
+                        picks_df = pd.DataFrame(picks_data)
+                        st.dataframe(picks_df, use_container_width=True, hide_index=True)
+            else:
+                st.info(f"No picks recorded for Week {selected_week_record['week']}")
+
