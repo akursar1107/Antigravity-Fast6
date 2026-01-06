@@ -2,6 +2,11 @@
 
 # API Configuration
 ODDS_API_KEY = "11d265853d712ded110d5e0a5ff82c5b"  # Ideally move to st.secrets in production
+ODDS_API_MARKET = "player_anytime_td"  # Market type for First TD odds
+ODDS_API_BASE_URL = "https://api.the-odds-api.com/v4"
+ODDS_API_SPORT = "americanfootball_nfl"
+ODDS_API_REGIONS = "us"
+ODDS_API_FORMAT = "american"
 
 # Season Configuration
 SEASONS = list(range(2025, 1999, -1))

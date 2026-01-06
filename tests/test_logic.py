@@ -38,7 +38,6 @@ class TestNFLData(unittest.TestCase):
         # Check game 2 first TD is play 20 (Player C)
         g2 = first[first['game_id'] == 'g2'].iloc[0]
         self.assertEqual(g2['play_id'], 20)
-        self.assertEqual(g2['play_id'], 20)
         self.assertEqual(g2['td_player_name'], 'Player C')
 
     def test_names_match(self):

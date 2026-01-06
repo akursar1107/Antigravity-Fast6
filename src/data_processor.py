@@ -2,8 +2,12 @@ import nflreadpy as nfl
 import pandas as pd
 import streamlit as st
 import requests
+import logging
 from typing import Dict, List, Optional, Union, Tuple
 import config
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 def _classify_game_type(start_time_dt: pd.Timestamp) -> str:
@@ -67,9 +71,16 @@ def load_rosters(season: int) -> pd.DataFrame:
 def get_touchdowns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Filters the DataFrame for plays where a touchdown was scored.
+    Validates that required column 'touchdown' exists.
     """
     if df.empty:
         return df
+    
+    # Validate required column exists
+    if 'touchdown' not in df.columns:
+        logger.warning("'touchdown' column not found in DataFrame")
+        return pd.DataFrame()
+    
     # Filter for touchdown plays
     # nflreadpy has a 'touchdown' column (1.0 for yes, 0.0 for no)
     return df[df['touchdown'] == 1].copy()
@@ -77,12 +88,24 @@ def get_touchdowns(df: pd.DataFrame) -> pd.DataFrame:
 def get_first_tds(df: pd.DataFrame) -> pd.DataFrame:
     """
     Identifies the first touchdown scorer for each game.
+    Validates that required columns exist.
     """
     if df.empty:
         return df
 
+    # Validate required columns exist
+    required_cols = ['game_id', 'play_id', 'touchdown']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        logger.warning(f"Missing columns in DataFrame: {missing_cols}")
+        return pd.DataFrame()
+
     # Get all touchdowns first
     tds = get_touchdowns(df)
+    
+    if tds.empty:
+        logger.debug("No touchdowns found in data")
+        return pd.DataFrame()
 
     # Sort by game_id and play_id (play_id implies chronological order)
     tds_sorted = tds.sort_values(by=['game_id', 'play_id'])
@@ -177,15 +200,17 @@ def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) ->
     Returns a dict: {(home_team, away_team): {player_name: price}}
     """
     # 1. Get Events
-    events_url = f'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events?apiKey={api_key}'
+    events_url = f'{config.ODDS_API_BASE_URL}/sports/{config.ODDS_API_SPORT}/events?apiKey={api_key}'
     try:
         r = requests.get(events_url)
         if r.status_code != 200:
             st.error(f"Error fetching events from Odds API: {r.text}")
+            logger.error(f"Events API error: HTTP {r.status_code}: {r.text}")
             return {}
         events = r.json()
     except Exception as e:
         st.error(f"Error connecting to Odds API: {e}")
+        logger.error(f"Failed to fetch events from Odds API: {e}")
         return {}
 
     # Filter events for the relevant week
@@ -200,13 +225,14 @@ def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) ->
         if week_start_date <= c_date <= week_end_date:
             week_events.append(e)
 
+    logger.info(f"Found {len(week_events)} games for week {week_start_date} to {week_end_date}")
     odds_data = {}
     
     for e in week_events:
         event_id = e['id']
         # 2. Get Odds for event
-        # Try player_anytime_td since player_first_td is restricted/unavailable
-        odds_url = f'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events/{event_id}/odds?apiKey={api_key}&regions=us&markets=player_anytime_td&oddsFormat=american'
+        # Use market from config
+        odds_url = f'{config.ODDS_API_BASE_URL}/sports/{config.ODDS_API_SPORT}/events/{event_id}/odds?apiKey={api_key}&regions={config.ODDS_API_REGIONS}&markets={config.ODDS_API_MARKET}&oddsFormat={config.ODDS_API_FORMAT}'
         
         try:
             r_odds = requests.get(odds_url)
@@ -217,10 +243,10 @@ def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) ->
                 bookmakers = data.get('bookmakers', [])
                 game_odds = {}
                 if bookmakers:
-                    # Look for player_first_td market
+                    # Look for configured market
                     for bm in bookmakers:
                         for m in bm.get('markets', []):
-                            if m['key'] == 'player_anytime_td':
+                            if m['key'] == config.ODDS_API_MARKET:
                                 for outcome in m['outcomes']:
                                     p_name = outcome['description']
                                     price = outcome['price']
@@ -236,13 +262,19 @@ def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) ->
                 h_team = get_team_abbr(e['home_team'])
                 a_team = get_team_abbr(e['away_team'])
                 odds_data[(h_team, a_team)] = game_odds
+                logger.debug(f"Fetched {len(game_odds)} player odds for {h_team} vs {a_team}")
 
             else:
-                # Optionally log warning but don't crash
-                # print(f"Failed to get odds for {event_id}: {r_odds.text}")
-                pass
-        except:
-            continue
+                # Log warning for failed odds request
+                logger.warning(f"Failed to get odds for event {event_id}: HTTP {r_odds.status_code}")
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Timeout fetching odds for event {event_id}: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error fetching odds for event {event_id}: {e}")
+        except (KeyError, ValueError) as e:
+            logger.error(f"Error parsing odds data for event {event_id}: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error processing event {event_id}: {e}")
             
     return odds_data
 
