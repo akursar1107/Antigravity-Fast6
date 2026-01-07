@@ -1,4 +1,22 @@
-# Python
+# Ignore Python caches and virtual envs
+__pycache__/
+.pytest_cache/
+.venv/
+
+# Local data files (SQLite DBs and backups)
+data/**/*.db
+data/**/*.db-wal
+data/**/*.db-shm
+data/**/*.sqlite
+data/**/*.sqlite3
+data/**/*.bak
+
+# Root-level CSVs used for local imports
+/*.csv
+
+# OS files
+.DS_Store
+Thumbs.db# Python
 __pycache__/
 *.py[cod]
 *$py.class
