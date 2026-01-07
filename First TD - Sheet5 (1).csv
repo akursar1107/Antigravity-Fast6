@@ -1,0 +1,91 @@
+Week,Gameday,Picker,Vistor,Home,Player,1st TD Odds
+1,Thursday,Phil,Dallas,Philadelphia,AJ Brown,900
+1,Friday,Anders,Kansas City,LA Chargers,Xavier Worthy,800
+1,Sunday,Neil,Baltimore,Buffalo,Josh Palmer,2200
+1,Monday,Dan C,Minnesota,Chicago,TJ Hock,1200
+2,Thursday,Tony,Washington,Green Bay,Tucker Kraft,1200
+2,Sunday,Luke,Atlanta,Minnesota,Penix Jr,3500
+2,Monday,Jeremy,Tampa Bay,Houston,Sterling Sheppard,2200
+2,Monday,Phil,LA Chargers,Las Vegas,Ladd,750
+3,Thursday,Anders,Miami,Buffalo,Knox,1200
+3,Sunday,Neil,Kansas City,NY Giants,Hunt,1200
+3,Monday,Dan C,Detriot,Baltimore,Zay Flowers,900
+4,Thursday,Tony,Seattle,Arizona,Cooper Kupp,1600
+4,Sunday,Luke,Green Bay,Dallas,Golden,1200
+4,Monday,Jeremy,NY Jets,Miami,Fields,1100
+4,Monday,Phil,Cincinnati,Denver,Mims,1800
+5,Thursday,Anders,San Fran,LA Rams,CMC,650
+5,Sunday,Neil,New England,Buffalo,Knox,2700
+5,Monday,Dan C,Kansas City,Jacksonville,Worthy,850
+6,Thursday,Tony,Philadelphia,NY Giants,AJ Brown,800
+6,Sunday,Luke,Detriot,Kansas City,Tyquan Thorton,2000
+6,Monday,Jeremy,Buffalo,Atlanta,Joshua Palmer,2000
+6,Monday,Phil,Chicago,Washington,Zach Ertz,1200
+7,Thursday,Anders,Pittsburgh,Cincinnati,Gainwell,1000
+7,Sunday,Neil,Atlanta,San Fran,Kittle,1100
+7,Monday,Dan C,Tampa Bay,Detriot,ARSB,650
+7,Monday,Tony,Houston,Seattle,Cooper Kupp,1200
+8,Thursday,Luke,Minnesota,LA Chargers,Addison,1100
+8,Sunday,Jeremy,Green Bay,Pittsburgh,Golden,1200
+8,Monday,Phil,Washington,Kansas City,Worthy,1000
+9,Thursday,Anders,Baltimore,Miami,Batemen,1900
+9,Sunday,Neil,Seattle,Washington,AJ Barner,1400
+9,Monday,Dan C,Arizona,Dallas,Jake Ferguson,850
+10,Thursday,Tony,Las Vegas,Denver,Sutton,650
+10,Sunday,Luke,Pittsburgh,LA Chargers,OG,850
+10,Monday,Jeremy,Philadelphia,Green Bay,Christian Watson,1500
+11,Thursday,Phil,NY Jets,New England,Hunter Henry,700
+11,Sunday,Anders,Detriot,Philadelphia,Jamo,1500
+11,Monday,Neil,Dallas,Las Vegas,Lamb,800
+12,Thursday,Dan C,Buffalo,Houston,Cook,500
+12,Sunday,Tony,Tampa Bay,LA Rams,Puka,550
+12,Monday,Luke,Carolina,San Fran,Kittle,750
+13,Thursday,Jeremy,Green Bay,Detriot,Wicks,2200
+13,Thursday,Phil,Kansas City,Dallas,Pickens,1100
+13,Thursday,Anders,Cincinnati,Baltimore,Andrews,750
+13,Friday,Neil,Chicago,Philadelphia,Goedert,1000
+13,Sunday,Dan C,Denver,Washington,Troy Franklin,800
+13,Monday,Tony,NY Giants,New England,Jaxson Dart ,1600
+14,Thursday,Luke,Dallas,Detriot,Pickens,1000
+14,Sunday,Jeremy,Houston,Kansas City,Xavier Worthy,1300
+14,Monday,Phil,Philadelphia,LA Chargers,Ladd,1200
+15,Thursday,Anders,Atlanta,Tampa Bay,Allgeier,1100
+15,Sunday,Neil,Minnesota,Dallas,Georgie Pickens,800
+15,Monday,Dan C,Miami,Pittsburgh,Jaylen Waddle,1100
+16,Thursday,Tony,LA Rams,Seattle,Kyren Williams ,
+16,Saturday,Luke,Philadelphia,Washington,Goedert,
+16,Saturday,Jeremy,Green Bay,Chicago,Zaccheaus,
+16,Sunday,Phil,New England,Baltimore,Henderson,
+16,Monday,Anders,San Fran,Indianapolis,jAUAN jENNINGS,
+17,Thursday,Neil,Dallas,Washington,Lamb,
+17,Thursday,Dan C,Detriot,Minnesota,Jamo,
+17,Thursday,Tony,Denver,Kansas City,Sutton,
+17,Saturday,Luke,Houston,LA Chargers,Johnston,
+17,Saturday,Jeremy,Baltimore,Green Bay,Zay Flowers,
+17,Sunday,Phil,Chicago,San Fran,DJ Moore,
+17,Monday,Anders,LA Rams,Atlanta,Terrance Ferguson,1900
+18,Saturday,Neil,Carolina,Tampa Bay,Bucky,
+18,Saturday,Dan C,Seattle,San Fran,Kittle,
+18,Sunday,Tony,Baltimore,Pittsburgh,Kenneth Gainwell,
+WC,Saturday,Luke,LA Rams,Carolina,,
+WC,Saturday,Jeremy,Green Bay,Chicago,,
+WC,Sunday,Phil,Buffalo,Jacksonville,,
+WC,Sunday,Anders,San Fran,Philadelphia,,
+WC,Sunday,Neil,LA Chargers,New England,Gadsden,
+WC,Monday,Dan C,Texans,Bal/Pit,,
+DIV,,Tony,,,,
+DIV,,Luke,,,,
+DIV,,Jeremy,,,,
+DIV,,Phil,,,,
+CHAMP,,Anders,,,,
+CHAMP,,Neil,,,,
+SB,,,,,,
+,,,,,,
+,odds <1000,1000<odds<=2000,Odds>2000,,,Odds
+Phil,0,0,0,,Neil,
+Anders,0,0,0,,,
+Neil,0,0,0,,,
+Dan C,0,0,0,,,
+Tony,0,0,0,,,
+Luke,0,0,0,,,
+Jeremy,0,0,0,,,

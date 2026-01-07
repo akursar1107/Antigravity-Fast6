@@ -6,10 +6,11 @@ Data sourced from NFL API and SQLite database.
 
 import streamlit as st
 import pandas as pd
-from data_processor import (
-    load_data, get_touchdowns, get_first_tds, get_game_schedule,
-    get_team_first_td_counts, get_player_first_td_counts, get_position_first_td_counts,
-    load_rosters
+from utils.nfl_data import (
+    load_data, get_touchdowns, get_first_tds, get_game_schedule, load_rosters
+)
+from utils.analytics import (
+    get_team_first_td_counts, get_player_first_td_counts, get_position_first_td_counts
 )
 from database import (
     init_db, get_leaderboard, get_user_stats, get_all_users, get_all_weeks,
@@ -251,12 +252,16 @@ def show_leaderboard_tab() -> None:
         # Display with formatting
         st.dataframe(
             leaderboard_df[[
-                'name', 'total_picks', 'wins', 'losses', 'total_return', 'avg_return'
+                'name', 'total_picks', 'wins', 'any_time_td_wins', 'points', 'losses', 'avg_odds', 'total_theoretical_return', 'total_return', 'avg_return'
             ]].rename(columns={
                 'name': 'Member',
                 'total_picks': 'Picks',
-                'wins': 'Wins',
+                'wins': 'First TD Wins',
+                'any_time_td_wins': 'Any Time TD Wins',
+                'points': 'Points',
                 'losses': 'Losses',
+                'avg_odds': 'Avg Odds',
+                'total_theoretical_return': 'Theo Return',
                 'total_return': 'Total ROI',
                 'avg_return': 'Avg Return'
             }),
@@ -264,8 +269,12 @@ def show_leaderboard_tab() -> None:
             hide_index=True,
             column_config={
                 "Picks": st.column_config.NumberColumn(format="%d"),
-                "Wins": st.column_config.NumberColumn(format="%d"),
+                "First TD Wins": st.column_config.NumberColumn(format="%d"),
+                "Any Time TD Wins": st.column_config.NumberColumn(format="%d"),
+                "Points": st.column_config.NumberColumn(format="%d"),
                 "Losses": st.column_config.NumberColumn(format="%d"),
+                "Avg Odds": st.column_config.NumberColumn(format="+%.0f"),
+                "Theo Return": st.column_config.NumberColumn(format="$%.2f"),
                 "Total ROI": st.column_config.NumberColumn(format="$%.2f"),
                 "Avg Return": st.column_config.NumberColumn(format="$%.2f")
             }
@@ -280,21 +289,40 @@ def show_leaderboard_tab() -> None:
             with st.expander(f"{user['name']}"):
                 stats = get_user_stats(user['id'])
                 
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5, col6 = st.columns(6)
                 with col1:
                     st.metric("Total Picks", stats['total_picks'] or 0)
                 with col2:
-                    st.metric("Wins", stats['wins'] or 0)
+                    st.metric("Points", stats.get('points') or 0)
                 with col3:
-                    st.metric("Losses", stats['losses'] or 0)
+                    st.metric("First TD Wins", stats['wins'] or 0)
                 with col4:
+                    st.metric("Any Time TD Wins", stats.get('any_time_td_wins') or 0)
+                with col5:
+                    st.metric("Losses", stats['losses'] or 0)
+                with col6:
                     st.metric("ROI", f"${stats['total_return'] or 0:.2f}")
                 
-                # Win percentage
-                total = (stats['wins'] or 0) + (stats['losses'] or 0)
-                if total > 0:
-                    win_pct = (stats['wins'] / total) * 100
-                    st.metric("Win %", f"{win_pct:.1f}%")
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    # Win percentage (First TD)
+                    total = (stats['wins'] or 0) + (stats['losses'] or 0)
+                    if total > 0:
+                        win_pct = (stats['wins'] / total) * 100
+                        st.metric("First TD Win %", f"{win_pct:.1f}%")
+                with col_b:
+                    # Any Time TD win percentage
+                    total = (stats.get('any_time_td_wins') or 0) + (stats['losses'] or 0)
+                    if total > 0:
+                        any_time_pct = ((stats.get('any_time_td_wins') or 0) / total) * 100
+                        st.metric("Any Time TD Win %", f"{any_time_pct:.1f}%")
+                with col_c:
+                    # ROI Efficiency
+                    theo_ret = stats.get('total_theoretical_return', 0) or 0
+                    actual_ret = stats['total_return'] or 0
+                    if theo_ret > 0:
+                        efficiency = (actual_ret / theo_ret) * 100
+                        st.metric("ROI Efficiency", f"{efficiency:.1f}%")
     else:
         st.info("No picks yet. Start in the Admin Interface!")
 
@@ -342,11 +370,20 @@ def show_week_picks_tab(season: int) -> None:
                 picks_data = []
                 for pick in picks:
                     result = get_result_for_pick(pick['id'])
+                    # Format odds as string (e.g., +1500) if available
+                    odds_val = pick.get('odds')
+                    odds_str = (
+                        f"+{int(odds_val)}" if isinstance(odds_val, (int, float)) and odds_val >= 0 else
+                        (str(int(odds_val)) if isinstance(odds_val, (int, float)) else "-")
+                    )
+                    theo_ret = pick.get('theoretical_return')
                     picks_data.append({
                         'Team': pick['team'],
                         'Player': pick['player_name'],
+                        'Odds': odds_str,
+                        'Theo Return': f"${theo_ret:.2f}" if isinstance(theo_ret, (int, float)) else "$0.00",
                         'Result': '✅ Correct' if result and result['is_correct'] else ('❌ Incorrect' if result and result['is_correct'] is False else '⏳ Pending'),
-                        'Return': f"${result['actual_return']:.2f}" if result else "-"
+                        'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "$0.00"
                     })
                 
                 picks_df = pd.DataFrame(picks_data)
@@ -373,11 +410,19 @@ def show_week_picks_tab(season: int) -> None:
                         
                         for pick in picks:
                             result = get_result_for_pick(pick['id'])
+                            odds_val = pick.get('odds')
+                            odds_str = (
+                                f"+{int(odds_val)}" if isinstance(odds_val, (int, float)) and odds_val >= 0 else
+                                (str(int(odds_val)) if isinstance(odds_val, (int, float)) else "-")
+                            )
+                            theo_ret = pick.get('theoretical_return')
                             picks_data.append({
                                 'Team': pick['team'],
                                 'Player': pick['player_name'],
+                                'Odds': odds_str,
+                                'Theo Return': f"${theo_ret:.2f}" if isinstance(theo_ret, (int, float)) else "$0.00",
                                 'Result': '✅' if result and result['is_correct'] else ('❌' if result and result['is_correct'] is False else '⏳'),
-                                'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "-"
+                                'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "$0.00"
                             })
                         
                         picks_df = pd.DataFrame(picks_data)

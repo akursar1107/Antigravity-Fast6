@@ -1,9 +1,15 @@
 import streamlit as st
 import pandas as pd
-from data_processor import load_data, get_game_schedule
+from utils.nfl_data import load_data, get_game_schedule
+from database import init_db, ensure_game_id_column, ensure_any_time_td_column
 from views.public_dashboard import show_public_dashboard
 from views.admin_page import show_admin_interface
 import config
+
+# Initialize database and run migrations
+init_db()
+ensure_game_id_column()
+ensure_any_time_td_column()
 
 # Page Configuration
 st.set_page_config(
@@ -73,8 +79,8 @@ st.title(f"🏈 NFL Touchdown Tracker - {season}")
 with st.spinner(f"Loading data for {season}..."):
     df = load_data(season)
 
-# Apply game type filter
-if not df.empty:
+# Apply game type filter (only if available)
+if not df.empty and 'game_type' in df.columns:
     if game_type_filter == "Main Slate":
         df = df[df['game_type'] == "Main Slate"]
     elif game_type_filter == "Standalone":

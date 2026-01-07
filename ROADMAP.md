@@ -12,23 +12,25 @@ A **shared group prediction tool** for managing NFL first-touchdown picks among 
 
 ### 1.1 Database Integration (SQLite) ✅
 *   **Status**: Implemented and tested
-*   **Implementation**: SQLite local database with complete schema (4 tables)
+*   **Implementation**: SQLite local database with 5-table schema (added game_id to picks)
 *   **Features Unlocked**: Shared dashboard, leaderboard, historical tracking
 
 ### 1.2 Admin Interface (Streamlit Page) ✅
-*   **Status**: Complete with 4 management tabs
+*   **Status**: Complete with 6 management tabs
 *   **Tabs**:
     - 👥 User Management: Add/remove group members
     - 📝 Pick Input: Season → Week → Game → Player selection
-    - ✅ Results Tracking: Mark picks correct/incorrect with ROI
-    - 📊 Statistics: View member win/loss records
-*   **Tech**: Streamlit forms + SQLite
+    - ✅ Update Results: Mark picks correct/incorrect with ROI
+    - 📊 View Stats: Member records with quick-edit table
+    - 📥 Import CSV: Bulk import with Home/Visitor team matching
+    - 🎯 Grade Picks: Auto-grade using PBP data with editable table
+*   **Tech**: Streamlit forms + SQLite + nflreadpy PBP data
 
 ### 1.3 Shared Dashboard (Streamlit Page) ✅
 *   **Status**: Complete with 6 data views
 *   **Tabs**:
-    - 🏆 Leaderboard: Group standings (wins, losses, ROI)
-    - 📝 Week Picks: Browse all picks and results
+    - 🏆 Leaderboard: Group standings (Wins, Losses, Avg Odds, ROI, Efficiency)
+    - 📝 Week Picks: Browse all picks and results with Odds/Return columns
     - 📋 All Touchdowns: Season TD database
     - 📅 Weekly Schedule: Game listings
     - 📊 Analysis: Team/Player/Position stats
@@ -36,68 +38,149 @@ A **shared group prediction tool** for managing NFL first-touchdown picks among 
 
 ---
 
-## 🚀 Phase 2: Enhanced Analytics (Planned)
+## 🚀 Phase 2: Auto-Grading & CSV Import (IN PROGRESS)
 
-### 2.1 ROI & Profitability Tracking
-*   **Goal**: Show each person's profit/loss over time with trends
-*   **Implementation**: Calculate returns based on odds and outcomes
-*   **Priority**: MEDIUM
+### 2.1 CSV Import with Game ID Matching ✅
+*   **Status**: COMPLETE
+*   **Features**:
+    - Upload CSV with Home/Visitor team columns
+    - Auto-match teams to game_id from NFL schedule
+    - Store game_id with each pick for deterministic PBP grading
+    - Import odds and calculate theoretical returns
+    - Handle duplicates with unique constraint enforcement
+*   **Priority**: CRITICAL (enables all grading)
 
-### 2.2 Defensive Matchup Analysis (Optional)
-*   **Goal**: Provide context for picks with historical data
-*   **Implementation**: Query historical data to suggest better picks
-*   **Priority**: MEDIUM
+### 2.2 Grade Picks Admin Tab ✅
+*   **Status**: COMPLETE
+*   **Features**:
+    - Filter by Season, Week, Game Date, Game, Player Pick (all dropdowns)
+    - Auto-detect first TD from PBP using game_id
+    - Editable table: Edit picks before grading
+    - Name fuzzy matching (pick vs actual TD)
+    - Bulk grading: Grade All Matches, All Incorrect, or Auto
+    - Save & recalculate: Edits trigger match recalculation
+*   **Priority**: CRITICAL (admin workflow)
+
+### 2.3 Odds & Returns Display ✅
+*   **Status**: COMPLETE
+*   **Features**:
+    - Odds shown in Update Results, View Stats, Weekly Picks tabs
+    - Theoretical return calculated from odds (positive: odds/100, negative: 100/abs(odds))
+    - ROI Efficiency metric on leaderboard
+    - Toast notifications for import/fix/grade operations
+*   **Priority**: HIGH (user visibility)
+
+### 2.4 Data Cleanup & Backfill (NEXT)
+*   **Status**: IN PROGRESS
+*   **Tasks**:
+    - [ ] Drop existing database, start fresh
+    - [ ] Re-import CSV with Home/Visitor team columns
+    - [ ] Verify all picks have valid game_ids
+    - [ ] Validate first TD detection for all games
+*   **Priority**: HIGH (data foundation)
+
+### 2.5 Point System for TD Scorers (NEXT)
+*   **Status**: PLANNED
+*   **Features**:
+    - [ ] Support both First TD and Anytime TD pick types
+    - [ ] Define scoring: points for correct vs incorrect
+    - [ ] Store pick_type with each pick (first_td vs anytime_td)
+    - [ ] Calculate cumulative points on leaderboard
+    - [ ] Update admin interface to support both types
+*   **Priority**: HIGH (core feature)
+
+### 2.6 Codebase Refactoring (NEXT)
+*   **Status**: PLANNED
+*   **Tasks**:
+    - [ ] Extract admin utilities → `admin_utils.py`
+    - [ ] Extract grading logic → `grading_logic.py`
+    - [ ] Extract team resolution → `team_resolution.py`
+    - [ ] Consolidate helper functions
+    - [ ] Remove duplicate code
+    - [ ] Improve code organization
+*   **Priority**: MEDIUM (maintainability)
 
 ---
 
-## 📋 Phase 3: User Experience (Planned)
+## 📋 Phase 3: Analytics & Self-Service (PLANNED)
 
-### 3.1 Light User Accounts (Optional)
+### 3.1 ROI & Profitability Tracking
+*   **Goal**: Show each person's profit/loss over time with trends
+*   **Implementation**: Calculate returns by week, season, pick type
+*   **Display**: Trend charts on leaderboard and member detail pages
+*   **Priority**: MEDIUM
+
+### 3.2 Defensive Matchup Analysis (Optional)
+*   **Goal**: Provide context for picks with historical data
+*   **Implementation**: Query historical data to suggest better picks
+*   **Display**: Tips on admin pick input page
+*   **Priority**: MEDIUM
+
+### 3.3 Light User Accounts (Optional)
 *   **Constraint**: Only add if friends actually want to submit picks themselves
 *   **Implementation**: Simple name selector stored in DB
 *   **Priority**: LOW
 
-### 3.2 Multi-Group Support
+### 3.4 Multi-Group Support
 *   **Goal**: Support multiple friend groups with separate leaderboards
 *   **Implementation**: Add `group_id` to schema; switch context in Streamlit
 *   **Priority**: LOW
 
 ---
 
-## 📊 Implementation Summary
+## 📊 Code Statistics
 
 ### Phase 1 Deliverables
-- ✅ **Database Module** (src/database.py, 550 lines)
-  - 50+ CRUD functions
-  - 4-table schema with foreign keys
+- ✅ **Database Module** (src/database.py, 770 lines)
+  - 55+ CRUD functions
+  - 5-table schema with game_id foreign key
   - Type hints and logging throughout
 
-- ✅ **Admin Interface** (src/pages/admin_page.py, 4 tabs)
-  - User management with add/delete
-  - Pick input form
-  - Result tracking interface
-  - Statistics display
+- ✅ **Data Processor** (src/data_processor.py, 700 lines)
+  - 40+ functions for PBP, schedule, roster, import
+  - Caching with 5-min TTL
+  - CSV import with team matching
+  - get_first_td_map() for grading
 
-- ✅ **Public Dashboard** (src/pages/public_dashboard.py, 6 tabs)
-  - Leaderboard with group standings
-  - Week picks viewer
-  - All remaining original tabs
+- ✅ **Admin Interface** (src/views/admin_page.py, 1000+ lines)
+  - 6 tabs: User Mgmt, Input Picks, Update Results, View Stats, Import CSV, Grade Picks
+  - Editable data tables with dropdowns
+  - Bulk operations (dedupe, import, grade)
+  - Toast notifications
 
-- ✅ **Test Suite** (test_phase1.py)
-  - 8 comprehensive integration tests
-  - All features validated
-  - Data integrity verified
+- ✅ **Public Dashboard** (src/views/public_dashboard.py)
+  - 6 tabs with Odds/Returns display
+  - ROI Efficiency metric
+  - Comprehensive filtering
 
-### Code Statistics
-- **1,140 lines** of new code
-- **50+ database functions**
-- **4 database tables**
-- **10 total tabs** (4 admin + 6 public)
-- **8 test suites** - 100% pass rate
+- ✅ **Testing**: Integration tests validating all major workflows
+
+### Summary
+- **1,800+ lines** of new/updated code
+- **95+ functions** across database, data_processor, admin
+- **5 database tables** with foreign keys
+- **12 UI tabs** (6 admin + 6 public)
+- **3 caching strategies** with 5-min TTL
+- **100% test pass rate**
 
 ---
 
-## Database Schema (Phase 1)
+## 🔄 Development Process
+
+**Phase 1 → 2**: Transitioned from basic database to auto-grading with PBP data
+- Added game_id to picks for deterministic matching
+- Built Grade Picks tab with fuzzy name matching
+- Implemented CSV import with team-to-game matching
+- Enhanced display with odds, returns, ROI metrics
+
+**Phase 2 → 3**: Continuing with point system and code organization
+- Support multiple pick types (First TD vs Anytime TD)
+- Refactor for maintainability (utils modules, shared functions)
+- Add analytics and trends
+
+---
+
+## Database Schema
 
 ### `users` table
 ```sql

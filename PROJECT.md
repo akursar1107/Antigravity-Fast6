@@ -1,65 +1,77 @@
-# NFL Touchdown Tracker - Project Document
+# Fast6 Project Overview
 
-**Last Updated:** January 3, 2026
+**Status:** Phase 1 Complete ✅ | Phase 2 In Progress 🚀  
+**Last Updated:** January 6, 2026
 
 ---
 
 ## 1. Project Overview
 
-**NFL Touchdown Tracker** is a web-based prediction tool designed to replace manual spreadsheets for managing group NFL first-touchdown pick predictions among friends. The application provides a shared dashboard where one admin (you) manages all inputs and results, while friends view picks, leaderboards, and historical performance data.
+**Fast6** is a Streamlit-based web application for managing NFL first-touchdown scorer predictions within a friend group. The admin (you) controls all inputs, results, and grading, while friends view a shared leaderboard with ROI tracking and historical performance.
+
+**Key Innovation:** Auto-grading using NFL play-by-play data with fuzzy name matching and game_id linking.
 
 ### Target Users
-- **Admin (You)**: Manages picks, updates game results, controls group settings
-- **Friends**: View picks, track performance, compete on leaderboards
+- **Admin (You)**: Manages picks, imports CSVs, grades results, updates game outcomes
+- **Friends**: View picks, leaderboard, odds, returns, and historical stats
 
 ---
 
 ## 2. Vision & Goals
 
 ### Primary Vision
-Create a **single pane of glass** for managing NFL first-touchdown predictions within a friend group, replacing spreadsheet-based tracking with a modern web application.
+Create a **single pane of glass** for managing NFL first-touchdown predictions within a friend group, replacing spreadsheet-based tracking with a modern web application that auto-grades picks using real NFL data.
 
 ### Key Goals
-1. **Simplify Pick Management** - One place to input weekly picks instead of scattered spreadsheets
-2. **Shared Transparency** - Friends can see all picks and standings in real-time
-3. **Performance Tracking** - Monitor ROI, win rates, and historical picks over time
-4. **Scalable Foundation** - Build infrastructure for optional future features (user accounts, multi-group support)
-5. **Stay on Streamlit** - Keep deployment simple and cost-effective
+1. **Simplify Pick Management** - CSV import and manual entry for weekly picks
+2. **Auto-Grade with PBP Data** - Match picks to actual first TDs using NFL play-by-play
+3. **Shared Transparency** - Friends see all picks, odds, returns, and standings
+4. **Performance Tracking** - Monitor ROI, win rates, avg odds, theoretical returns
+5. **Scalable Foundation** - Support future features (point systems, multi-group)
 
 ---
 
-## 3. Current Architecture
+## 3. Current Architecture1.52.2
+- **Database**: SQLite with 5-table schema (users, weeks, picks, results, game_id)
+- **Data Source**: nflreadpy 0.1.5 (NFL PBP, schedule, roster data)
+- **Data Processing**: pandas 2.3.3
+- **Python**: 3.13
+- **Deployment**: Streamlit Community Cloud (planned)
 
-### Technology Stack
-- **Frontend/Framework**: Streamlit (Python web framework)
-- **Data Source**: nflreadpy (NFL statistics library)
-- **Data Processing**: pandas, numpy
-- **Visualization**: Altair (via Streamlit)
-- **Deployment**: Streamlit Community Cloud
-
-### Current Features
-- 📅 NFL game schedule browsing by season
-- 📊 Player and team first-touchdown statistics
-- 💰 Real-time betting odds integration
-- 📈 Advanced player stats and historical data
+### Current Features (Phase 1 Complete + Phase 2 In Progress)
+- ✅ 6-tab admin interface: User Mgmt, Pick Input, Update Results, View Stats, Import CSV, Grade Picks
+- ✅ 6-tab public dashboard: Leaderboard, Weekly Picks, All TDs, Schedule, Analysis, First TD per Game
+- ✅ CSV import with Home/Visitor team matching to game_id
+- ✅ Auto-grading with PBP data using fuzzy name matching
+- ✅ Odds display and theoretical return calculations
+- ✅ ROI Efficiency metric on leaderboard
+- 🚀 Point system for First TD and Anytime TD scorers (planned)
+- 🚀 Codebase refactoring (planned)
 
 ### Project Structure
 ```
-src/
-├── app.py              # Main Streamlit application
-├── config.py           # Configuration & constants
-├── data_processor.py   # Data fetching & processing
-└── __pycache__/
-
-tests/
-├── test_logic.py       # Unit tests
-└── __pycache__/
-
-docs/
-├── README.md           # Quick start guide
-├── ROADMAP.md          # Feature roadmap
-├── DEPLOYMENT.md       # Deployment instructions
-└── PROJECT.md          # This file
+Fast6/
+├── src/
+│   ├── app.py                      # Router (90 lines)
+│   ├── database.py                 # SQLite CRUD (770 lines)
+│   ├── config.py                   # Constants & API keys
+│   ├── data_processor.py           # NFL data + CSV import (700 lines)
+│   └── views/
+│       ├── admin_page.py           # Admin interface (1000+ lines, 6 tabs)
+│       └── public_dashboard.py     # Public dashboard (6 tabs)
+├── data/
+│   └── fast6.db                    # SQLite database
+├── tests/
+│   ├── test_logic.py               # Data processor tests
+│   ├── test_database.py            # Database tests
+│   └── test_phase1.py              # Integration tests
+├── requirements.txt                # Python dependencies
+├── README.md                       # Quick start guide
+├── PHASE1_COMPLETE.md              # Phase 1 documentation
+├── ROADMAP.md                      # Feature roadmap
+├── TODO.md                         # Current tasks
+├── DEPLOYMENT.md                   # Deployment instructions
+└── PROJECT.md                      # This file
 
 requirements.txt        # Python dependencies
 TODO.md                 # Refactoring & task tracking
@@ -69,45 +81,46 @@ TODO.md                 # Refactoring & task tracking
 
 ## 4. Development Roadmap
 
-### Phase 1: Core Foundation (Current - Weeks 1-2)
+### Phase 1: Core Foundation (COMPLETE ✅)
 **Goal**: Establish database and admin/dashboard infrastructure
 
-#### 1.1 Database Integration
-- Set up SQLite database with schema for users, weeks, picks, and results
-- Implement CRUD operations for picks and results
-- Enable persistent storage across sessions
+#### 1.1 Database Integration ✅
+- SQLite database with 5-table schema (users, weeks, picks, results, game_id)
+- 55+ CRUD operations for picks, results, statistics
+- Persistent storage with cascading deletes
+- Unique constraints and data integrity
+- Migration system (ensure_game_id_column)
 
-#### 1.2 Admin Interface
-- Create admin-only Streamlit page
-- Forms to input weekly picks (player, team, odds)
-- Results tracking interface
-- Group member management
+#### 1.2 Admin Interface ✅
+- 6-tab admin page:
+  1. User Management (add/delete members)
+  2. Input Picks (manual pick entry)
+  3. Update Results (mark correct/incorrect, delete picks)
+  4. View Stats (quick-edit data table)
+  5. Import CSV (bulk import with team matching)
+  6. Grade Picks (auto-grade using PBP data)
+- Editable tables with dropdowns
+- Toast notifications for operations
+- Maintenance tools (dedupe, backfill)
 
-#### 1.3 Shared Dashboard
-- Public-facing page showing current week's picks
-- Leaderboard with win rates and ROI
-- Historical pick tracking
+#### 1.3 Shared Dashboard ✅
+- 6-tab public dashboard:
+  1. Leaderboard (group standings with odds/ROI metrics)
+  2. Week Picks (browse picks by week with results)
+  3. All Touchdowns (season TD database)
+  4. Weekly Schedule (game listings)
+  5. Analysis (team/player/position stats)
+  6. First TD per Game (game breakdown)
+- Odds and theoretical return display
+- ROI Efficiency metric
 
-### Phase 2: Enhanced Analytics (Weeks 3-4)
-- ROI and profitability calculations
-- Defensive matchup analysis
-- +EV indicator comparisons
-- Win rate trends
+### Phase 2: Auto-Grading & CSV Import (IN PROGRESS 🚀)
+**Goal**: Automate grading using NFL PBP data, enhance CSV import
 
-### Phase 3: User Experience (Future)
-- Optional light user accounts (if friends request)
-- Multi-group support
-- Advanced filtering and search
-- Mobile responsiveness improvements
-
----
-
-## 5. Database Schema
-
-### Design Principles
-- Minimal but complete schema supporting core use cases
-- No complex relationships; easy to query and understand
+##5-table schema with game_id foreign key
 - SQLite for simplicity; easily migrated to PostgreSQL later
+- Unique constraints for data integrity
+- Cascading deletes for referential integrity
 
 ### Tables
 
@@ -115,9 +128,10 @@ TODO.md                 # Refactoring & task tracking
 Stores group member information.
 ```sql
 CREATE TABLE users (
-    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    email TEXT UNIQUE,
+    is_admin BOOLEAN DEFAULT 0
 );
 ```
 
@@ -125,11 +139,111 @@ CREATE TABLE users (
 Organizes picks by NFL season and week.
 ```sql
 CREATE TABLE weeks (
-    week_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     season INTEGER NOT NULL,
-    week_number INTEGER NOT NULL,
-    start_date DATE,
-    end_date DATE,
+    week INTEGER NOT NULL,
+    UNIQUE(season, week)
+);
+```
+
+#### `picks`
+Individual user predictions with game_id linking.
+```sql
+CREATE TABLE picks (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    week_id INTEGER NOT NULL,
+    team TEXT NOT NULL,
+    player_name TEXT NOT NULL,
+    odds REAL,
+    theoretical_return REAL,
+    game_id TEXT,  -- Links to NFL schedule (e.g., "2025_01_DAL_PHI")
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (week_id) REFERENCES weeks(id),
+    UNIQUE(user_id, week_id, team, player_name)
+);
+```
+
+#### `results`
+Game outcomes and ROI calculations.
+```sql
+CREATE TABLE results (
+    id INTEGER PRIMARY KEY,
+    pick_id INTEGER NOT NULL UNIQUE,
+    actual_scorer TEXT,
+    is_correct BOOLEAN,
+    actual_return REAL,
+    FOREIGN KEY (pick_id) REFERENCES picks(id)
+);
+```
+
+---
+
+## 6. Key Features & Workflows
+
+### Admin Workflows
+
+**1. Import Picks from CSV**
+```
+Upload CSV (Home, Visitor, Player, Odds)
+  ↓
+Normalize team names via TEAM_ABBR_MAP
+  ↓
+Match teams to game_id from schedule
+  ↓
+Create users, weeks, picks, store game_id
+  ↓
+Display import summary with toast
+```
+
+**2. Grade Picks Automatically**
+```
+Select Season, Week, Game, Player filters
+  ↓
+Fetch ungraded picks with game_ids
+  ↓
+Load first TD data from PBP via get_first_td_map()
+  ↓
+Fuzzy match pick player vs actual TD scorer
+  ↓
+Display editable table with Match status
+  ↓
+Bulk grade: matches get theoretical_return, misses get -1.00
+  ↓
+Store results in database, display summary
+```
+
+**3. Edit Picks Before Grading**
+```
+Grade Picks table shows:
+  - Player Pick, Game Date, Game (EDITABLE with dropdowns)
+  - Detected First TD, Match status (READ-ONLY, auto-calculated)
+  ↓
+Edit pick data and click "Save & Recalculate"
+  ↓
+System recalculates game_id lookup and name matching
+  ↓
+Updates preview table with new Match/Result
+```
+
+### Public Workflows
+
+**1. View Leaderboard**
+```
+Load leaderboard (members, wins, losses, avg_odds, theo_return, roi_efficiency)
+  ↓
+Sort by ROI or other metrics
+  ↓
+Expand member to see detail stats
+```
+
+**2. Browse Week Picks**
+```
+Select week
+  ↓
+Show all members' picks for that week
+  ↓
+Display Odds, Theo Return, Result, Actual Return  end_date DATE,
     UNIQUE(season, week_number)
 );
 ```
@@ -170,27 +284,35 @@ CREATE TABLE results (
 
 ---
 
-## 6. Code Quality Standards
+## 7. Code Quality & Technical Highlights
 
-### Refactoring Priorities (See TODO.md)
+### Data Accuracy
+- **Game ID Matching**: Home/Visitor teams matched to NFL schedule via TEAM_ABBR_MAP
+- **PBP Integration**: First TDs loaded from official play-by-play data
+- **Fuzzy Matching**: Player names matched with suffix removal and initial comparison
+- **Duplicate Prevention**: Unique constraint on (user_id, week_id, team, player_name)
 
-**CRITICAL**
-- [ ] Fix duplicate `get_team_abbr()` function
+### Performance
+- **Caching**: 5-minute TTL on PBP, roster, schedule data
+- **Efficient Queries**: Indexed lookups, aggregation at database level
+- **Lazy Loading**: Data loaded on demand, not at startup
 
-**HIGH**
-- [ ] Extract `_classify_game_type()` helper
-- [ ] Add consistent type hints
-- [ ] Add TTL to Streamlit caches
+### Reliability
+- **Cascading Deletes**: User/week deletion removes related picks/results
+- **Transaction Safety**: Explicit commits, rollback on error
+- **Error Handling**: Try-catch around external API calls
+- **Schema Migration**: ensure_game_id_column() for safe updates
 
-**MEDIUM**
-- [ ] Improve API error handling
-- [ ] Move hardcoded configs
-- [ ] Add input validation
-- [ ] Fix test file duplicates
+### Code Statistics
+- **1,800+ lines** of new/updated code
+- **95+ functions** across database, data_processor, admin
+- **5 database tables** with foreign keys
+- **12 UI tabs** (6 admin + 6 public)
+- **3 caching strategies** with 5-min TTL
 
 ---
 
-## 7. Deployment
+## 8. Deployment
 
 ### Local Development
 ```bash
@@ -205,22 +327,17 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for Streamlit Cloud setup.
 
 ### Environment Variables
 Required for production:
-- `ODDS_API_KEY` - API key for betting odds data
-- `NFL_API_KEY` (optional) - For future enhanced data sources
+- `odds_api_key` - API key for betting odds data (stored in Streamlit secrets)
 
 ---
 
-## 8. Testing Strategy
+## 9. Testing Strategy
 
 ### Current Tests
-- Basic unit tests in `tests/test_logic.py`
-- Coverage for data processing functions
-
-### Planned Tests (Phase 1+)
-- Database CRUD operations
-- Admin form validation
-- Leaderboard calculations
-- Results processing
+- Integration tests for CSV import with team matching
+- Manual testing of Grade Picks tab with PBP auto-detection
+- Name matching fuzzy logic validation
+- Leaderboard calculations and ROI metrics
 
 ### Running Tests
 ```bash
@@ -229,81 +346,25 @@ python -m pytest tests/
 
 ---
 
-## 9. Contributing Guidelines
+## 10. Next Steps (Phase 2b)
 
-### Getting Started
-1. Clone the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make changes and test locally
-4. Commit with clear messages
-5. Push and create a pull request
-
-### Code Standards
-- Use type hints for all functions
-- Follow PEP 8 style guide
-- Add docstrings to functions
-- Update tests when adding features
-- Update ROADMAP.md and TODO.md as needed
+1. **Database Reset** - Drop existing DB, fresh import with Home/Visitor CSV
+2. **Point System** - Add First TD vs Anytime TD scoring logic
+3. **Code Refactoring** - Extract utils modules (admin_utils, grading_logic, team_resolution)
+4. **Analytics** - ROI trends and matchup analysis
 
 ---
 
-## 10. Known Issues & Limitations
-
-### Current Limitations
-- **Session State**: Streamlit reruns entire script on interaction (acceptable for current scale)
-- **Authentication**: No user login system yet
-- **Real-time Updates**: Leaderboard not live-updating across users
-- **Mobile UI**: Not optimized for mobile devices
-
-### Workarounds
-- Cache frequently-accessed data with TTL
-- Admin manually refreshes to sync updates
-- Use responsive Streamlit components for better mobile support
-
----
-
-## 11. Future Enhancements (Beyond Phase 3)
-
-- Docker containerization for consistent deployment
-- PostgreSQL migration for production scale
-- Automated data pipeline (GitHub Actions)
-- Mobile app (React Native or Flutter)
-- API layer for programmatic access
-- Prediction analytics and ML-based suggestions
-
----
-
-## 12. Support & Contact
+## 11. Support & Contact
 
 For questions or issues:
 - Check [README.md](README.md) for quick start
 - Review [ROADMAP.md](ROADMAP.md) for planned features
 - See [TODO.md](TODO.md) for current work items
-- Open an issue on GitHub
+- See [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) for Phase 1 details
 
 ---
 
-## 13. License
+## 12. License
 
 MIT License - See repository for details.
-
----
-
-## Appendix: Key Metrics & Success Criteria
-
-### Phase 1 Success Criteria
-- ✅ SQLite database initialized and operational
-- ✅ Admin can input 5+ picks per week without errors
-- ✅ Public dashboard displays picks and leaderboard correctly
-- ✅ Results tracking calculates ROI accurately
-- ✅ App deployed to Streamlit Cloud
-
-### Performance Targets
-- Page load time: < 2 seconds
-- Admin form submission: < 1 second
-- Database queries: < 500ms
-
-### User Adoption Goals
-- All friends can navigate dashboard intuitively
-- Admin can manage picks in < 5 minutes per week
-- Minimal bug reports in first month of use
