@@ -6,7 +6,8 @@ import os
 # Add src to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from data_processor import get_touchdowns, get_first_tds, names_match
+from utils.nfl_data import get_touchdowns, get_first_tds
+from utils.name_matching import names_match
 
 class TestNFLData(unittest.TestCase):
     def setUp(self):

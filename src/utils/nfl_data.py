@@ -63,12 +63,12 @@ def process_game_type(df: pd.DataFrame) -> pd.DataFrame:
     try:
         ts = None
         if 'game_datetime' in df.columns:
-            ts = pd.to_datetime(df['game_datetime'], errors='coerce')
+            ts = pd.to_datetime(df['game_datetime'], errors='coerce', utc=True, format='mixed')
         elif 'start_time' in df.columns:
-            # format may vary; rely on pandas inference
-            ts = pd.to_datetime(df['start_time'], errors='coerce')
+            # Normalize strings and allow mixed formats without warnings
+            ts = pd.to_datetime(df['start_time'].astype(str), errors='coerce', utc=True, format='mixed')
         elif 'game_date' in df.columns:
-            ts = pd.to_datetime(df['game_date'], errors='coerce')
+            ts = pd.to_datetime(df['game_date'], errors='coerce', utc=True, format='mixed')
 
         if ts is not None:
             df = df.copy()

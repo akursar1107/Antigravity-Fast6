@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from utils.nfl_data import load_data, get_game_schedule
-from database import init_db, ensure_game_id_column, ensure_any_time_td_column
+from utils import init_db, ensure_game_id_column, ensure_any_time_td_column
 from views.public_dashboard import show_public_dashboard
 from views.admin_page import show_admin_interface
 import config
