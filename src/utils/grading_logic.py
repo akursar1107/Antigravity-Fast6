@@ -125,9 +125,11 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
             # Check first TD
             first_td_match = first_tds[first_tds['game_id'] == game_id]
             is_correct = False
+            actual_first_td_scorer = None  # Track who actually scored the first TD
+            
             if not first_td_match.empty:
-                actual_first_td_player = str(first_td_match.iloc[0]['td_player_name']).strip()
-                is_correct = names_match(player_name, actual_first_td_player)
+                actual_first_td_scorer = str(first_td_match.iloc[0]['td_player_name']).strip()
+                is_correct = names_match(player_name, actual_first_td_scorer)
             
             # Check any time TD - only in the specific game that was picked
             # NOTE: If player scored first TD, they automatically scored an any time TD
@@ -156,10 +158,10 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
             # Calculate actual return
             actual_return = theo_return if is_correct else 0.0
             
-            # Save result
+            # Save result - use the actual first TD scorer, not the picked player
             database.add_result(
                 pick_id=pick_id,
-                actual_scorer=player_name,
+                actual_scorer=actual_first_td_scorer,  # Who actually scored first TD (or None if no TD)
                 is_correct=is_correct,
                 actual_return=actual_return,
                 any_time_td=any_time_td
