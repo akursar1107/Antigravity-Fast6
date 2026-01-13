@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 def names_match(picked_name: str, actual_name: str, threshold: float = 0.75) -> bool:
     """
     Compare two player names with fuzzy matching.
-    Handles variations like "CMC" vs "Christian McCaffrey", "Penix Jr" vs "Michael Penix Jr", etc.
+    Handles variations like "CMC" vs "Christian McCaffrey", "Penix Jr" vs "Michael Penix Jr", 
+    "Puka Nacua" vs "P.Nacua", etc.
     
     Args:
         picked_name: Name as picked by user
@@ -41,10 +42,24 @@ def names_match(picked_name: str, actual_name: str, threshold: float = 0.75) -> 
     p_parts = p.split()
     a_parts = a.split()
     
+    # Extract last name more intelligently (handle "P.Nacua" -> "Nacua")
+    def get_last_name(parts):
+        if not parts:
+            return ""
+        last_part = parts[-1]
+        # If last part contains a period (e.g., "p.nacua"), extract after the period
+        if '.' in last_part:
+            # Split by period and take the last non-empty part
+            period_parts = [part for part in last_part.split('.') if part]
+            return period_parts[-1] if period_parts else last_part
+        return last_part
+    
+    p_last = get_last_name(p_parts)
+    a_last = get_last_name(a_parts)
+    
     # Check if last names match
-    if len(p_parts) > 0 and len(a_parts) > 0:
-        if p_parts[-1] == a_parts[-1]:  # Last names match
-            return True
+    if p_last and a_last and p_last == a_last:
+        return True
     
     # Fuzzy matching using SequenceMatcher
     ratio = difflib.SequenceMatcher(None, p, a).ratio()
