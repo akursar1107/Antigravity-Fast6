@@ -5,6 +5,9 @@ Handles adding, viewing, and removing group members.
 
 import streamlit as st
 import pandas as pd
+import shutil
+from pathlib import Path
+from datetime import datetime
 from utils import get_all_users, add_user, delete_user
 
 
@@ -57,3 +60,66 @@ def show_users_tab() -> None:
                     st.rerun()
         else:
             st.info("No members yet. Add one to get started!")
+    
+    # Database Tools Section
+    st.markdown("---")
+    st.header("🗄️ Database Tools")
+    
+    col_db1, col_db2 = st.columns(2)
+    
+    with col_db1:
+        st.subheader("Archive Database")
+        st.markdown("Create a backup copy of the current database in the archive folder.")
+        
+        if st.button("📦 Archive Database", key="archive_db_btn", type="primary"):
+            try:
+                # Database path
+                db_path = Path(__file__).parent.parent.parent.parent / "data" / "fast6.db"
+                archive_dir = Path(__file__).parent.parent.parent.parent / "archive"
+                
+                # Create archive directory if it doesn't exist
+                archive_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Generate timestamped filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                archive_path = archive_dir / f"fast6_{timestamp}.db.bak"
+                
+                # Copy database to archive
+                shutil.copy2(db_path, archive_path)
+                
+                # Get file size for display
+                file_size = archive_path.stat().st_size / 1024  # KB
+                
+                st.success(f"✅ Database archived successfully!")
+                st.info(f"📁 Saved to: `{archive_path.name}` ({file_size:.1f} KB)")
+                
+            except Exception as e:
+                st.error(f"❌ Failed to archive database: {str(e)}")
+    
+    with col_db2:
+        st.subheader("Archived Backups")
+        try:
+            archive_dir = Path(__file__).parent.parent.parent.parent / "archive"
+            if archive_dir.exists():
+                backups = sorted(
+                    [f for f in archive_dir.glob("fast6_*.db.bak")],
+                    key=lambda x: x.stat().st_mtime,
+                    reverse=True
+                )
+                
+                if backups:
+                    st.markdown(f"**{len(backups)} backup(s) found:**")
+                    for backup in backups[:5]:  # Show last 5
+                        size_kb = backup.stat().st_size / 1024
+                        mtime = datetime.fromtimestamp(backup.stat().st_mtime)
+                        st.text(f"📄 {backup.name} ({size_kb:.1f} KB)")
+                        st.caption(f"   Created: {mtime.strftime('%Y-%m-%d %H:%M:%S')}")
+                    
+                    if len(backups) > 5:
+                        st.caption(f"... and {len(backups) - 5} more")
+                else:
+                    st.info("No backups found yet.")
+            else:
+                st.info("Archive directory not found.")
+        except Exception as e:
+            st.warning(f"Could not read archives: {str(e)}")
