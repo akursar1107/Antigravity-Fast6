@@ -75,7 +75,8 @@ def backfill_team_for_picks(season: int) -> dict:
             SELECT p.id, p.player_name, p.team, u.name as user_name
             FROM picks p
             JOIN users u ON p.user_id = u.id
-            WHERE p.season = ? AND p.team = 'Unknown'
+            JOIN weeks w ON p.week_id = w.id
+            WHERE w.season = ? AND p.team = 'Unknown'
             ORDER BY p.player_name
         """, (season,))
         
@@ -123,22 +124,23 @@ def backfill_team_for_picks(season: int) -> dict:
         
         # Remove duplicate picks (keep first, delete rest)
         cursor.execute("""
-            SELECT id, user_id, week_id, COUNT(*) as count
-            FROM picks
-            WHERE season = ?
-            GROUP BY user_id, week_id, player_name, team
+            SELECT p.id, p.user_id, p.week_id, COUNT(*) as count
+            FROM picks p
+            JOIN weeks w ON p.week_id = w.id
+            WHERE w.season = ?
+            GROUP BY p.user_id, p.week_id, p.player_name, p.team
             HAVING count > 1
         """, (season,))
         
         duplicate_groups = cursor.fetchall()
         for group in duplicate_groups:
+            pick_id, user_id, week_id, count = group
             # Get all picks in this duplicate group and delete the later ones
             cursor.execute("""
-                SELECT id FROM picks
-                WHERE season = ? AND player_name = ?
-                  AND user_id = ? AND week_id = ?
-                ORDER BY created_at DESC
-            """, (season, player_name, group[1], group[2]))
+                SELECT p.id FROM picks p
+                WHERE p.user_id = ? AND p.week_id = ?
+                ORDER BY p.created_at DESC
+            """, (user_id, week_id))
             
             picks_to_delete = cursor.fetchall()[1:]  # Keep first, delete rest
             for dup_pick in picks_to_delete:
