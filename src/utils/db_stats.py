@@ -7,6 +7,7 @@ import sqlite3
 import logging
 import struct
 from typing import Optional, List, Dict
+import config
 
 from .db_connection import get_db_connection
 
@@ -248,7 +249,7 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 3 WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -269,7 +270,7 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 3 WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -302,7 +303,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 3 WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -322,7 +323,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 3 WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,

@@ -164,24 +164,17 @@ src/
   - Provides FEATURES dictionary for feature toggles
   - Tested and verified: all 32 teams load, all scoring values correct, theme colors accessible
 
-#### Phase 2: Refactor Code to Use Config
-- [ ] Update scoring references in database queries
-  - Replace hardcoded `3` (first TD) with `CONFIG["scoring"]["first_td_win"]`
-  - Replace hardcoded `1` (any time) with `CONFIG["scoring"]["any_time_td"]`
-  - Update `utils/grading_logic.py` to use config values
-  - Update `utils/db_stats.py` leaderboard calculations
-- [ ] Update team references
-  - Replace `TEAM_ABBR_MAP` with `CONFIG["teams"]`
-  - Update `utils/team_utils.py` to use config
-  - Update `utils/analytics.py` team lookups
-- [ ] Update season references
-  - Replace hardcoded `SEASONS = [2025, 2024, ...]` with `CONFIG["seasons"]`
-  - Use `CONFIG["app"]["current_season"]` instead of hardcoded values
-  - Update sidebar season selector in `app.py`
-- [ ] Update API configuration
-  - Load API key from `st.secrets.get("odds_api_key", ...)` with config fallback
-  - Move odds API URL and parameters to config
-  - Update `utils/odds_api.py` to read from config
+#### Phase 2: Refactor Code to Use Config ✅
+- [x] Update scoring references in database queries
+  - Replaced hardcoded `3` (first TD) with `config.SCORING_FIRST_TD` in all SQL queries
+  - Replaced hardcoded `1` (any time) with `config.SCORING_ANY_TIME` in all SQL queries
+  - Updated `utils/db_stats.py` (4 locations with CASE statements)
+  - All leaderboard queries now use config values
+  - Scoring values are now configurable without code changes
+- [ ] Update team references (use TEAM_MAP from config)
+- [ ] Update season references (use SEASONS from config)
+- [ ] Update API configuration (use config values)
+- [ ] Test all changes and verify backward compatibility
 
 #### Phase 3: Apply Dynamic UI Theming
 - [ ] Update `app.py` CSS generation to read from config
