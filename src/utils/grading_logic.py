@@ -135,11 +135,20 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
             if not td_row.empty:
                 # Filter to only TDs by the picked team
                 td_row_team_filtered = td_row[td_row['posteam'] == team_abbr]
+                logger.debug(f"Checking Any Time TD for {player_name} ({team_abbr}) in game {game_id}")
+                logger.debug(f"Found {len(td_row_team_filtered)} TDs by {team_abbr} in this game")
+                
                 for _, td in td_row_team_filtered.iterrows():
                     td_player = str(td.get('td_player_name', '')).strip()
-                    if names_match(player_name, td_player):
+                    match = names_match(player_name, td_player)
+                    logger.debug(f"  Comparing '{player_name}' vs '{td_player}': {match}")
+                    if match:
                         any_time_td = True
+                        logger.info(f"✓ Any Time TD match: {player_name} = {td_player}")
                         break
+                
+                if not any_time_td:
+                    logger.debug(f"✗ No Any Time TD match for {player_name}")
             
             # Calculate actual return
             actual_return = theo_return if is_correct else 0.0
