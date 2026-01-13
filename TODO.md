@@ -317,6 +317,153 @@ src/
 5. Verify database backward compatibility
 
 See `REFACTORING.md` and `ROADMAP.md` for additional context.
+
+---
+
+## 🚀 PHASE 5: Advanced Features & Analytics (PLANNED)
+
+### Strategic Opportunities (from nfelo Resource Analysis)
+
+#### 🎯 TOP PRIORITY: Player Performance Tracking ⭐⭐⭐
+- [ ] Create `src/utils/player_stats.py` module
+  - Track first TD scoring rate by player (%, count, games)
+  - Track by position (WR, RB, TE, etc.)
+  - Show player form/trends over season
+  - Identify "hot" players (higher recent TD rate)
+- [ ] Add player stats database table
+  - Fields: player_id, player_name, season, position, td_count, game_count, td_rate
+  - Update after each result is graded
+- [ ] Integrate into pick input UI
+  - Show "Player Form" badge: 🔥 Hot, ✓ Average, ❄️ Cold
+  - Display: "X has scored 3 TDs in last 5 games"
+  - Sort players by recent TD rate in picker
+- [ ] Public dashboard tab: "Player Stats"
+  - Leaderboard of hot players
+  - TD rate by position
+  - Week-by-week trends
+- **Why**: Easy to implement, high user value, enables pick difficulty scoring
+- **Effort**: ~6 hours
+- **Data Source**: Already have from PBP data via nflreadpy
+
+#### ⭐⭐⭐ Team Rating System (ELO)
+- [ ] Create `src/utils/team_ratings.py` module
+  - Implement ELO rating calculation (K=25 for NFL)
+  - Initialize all 32 teams with 1500 rating
+  - Update ratings after each completed game
+  - Store in new `team_ratings` database table
+- [ ] Integrate into team strength display
+  - Show current ELO rating for each team
+  - Display rating trend: 📈 Rising, 📉 Falling, → Stable
+  - Use for matchup difficulty assessment
+- [ ] Enhance game selection UI
+  - Badge: "Strong offense vs weak defense = high TD probability"
+  - Color-code games by difficulty (green easy, red hard)
+  - Quick filter: "Show games vs top 10 defenses"
+- [ ] Power rankings dashboard
+  - Public page: Current team rankings (like nfelo)
+  - Historical charts: How ratings evolved over season
+- **Why**: Powers multiple downstream features, better predictions
+- **Effort**: ~10 hours
+- **Dependencies**: Requires completed game results
+
+#### ⭐⭐⭐ ROI & Profitability Trends (Already in TODO, moving to Phase 5)
+- [ ] Extend `src/utils/db_stats.py`
+  - Calculate cumulative ROI by user over season
+  - Weekly ROI breakdown
+  - Best/worst pick analysis
+- [ ] Add charts to public dashboard
+  - ROI curve by user (line chart)
+  - Win rate trends (bar chart, weekly)
+  - Pick difficulty vs success (scatter: did harder picks pay off?)
+- [ ] Export functionality
+  - CSV export of user stats
+  - Downloadable ROI report
+- **Why**: Critical for user engagement, already have data
+- **Effort**: ~4 hours
+- **Dependencies**: Already have odds and result data
+
+#### Defensive Analysis Module
+- [ ] Create `src/utils/defense_analysis.py`
+  - Track which defenses allow most TDs
+  - TD rate allowed by position (WR vs RB vs TE)
+  - Show in game picker: "Arizona D allows 3.2 WR TDs per game"
+- [ ] Add to analytics tab
+  - "Worst defenses" ranking
+  - Position-specific weaknesses
+  - Trend: Is defense improving/declining?
+- **Why**: Helps user make better picks
+- **Effort**: ~5 hours
+- **Dependencies**: Historical PBP data
+
+#### Spread Projection Engine
+- [ ] Create `src/utils/spread_projections.py`
+  - Use team ELO ratings to project game spread
+  - Compare vs actual Vegas spread
+  - Identify mispriced games ("Vegas thinks ARI +5, we think +8")
+- [ ] Display in game picker
+  - "Vegas says: LAR -7.5"
+  - "Model says: LAR -6.5 (favors the underdog slightly)"
+  - Badge: "Value pick" if you're picking underdog in underrated game
+- **Why**: Better pick difficulty scoring
+- **Effort**: ~4 hours
+- **Dependencies**: ELO system
+
+#### Advanced Configuration (Extend Phase 3)
+- [ ] Add to `src/config.json`
+  - ELO parameters: k_factor (25), reversion_rate (0.3), initial_rating (1500)
+  - Team-specific adjustments: home field advantage, dome vs outdoor
+  - Scoring weights: First TD base (3) vs position (WR+0.1, TE+0.05)
+  - Difficulty multipliers: Pick vs top-5 defense = worth more?
+- [ ] Create `CONFIG_GUIDE.md` (from Phase 4)
+  - Detailed explanation of each config value
+  - How to tune for your league
+  - Examples: "Aggressive risk" vs "Conservative" profiles
+
+---
+
+### Implementation Roadmap - Phase 5
+
+**Week 1 (Player Stats + ROI Trends)**:
+- [ ] Build player_stats.py and db table
+- [ ] Add ROI charting to dashboard
+- [ ] Test with existing data
+- **Effort**: ~10 hours | **Impact**: ⭐⭐⭐
+
+**Week 2 (Team Ratings + Defense Analysis)**:
+- [ ] Implement ELO system
+- [ ] Build defense_analysis.py
+- [ ] Add power rankings dashboard
+- **Effort**: ~15 hours | **Impact**: ⭐⭐⭐
+
+**Week 3 (Polish + Spread Projections)**:
+- [ ] Implement spread_projections.py
+- [ ] Integrate with game picker UI
+- [ ] Create advanced config guide
+- [ ] Comprehensive testing
+- **Effort**: ~10 hours | **Impact**: ⭐⭐
+
+---
+
+### Deferred Features (Phase 6+)
+
+#### Medium Impact (Nice to have)
+- [ ] QB-adjusted ratings (separate QB from team strength)
+- [ ] Historical visualization (ELO evolution, trend charts)
+- [ ] Model optimization framework (auto-tune scoring weights)
+- [ ] Export reports (user stats, pick analysis)
+
+#### Lower Priority (Future consideration)
+- [ ] Futures market (multi-week picks)
+- [ ] Props analysis beyond first TD
+- [ ] Machine learning model for pick prediction
+- [ ] Community features (consensus picks, sharp vs public)
+- [ ] API for third-party integrations
+- [ ] Discord bot notifications
+- [ ] Email alerts for injuries/breaking news
+
+---
+
+See `REFACTORING.md` and `ROADMAP.md` for additional context.
  features
 ✅ **No Breaking Changes**: Backward compatibility maintained via `utils/__init__.py`
 
