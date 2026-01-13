@@ -6,6 +6,7 @@ import streamlit as st
 import tempfile
 import os
 from utils.csv_import import ingest_picks_from_csv
+from views.admin.csv_import_clean import show_clean_csv_import
 
 
 def show_import_csv_tab(season: int) -> None:
@@ -31,6 +32,26 @@ def show_import_csv_tab(season: int) -> None:
     - game_id: Optional unique game identifier
     """
     st.header("📥 Import Picks from CSV")
+    
+    # Choose import method
+    import_method = st.radio(
+        "Select Import Method",
+        options=["🆕 Clean Import (Recommended)", "📦 Legacy Import"],
+        index=0,
+        help="Clean Import: Validates teams using rosters, prevents dirty data. Legacy Import: Direct import from old format."
+    )
+    
+    if import_method == "🆕 Clean Import (Recommended)":
+        show_clean_csv_import(season)
+    else:
+        show_legacy_import(season)
+
+
+def show_legacy_import(season: int) -> None:
+    """
+    Legacy CSV import method (original implementation).
+    Kept for backward compatibility with old CSV format.
+    """
     st.markdown("Upload a CSV in the same format as 'First TD - 2025.csv'. Only regular-season weeks (1–18) are imported.")
 
     # Season selection for mapping
