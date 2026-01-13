@@ -109,7 +109,14 @@ def validate_week(week_value) -> Optional[int]:
 
 
 def validate_team(team: str) -> Optional[str]:
-    """Validate and normalize team abbreviation."""
+    """Validate and normalize team abbreviation.
+    
+    Handles:
+    - Abbreviations: "DET", "SF", "KC"
+    - Full names: "Detroit Lions", "San Francisco 49ers"
+    - Partial names: "Detroit", "San Francisco"
+    - Fuzzy matches: "San Fran" (for San Francisco), "Detriot" (typo)
+    """
     if not team:
         return None
     
@@ -119,12 +126,28 @@ def validate_team(team: str) -> Optional[str]:
     if team in VALID_TEAMS:
         return team
     
-    # Try to find it in the full name mapping
+    # Try exact matching on full names first
     for full_name, abbr in config.TEAM_ABBR_MAP.items():
         if team.lower() == full_name.lower():
             return abbr
     
-    return None
+    # Try fuzzy matching for partial/abbreviated team names
+    from difflib import SequenceMatcher
+    best_match = None
+    best_score = 0.70  # Minimum threshold for fuzzy match
+    
+    for full_name, abbr in config.TEAM_ABBR_MAP.items():
+        score = SequenceMatcher(None, team.lower(), full_name.lower()).ratio()
+        
+        # Prefer matches that start with the same letters
+        if team.lower() in full_name.lower() or full_name.lower().startswith(team.lower()):
+            score += 0.15  # Boost score for substring match
+        
+        if score > best_score:
+            best_score = score
+            best_match = abbr
+    
+    return best_match
 
 
 def parse_odds(odds_value) -> float:
