@@ -196,6 +196,7 @@ def find_game_id(season: int, week: int, visitor: str, home: str, schedule_df: p
 def find_player_team(player_name: str, season: int, rosters_df: pd.DataFrame) -> Optional[str]:
     """
     Find which team a player belongs to by searching rosters.
+    Uses fuzzy matching and returns the BEST match (highest similarity score).
     
     Args:
         player_name: Player's name
@@ -208,14 +209,34 @@ def find_player_team(player_name: str, season: int, rosters_df: pd.DataFrame) ->
     if not player_name or rosters_df.empty:
         return None
     
-    # Search roster DataFrame
+    from difflib import SequenceMatcher
+    
+    best_match_team = None
+    best_match_name = None
+    best_score = 0.0  # Will track highest score among matches
+    
+    # Search roster DataFrame and find BEST match
     for _, player_row in rosters_df.iterrows():
         roster_name = player_row.get('full_name', '')
-        if roster_name and names_match(player_name, roster_name):
-            # Return team abbreviation
-            return player_row.get('team', None)
+        if not roster_name:
+            continue
+        
+        # Use the same name matching logic from name_matching.py
+        # This handles last names, abbreviations, etc.
+        if names_match(player_name, roster_name, threshold=0.70):
+            # Calculate score to find the BEST match among all matches
+            score = SequenceMatcher(None, player_name.lower(), roster_name.lower()).ratio()
+            
+            if score > best_score:
+                best_score = score
+                best_match_team = player_row.get('team', None)
+                best_match_name = roster_name
     
-    return None
+    # Log the best match found for debugging
+    if best_match_team:
+        logger.debug(f"Matched '{player_name}' → '{best_match_name}' ({best_match_team}) [score: {best_score:.3f}]")
+    
+    return best_match_team
 
 
 def import_picks_from_csv(
