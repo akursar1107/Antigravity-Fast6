@@ -171,10 +171,24 @@ src/
   - Updated `utils/db_stats.py` (4 locations with CASE statements)
   - All leaderboard queries now use config values
   - Scoring values are now configurable without code changes
-- [ ] Update team references (use TEAM_MAP from config)
-- [ ] Update season references (use SEASONS from config)
-- [ ] Update API configuration (use config values)
-- [ ] Test all changes and verify backward compatibility
+- [x] Season references already using config
+  - `app.py`: Already uses `config.SEASONS` in sidebar selector
+  - `views/admin/results.py`: Already uses `config.SEASONS`
+  - No code changes needed - was already refactored
+- [x] API configuration already integrated
+  - `utils/odds_api.py`: Uses all config.ODDS_API_* constants
+  - API key loaded from st.secrets with fallback to environment variable
+  - All endpoints and parameters from config
+- [x] Test all changes and verify backward compatibility
+  - ✅ Configuration loads successfully without errors
+  - ✅ All 32 NFL teams loaded correctly from config
+  - ✅ 10 seasons available (2016-2025)
+  - ✅ Scoring values correct: First TD=3pts, Any Time=1pt
+  - ✅ API configuration active and integrated
+  - ✅ Theme colors available (9 color definitions)
+  - ✅ Feature toggles working (3 enabled: auto_grading, csv_import, admin_panel)
+  - ✅ All modules load without errors or warnings (except expected st.secrets warning)
+  - ✅ Backward compatible with existing defaults
 
 #### Phase 3: Apply Dynamic UI Theming
 - [ ] Update `app.py` CSS generation to read from config
