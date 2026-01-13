@@ -243,7 +243,8 @@ def import_picks_from_csv(
     csv_path: str,
     season: int,
     dry_run: bool = False,
-    auto_create_users: bool = True
+    auto_create_users: bool = True,
+    corrections: Dict = None
 ) -> ImportResult:
     """
     Import picks from CSV with comprehensive validation.
@@ -256,14 +257,18 @@ def import_picks_from_csv(
         season: NFL season year
         dry_run: If True, validate only without inserting
         auto_create_users: If True, create users that don't exist
+        corrections: Dict of {row_num: {'player': name, 'team': abbr}} for corrected picks
         
     Returns:
         ImportResult with statistics and error details
     """
     result = ImportResult()
+    corrections = corrections or {}
     
     logger.info(f"Starting CSV import for season {season}")
     logger.info(f"Dry run: {dry_run}")
+    if corrections:
+        logger.info(f"Applying {len(corrections)} corrections")
     
     # Load CSV
     try:
@@ -343,13 +348,20 @@ def import_picks_from_csv(
                 result.add_warning(row_num, 'Player Team', f"Player '{player_name}' not found in rosters, will set to Unknown")
                 player_team = 'Unknown'
             
+            # Check if this row has a correction
+            if row_num in corrections:
+                correction = corrections[row_num]
+                player_name = correction['player']
+                player_team = correction['team']
+                logger.info(f"Applied correction for Row {row_num}: {player_name} ({player_team})")
+            
             # Validate player's team is in the game
             if player_team != 'Unknown' and player_team not in [visitor, home]:
                 result.add_error(
                     row_num, 
                     'Team Validation',
                     f"{player_name} plays for {player_team}, but game is {visitor} @ {home}",
-                    row_data={'player': player_name, 'team': player_team, 'game': f"{visitor} @ {home}"}
+                    row_data={'player': player_name, 'team': player_team, 'game': f"{visitor} @ {home}", 'game_id': game_id}
                 )
                 continue
             
