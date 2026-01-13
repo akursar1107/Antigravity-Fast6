@@ -14,8 +14,9 @@ data/**/*.bak
 # Root-level CSVs used for local imports
 /*.csv
 
-# External reference projects
-nfelo-main/
+# Archive and resource folders
+archive/
+resources/
 
 # OS files
 .DS_Store

@@ -190,24 +190,51 @@ src/
   - ✅ All modules load without errors or warnings (except expected st.secrets warning)
   - ✅ Backward compatible with existing defaults
 
-#### Phase 3: Apply Dynamic UI Theming
-- [ ] Update `app.py` CSS generation to read from config
-  - Dynamically build gradients from `CONFIG["ui_theme"]["primary_color"]` and `secondary_color"`
-  - Read font family from config
-  - Apply border radius config to all components
-- [ ] Create helper function for building CSS from config
-  - `def generate_theme_css(theme_config) -> str:`
-  - Allows easy theme switching without code changes
+#### Phase 3: Apply Dynamic UI Theming ✅
+- [x] Created `src/utils/theming.py` (260 lines)
+  - New `generate_theme_css(theme_dict)` function that accepts THEME dict
+  - Returns fully parameterized CSS with all colors/fonts/spacing from config
+  - Generates modern CSS: gradients, glass-morphism, animations, responsive design
+  - Modular helper for easy theme switching
+- [x] Updated `app.py` CSS generation
+  - Added theming import: `from utils.theming import generate_theme_css`
+  - Replaced 330+ lines of hardcoded CSS with dynamic generation
+  - Now calls: `theme_css = generate_theme_css(config.THEME)`
+  - All colors sourced from config.json: primary (#667eea), secondary (#764ba2), etc.
+  - Theme changes now via JSON edits only (no code modifications needed)
+- [x] Fixed `utils/db_stats.py` f-strings
+  - Added f-string prefix to 4 SQL queries using config scoring values
+  - Functions now properly interpolate SCORING_FIRST_TD and SCORING_ANY_TIME
+  - Affected: `get_leaderboard()`, `get_user_stats()` (weekly & cumulative)
+- [x] Testing & Validation
+  - ✅ Theming module loads successfully
+  - ✅ CSS generation works with config values
+  - ✅ CSS contains all theme colors and fonts
+  - ✅ CSS contains gradient backgrounds
+  - ✅ Dynamic theming module verified
+  - ✅ All 8 tests passed
 
-#### Phase 4: Documentation & Testing
-- [ ] Create `CONFIG_GUIDE.md` explaining all configuration options
-- [ ] Add example `config.json.example` for new users
-- [ ] Test configuration loading on startup
-  - Verify JSON parses correctly
-  - Verify all required keys present
-  - Test `st.secrets` override behavior
-- [ ] Verify all teams/seasons/scoring use config values
-- [ ] Add unit tests for config loading
+#### Phase 4: Documentation & Testing (In Progress)
+- [ ] Create `CONFIG_GUIDE.md` with detailed configuration documentation
+  - All config.json sections explained with examples
+  - How to change themes, seasons, scoring, API keys
+  - Environment variable overrides
+  - st.secrets integration
+- [ ] Create `THEMING_GUIDE.md` with theming system documentation
+  - How the theming system works
+  - Adding new themes (just edit config.json)
+  - Custom color palettes
+  - CSS generation details
+- [ ] Create `config.json.example` template for new users
+- [ ] Add unit tests for configuration system
+  - Test JSON loading
+  - Test scoring value interpolation in SQL
+  - Test CSS generation with various themes
+  - Test environment variable and st.secrets overrides
+- [ ] Integration testing
+  - Test app startup with dynamic theming
+  - Test theme color application
+  - Verify all components styled correctly
 
 #### Benefits After Completion
 ✅ **No API Key in Code**: Secrets managed via `st.secrets` or environment  
