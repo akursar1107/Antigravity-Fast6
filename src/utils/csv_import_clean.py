@@ -117,7 +117,8 @@ def validate_team(team: str) -> Optional[str]:
     - Partial names: "Detroit", "San Francisco"
     - Fuzzy matches: "San Fran" (for San Francisco), "Detriot" (typo)
     """
-    if not team:
+    # Handle NaN or non-string values
+    if pd.isna(team) or not team:
         return None
     
     team = str(team).strip().upper()
@@ -229,7 +230,22 @@ def find_player_team(player_name: str, season: int, rosters_df: pd.DataFrame) ->
     Returns:
         Team abbreviation or None if not found
     """
-    if not player_name or rosters_df.empty:
+    # Handle NaN or non-string values
+    try:
+        if pd.isna(player_name):
+            return None
+    except (TypeError, ValueError):
+        # pd.isna can raise on some types, that's fine
+        pass
+    
+    if not player_name:
+        return None
+    
+    player_name = str(player_name).strip()
+    if not player_name:
+        return None
+    
+    if rosters_df.empty:
         return None
     
     from difflib import SequenceMatcher

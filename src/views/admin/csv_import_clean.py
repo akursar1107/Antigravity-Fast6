@@ -70,6 +70,13 @@ def validate_csv_data(df: pd.DataFrame, season: int):
         visitor = validate_team(row['Visitor'])
         home = validate_team(row['Home'])
         
+        # Check for empty player name
+        player_name = str(row.get('Player', '')).strip() if pd.notna(row.get('Player')) else ''
+        if not player_name:
+            df.at[idx, 'has_error'] = True
+            df.at[idx, 'error_message'] = "Player name is empty"
+            continue
+        
         if not (week and visitor and home):
             df.at[idx, 'has_error'] = True
             if not week:
