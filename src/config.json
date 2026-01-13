@@ -1,0 +1,223 @@
+{
+  "app": {
+    "name": "Fast6",
+    "version": "1.0.0",
+    "current_season": 2025,
+    "database_path": "data/fast6.db",
+    "description": "NFL First TD Prediction Pool"
+  },
+
+  "seasons": [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016],
+
+  "scoring": {
+    "first_td_win": 3,
+    "any_time_td": 1,
+    "name_match_threshold": 0.75,
+    "auto_grade_enabled": true
+  },
+
+  "teams": {
+    "ARI": {
+      "full_name": "Arizona Cardinals",
+      "division": "NFC West",
+      "conference": "NFC"
+    },
+    "ATL": {
+      "full_name": "Atlanta Falcons",
+      "division": "NFC South",
+      "conference": "NFC"
+    },
+    "BAL": {
+      "full_name": "Baltimore Ravens",
+      "division": "AFC North",
+      "conference": "AFC"
+    },
+    "BUF": {
+      "full_name": "Buffalo Bills",
+      "division": "AFC East",
+      "conference": "AFC"
+    },
+    "CAR": {
+      "full_name": "Carolina Panthers",
+      "division": "NFC South",
+      "conference": "NFC"
+    },
+    "CHI": {
+      "full_name": "Chicago Bears",
+      "division": "NFC North",
+      "conference": "NFC"
+    },
+    "CIN": {
+      "full_name": "Cincinnati Bengals",
+      "division": "AFC North",
+      "conference": "AFC"
+    },
+    "CLE": {
+      "full_name": "Cleveland Browns",
+      "division": "AFC North",
+      "conference": "AFC"
+    },
+    "DAL": {
+      "full_name": "Dallas Cowboys",
+      "division": "NFC East",
+      "conference": "NFC"
+    },
+    "DEN": {
+      "full_name": "Denver Broncos",
+      "division": "AFC West",
+      "conference": "AFC"
+    },
+    "DET": {
+      "full_name": "Detroit Lions",
+      "division": "NFC North",
+      "conference": "NFC"
+    },
+    "GB": {
+      "full_name": "Green Bay Packers",
+      "division": "NFC North",
+      "conference": "NFC"
+    },
+    "HOU": {
+      "full_name": "Houston Texans",
+      "division": "AFC South",
+      "conference": "AFC"
+    },
+    "IND": {
+      "full_name": "Indianapolis Colts",
+      "division": "AFC South",
+      "conference": "AFC"
+    },
+    "JAX": {
+      "full_name": "Jacksonville Jaguars",
+      "division": "AFC South",
+      "conference": "AFC"
+    },
+    "KC": {
+      "full_name": "Kansas City Chiefs",
+      "division": "AFC West",
+      "conference": "AFC"
+    },
+    "LV": {
+      "full_name": "Las Vegas Raiders",
+      "division": "AFC West",
+      "conference": "AFC"
+    },
+    "LAC": {
+      "full_name": "Los Angeles Chargers",
+      "division": "AFC West",
+      "conference": "AFC"
+    },
+    "LA": {
+      "full_name": "Los Angeles Rams",
+      "division": "NFC West",
+      "conference": "NFC"
+    },
+    "MIA": {
+      "full_name": "Miami Dolphins",
+      "division": "AFC East",
+      "conference": "AFC"
+    },
+    "MIN": {
+      "full_name": "Minnesota Vikings",
+      "division": "NFC North",
+      "conference": "NFC"
+    },
+    "NE": {
+      "full_name": "New England Patriots",
+      "division": "AFC East",
+      "conference": "AFC"
+    },
+    "NO": {
+      "full_name": "New Orleans Saints",
+      "division": "NFC South",
+      "conference": "NFC"
+    },
+    "NYG": {
+      "full_name": "New York Giants",
+      "division": "NFC East",
+      "conference": "NFC"
+    },
+    "NYJ": {
+      "full_name": "New York Jets",
+      "division": "AFC East",
+      "conference": "AFC"
+    },
+    "PHI": {
+      "full_name": "Philadelphia Eagles",
+      "division": "NFC East",
+      "conference": "NFC"
+    },
+    "PIT": {
+      "full_name": "Pittsburgh Steelers",
+      "division": "AFC North",
+      "conference": "AFC"
+    },
+    "SF": {
+      "full_name": "San Francisco 49ers",
+      "division": "NFC West",
+      "conference": "NFC"
+    },
+    "SEA": {
+      "full_name": "Seattle Seahawks",
+      "division": "NFC West",
+      "conference": "NFC"
+    },
+    "TB": {
+      "full_name": "Tampa Bay Buccaneers",
+      "division": "NFC South",
+      "conference": "NFC"
+    },
+    "TEN": {
+      "full_name": "Tennessee Titans",
+      "division": "AFC South",
+      "conference": "AFC"
+    },
+    "WAS": {
+      "full_name": "Washington Commanders",
+      "division": "NFC East",
+      "conference": "NFC"
+    }
+  },
+
+  "api": {
+    "odds_api": {
+      "key_env_var": "ODDS_API_KEY",
+      "base_url": "https://api.the-odds-api.com/v4",
+      "sport": "americanfootball_nfl",
+      "market": "player_anytime_td",
+      "regions": "us",
+      "format": "american",
+      "cache_ttl": 3600
+    }
+  },
+
+  "ui_theme": {
+    "primary_color": "#667eea",
+    "secondary_color": "#764ba2",
+    "accent_color": "#f093fb",
+    "success_color": "#48bb78",
+    "error_color": "#f56565",
+    "warning_color": "#ed8936",
+    "info_color": "#4299e1",
+    "font_family": "Inter, sans-serif",
+    "border_radius": "20px"
+  },
+
+  "positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE",
+    "FB",
+    "K",
+    "D/ST"
+  ],
+
+  "features": {
+    "auto_grading": true,
+    "csv_import": true,
+    "admin_panel": true,
+    "multi_group_support": false,
+    "user_self_management": false
+  }
+}

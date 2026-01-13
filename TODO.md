@@ -144,22 +144,25 @@ src/
 
 **Objective**: Centralize all configuration (teams, seasons, scoring, API keys, UI theme) into a single JSON file for better maintainability and flexibility.
 
-#### Phase 1: Create Configuration Infrastructure
-- [ ] Create `src/config.json` with full Fast6 configuration
+#### Phase 1: Create Configuration Infrastructure ✅
+- [x] Create `src/config.json` with full Fast6 configuration
   - `app`: name, version, current_season, database_path
-  - `seasons`: list of available seasons
-  - `scoring`: first_td points, any_time_td points, name match threshold
+  - `seasons`: list of available seasons [2025, 2024, ...2020]
+  - `scoring`: first_td_win (3), any_time_td (1), name_match_threshold, auto_grade_enabled
   - `teams`: all 32 NFL teams with full names, divisions, conferences
-  - `api`: odds API configuration with key management
+  - `api`: odds API configuration with key_env_var pointing to environment variable
   - `ui_theme`: colors, fonts, border radius for Streamlit styling
   - `positions`: valid player positions
   - `features`: toggles for auto_grading, csv_import, admin_panel, etc.
-- [ ] Update `src/config.py` to load JSON configuration
-  - Load from `src/config.json` on startup
-  - Expose all config values as module constants
-  - Support `st.secrets` override for API keys (e.g., `odds_api_key`)
-  - Fallback to config.json if secrets not available
-  - Add helper functions for team lookups
+- [x] Update `src/config.py` to load JSON configuration
+  - Loads from `src/config.json` on startup
+  - Exposes all config values as module constants
+  - Supports `st.secrets` override for API keys (with graceful fallback)
+  - Supports environment variable override (ODDS_API_KEY)
+  - Builds TEAM_MAP and TEAM_ABBR_MAP from JSON
+  - Provides THEME dictionary for UI colors
+  - Provides FEATURES dictionary for feature toggles
+  - Tested and verified: all 32 teams load, all scoring values correct, theme colors accessible
 
 #### Phase 2: Refactor Code to Use Config
 - [ ] Update scoring references in database queries
