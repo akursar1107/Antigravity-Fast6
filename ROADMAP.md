@@ -89,39 +89,127 @@ A **shared group prediction tool** for managing NFL first-touchdown picks among 
     - [ ] Update admin interface to support both types
 *   **Priority**: HIGH (core feature)
 
-### 2.6 Codebase Refactoring (NEXT)
-*   **Status**: PLANNED
-*   **Tasks**:
-    - [ ] Extract admin utilities → `admin_utils.py`
-    - [ ] Extract grading logic → `grading_logic.py`
-    - [ ] Extract team resolution → `team_resolution.py`
-    - [ ] Consolidate helper functions
-    - [ ] Remove duplicate code
-    - [ ] Improve code organization
-*   **Priority**: MEDIUM (maintainability)
+---
+
+## ✅ Phase 3: JSON Configuration & Dynamic Theming (COMPLETE)
+
+### 3.1 JSON Configuration Infrastructure ✅
+*   **Status**: COMPLETE
+*   **Implementation**: `src/config.json` with full Fast6 configuration
+*   **Features**:
+    - App metadata (name, version, database path)
+    - Seasons list (2016-2025)
+    - Scoring configuration (3pts first TD, 1pt any time, threshold)
+    - All 32 NFL teams with divisions/conferences
+    - API configuration (Odds API endpoints, key management)
+    - UI theme (9 color definitions, fonts, border radius)
+    - Positions list and feature toggles
+*   **Benefits**:
+    - Single source of truth for all configuration
+    - No API keys in code (uses st.secrets)
+    - Easy environment-based customization
+*   **Priority**: CRITICAL (foundation for dynamic system)
+
+### 3.2 Code Refactoring to Use Config ✅
+*   **Status**: COMPLETE
+*   **Updates**:
+    - Scoring values: Replaced all hardcoded `3` and `1` with config references
+    - Seasons: Already using `config.SEASONS`
+    - API: Already using `config.ODDS_API_*` constants
+    - Teams: Using generated TEAM_MAP and TEAM_ABBR_MAP from config
+    - Features: Using feature toggles from config
+*   **Result**: All configuration now centralized and configurable without code changes
+*   **Priority**: HIGH (enables dynamic system)
+
+### 3.3 Dynamic UI Theming ✅
+*   **Status**: COMPLETE
+*   **Implementation**: `src/utils/theming.py` with `generate_theme_css()` function
+*   **Features**:
+    - Dynamic CSS generation from configuration
+    - Gradient backgrounds (primary + secondary colors)
+    - Glass-morphism effects
+    - Smooth animations and transitions
+    - Google Fonts integration (Inter, Roboto Mono)
+    - Responsive design for all components
+    - Theme customization via JSON (no code edits needed)
+*   **Benefits**:
+    - Theme changes via JSON only
+    - All colors parameterized from config
+    - Easy to add new themes
+    - Consistent styling across app
+*   **Priority**: HIGH (user experience)
+
+### 3.4 Code Modularization ✅
+*   **Status**: COMPLETE
+*   **Achievement**: 34 Python modules organized into logical packages
+*   **Structure**:
+    - `src/utils/` - 14 utility modules (database, API, grading, analytics, etc.)
+    - `src/views/admin/` - 6 admin interface tabs
+    - `src/views/tabs/` - 6 public dashboard tabs
+    - Main routers reduced from 1,000+ lines to 74 lines each
+*   **Result**: Highly maintainable, testable codebase
+*   **Priority**: HIGH (maintainability)
 
 ---
 
-## 📋 Phase 3: Analytics & Self-Service (PLANNED)
+## 📋 Phase 4: Documentation & Testing (IN PROGRESS)
 
-### 3.1 ROI & Profitability Tracking
+### 4.1 Configuration Documentation
+*   **Status**: PLANNED
+*   **Deliverable**: `CONFIG_GUIDE.md`
+*   **Content**:
+    - Complete `config.json` reference
+    - How to change themes, scoring, seasons
+    - Environment variable and st.secrets management
+    - Adding new teams/seasons
+
+### 4.2 Theming System Documentation
+*   **Status**: PLANNED
+*   **Deliverable**: `THEMING_GUIDE.md`
+*   **Content**:
+    - How theming system works
+    - Adding new themes
+    - Custom color palettes
+    - CSS generation details
+
+### 4.3 Unit Testing
+*   **Status**: PLANNED
+*   **Tests to Add**:
+    - Config loading and validation
+    - Scoring interpolation in SQL
+    - CSS generation with various themes
+    - Environment variable overrides
+    - st.secrets integration
+
+### 4.4 Integration Testing
+*   **Status**: PLANNED
+*   **Tests to Add**:
+    - App startup with dynamic theming
+    - Theme color application
+    - All components styled correctly
+
+---
+
+## 🎯 Phase 5: Advanced Analytics & Features (PLANNED)
+
+### 5.1 ROI & Profitability Tracking
 *   **Goal**: Show each person's profit/loss over time with trends
 *   **Implementation**: Calculate returns by week, season, pick type
 *   **Display**: Trend charts on leaderboard and member detail pages
 *   **Priority**: MEDIUM
 
-### 3.2 Defensive Matchup Analysis (Optional)
+### 5.2 Defensive Matchup Analysis (Optional)
 *   **Goal**: Provide context for picks with historical data
 *   **Implementation**: Query historical data to suggest better picks
 *   **Display**: Tips on admin pick input page
 *   **Priority**: MEDIUM
 
-### 3.3 Light User Accounts (Optional)
+### 5.3 Light User Accounts (Optional)
 *   **Constraint**: Only add if friends actually want to submit picks themselves
 *   **Implementation**: Simple name selector stored in DB
 *   **Priority**: LOW
 
-### 3.4 Multi-Group Support
+### 5.4 Multi-Group Support
 *   **Goal**: Support multiple friend groups with separate leaderboards
 *   **Implementation**: Add `group_id` to schema; switch context in Streamlit
 *   **Priority**: LOW
