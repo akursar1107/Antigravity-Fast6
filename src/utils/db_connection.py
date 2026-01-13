@@ -6,8 +6,9 @@ Handles SQLite connection pooling, schema setup, and migrations.
 import sqlite3
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Generator
 from datetime import datetime
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,30 @@ def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
+
+
+@contextmanager
+def get_db_context() -> Generator[sqlite3.Connection, None, None]:
+    """
+    Context manager for database connections.
+    Automatically handles connection cleanup and commits.
+    
+    Usage:
+        with get_db_context() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users")
+            # Connection is automatically committed and closed
+    """
+    conn = get_db_connection()
+    try:
+        yield conn
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Database error: {e}")
+        raise
+    finally:
+        conn.close()
 
 
 def init_db() -> None:
@@ -83,8 +108,17 @@ def init_db() -> None:
             )
         """)
         
+        # Create indexes for frequently queried columns
+        # This dramatically improves query performance on larger datasets
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_picks_user_week ON picks(user_id, week_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_picks_season ON picks(season)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_pick_id ON results(pick_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_correct ON results(is_correct)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_weeks_season ON weeks(season)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_weeks_season_week ON weeks(season, week)")
+        
         conn.commit()
-        logger.info("Database initialized successfully")
+        logger.info("Database initialized successfully with indexes")
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
         raise

@@ -12,7 +12,28 @@ from utils.name_matching import names_match
 
 
 def show_grading_tab(season: int, schedule: pd.DataFrame) -> None:
-    """Display the grading interface for ungraded picks."""
+    """
+    Display the grading tab for auto-grading picks against results.
+    
+    Args:
+        season: Current NFL season year
+        schedule: NFL schedule DataFrame with game information
+    
+    Provides functionality to:
+    - Auto-grade ungraded picks using play-by-play data
+    - Review and manually edit gradings
+    - Handle unknown teams by looking up player rosters
+    - Clear grading for re-processing
+    - Preview grade changes before saving
+    
+    Grading determines:
+    - is_correct: Did player score the FIRST TD of the game?
+    - any_time_td: Did player score ANY TD in the game?
+    - actual_return: Point value based on pick odds
+    
+    Picks with team='Unknown' are highlighted and can be auto-fixed
+    by looking up the player in the NFL roster.
+    """
     st.header("🎯 Grade Ungraded Picks")
     st.markdown("Automatically grade picks based on actual first TD scorers from play-by-play data.")
     
@@ -200,21 +221,20 @@ def _show_unknown_teams_fix(ungraded, grade_season):
     unknown_teams = [p for p in ungraded if p.get('team') == 'Unknown']
     if unknown_teams:
         st.warning(f"⚠️ {len(unknown_teams)} pick(s) have team='Unknown' and cannot be graded.")
-        # TODO: Implement backfill_team_for_picks function to fix Unknown teams
-        # if st.button("🔧 Auto-Fix Unknown Teams", type="secondary"):
-        #     with st.spinner("Looking up player teams from roster..."):
-        #         from utils.team_utils import backfill_team_for_picks
-        #         result = backfill_team_for_picks(grade_season)
-        #         if 'error' in result:
-        #             st.error(result['error'])
-        #         else:
-        #             msg = f"Updated {result['updated']} pick(s)"
-        #             if result['duplicates'] > 0:
-        #                 msg += f", removed {result['duplicates']} duplicate(s)"
-        #             if result['failed'] > 0:
-        #                 msg += f", {result['failed']} failed to resolve"
-        #             st.success(msg)
-        #             st.rerun()
+        if st.button("🔧 Auto-Fix Unknown Teams", type="secondary"):
+            with st.spinner("Looking up player teams from roster..."):
+                from utils.team_utils import backfill_team_for_picks
+                result = backfill_team_for_picks(grade_season)
+                if 'error' in result:
+                    st.error(result['error'])
+                else:
+                    msg = f"Updated {result['updated']} pick(s)"
+                    if result['duplicates'] > 0:
+                        msg += f", removed {result['duplicates']} duplicate(s)"
+                    if result['failed'] > 0:
+                        msg += f", {result['failed']} failed to resolve"
+                    st.success(msg)
+                    st.rerun()
 
 
 def _load_first_td_map(grade_season, grade_week):

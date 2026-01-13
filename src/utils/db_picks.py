@@ -5,31 +5,12 @@ Handles user predictions, picks retrieval, deletion, and deduplication.
 
 import sqlite3
 import logging
-import struct
 from typing import Optional, List, Dict, Tuple
 
 from .db_connection import get_db_connection
+from .type_utils import safe_int as _safe_int
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_int(value) -> int:
-    """Safely convert any value to int, handling bytes."""
-    if value is None:
-        return 0
-    if isinstance(value, bytes):
-        # Try to unpack as little-endian integer
-        try:
-            return struct.unpack('<i', value[:4])[0] if len(value) >= 4 else 0
-        except (struct.error, TypeError):
-            try:
-                return int(value.decode('utf-8', errors='ignore'))
-            except (ValueError, AttributeError):
-                return 0
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return 0
 
 
 def add_pick(user_id: int, week_id: int, team: str, player_name: str,

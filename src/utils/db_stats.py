@@ -5,32 +5,37 @@ Handles result management, leaderboards, and user statistics tracking.
 
 import sqlite3
 import logging
-import struct
 from typing import Optional, List, Dict
 import config
 
+try:
+    import streamlit as st
+    HAS_STREAMLIT = True
+except ImportError:
+    HAS_STREAMLIT = False
+
 from .db_connection import get_db_connection
+from .type_utils import safe_int as _safe_int
 
 logger = logging.getLogger(__name__)
 
+# Cache scoring constants at module load time to avoid repeated config lookups
+_SCORING_FIRST_TD = config.SCORING_FIRST_TD
+_SCORING_ANY_TIME = config.SCORING_ANY_TIME
 
-def _safe_int(value) -> int:
-    """Safely convert any value to int, handling bytes."""
-    if value is None:
-        return 0
-    if isinstance(value, bytes):
-        # Try to unpack as little-endian integer
+
+def _cache_if_streamlit(func):
+    """
+    Decorator that applies st.cache_data if Streamlit is available.
+    Falls back to original function if not in Streamlit context.
+    """
+    if HAS_STREAMLIT:
         try:
-            return struct.unpack('<i', value[:4])[0] if len(value) >= 4 else 0
-        except (struct.error, TypeError):
-            try:
-                return int(value.decode('utf-8', errors='ignore'))
-            except (ValueError, AttributeError):
-                return 0
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return 0
+            return st.cache_data(ttl=300)(func)  # Cache for 5 minutes
+        except RuntimeError:
+            # Not in Streamlit context
+            return func
+    return func
 
 
 # ============= RESULT OPERATIONS =============
@@ -227,6 +232,7 @@ def clear_grading_results(season: int, week: Optional[int] = None) -> Dict[str, 
 
 # ============= LEADERBOARD & STATISTICS =============
 
+@_cache_if_streamlit
 def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
     """
     Get leaderboard stats for all users.
@@ -249,7 +255,7 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -270,7 +276,7 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -303,7 +309,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -323,7 +329,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
                     SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
                     SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,

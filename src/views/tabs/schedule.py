@@ -7,7 +7,21 @@ import pandas as pd
 
 
 def show_schedule_tab(schedule: pd.DataFrame) -> None:
-    """Display weekly schedule and results."""
+    """
+    Display the NFL schedule tab.
+    
+    Args:
+        schedule: DataFrame with NFL schedule containing:
+            - Week: Game week number
+            - Date: Game date/time
+            - Home: Home team name
+            - Away: Away team name
+            - Spread: Vegas spread (Home team perspective)
+            - OU: Over/Under total points
+    
+    Shows upcoming games, historical games, and quick score updates.
+    Uses Streamlit data editor for interactive schedule viewing.
+    """
     st.header("Weekly Schedule & Results")
     
     if not schedule.empty:

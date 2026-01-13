@@ -13,7 +13,22 @@ from utils.analytics import (
 
 
 def show_analysis_tab(df: pd.DataFrame, season: int) -> None:
-    """Display analysis: team rankings, player leaderboard, position stats."""
+    """
+    Display the data analysis and insights tab.
+    
+    Args:
+        df: Play-by-play data DataFrame
+        season: Current NFL season year
+    
+    Provides statistical analysis including:
+    - Player and team TD frequency distributions
+    - Historical performance metrics
+    - Trend analysis across the season
+    - Statistical correlations and patterns
+    - Data-driven pick recommendations
+    
+    Helps users make informed decisions on picks using data visualization.
+    """
     st.header("First Touchdown Analysis")
     
     if df.empty:

@@ -12,7 +12,22 @@ from utils import get_all_weeks, get_all_users, get_user_stats, get_user_all_pic
 def get_season_and_week_selectors(season: int, seasons_list: List[int], key_prefix: str = "") -> tuple:
     """
     Create standardized season and week selectors for admin interface.
-    Returns (selected_season, selected_week_num_or_none)
+    
+    Args:
+        season: Default/current season to display
+        seasons_list: List of available seasons to select from
+        key_prefix: Prefix for Streamlit widget keys (prevents collisions)
+    
+    Returns:
+        tuple: (selected_season: int, selected_week: Optional[int])
+            - selected_season: Selected NFL season year
+            - selected_week: Selected week number or None if "All Weeks" selected
+    
+    Creates two columns with:
+    - Season input: Number input for year selection (2000-2100)
+    - Week selector: Dropdown for week selection with "All Weeks" option
+    
+    Used consistently across admin tabs for unified filtering.
     """
     col1, col2 = st.columns(2)
     
@@ -45,7 +60,18 @@ def get_season_and_week_selectors(season: int, seasons_list: List[int], key_pref
 
 
 def format_odds(odds: Optional[float]) -> str:
-    """Format American odds for display."""
+    """
+    Format American odds for display.
+    
+    Args:
+        odds: American odds as float/int or None
+    
+    Returns:
+        str: Formatted odds string (e.g., "-110", "+150", "N/A")
+    
+    Handles None values by returning "N/A".
+    Converts float odds to integer representation.
+    """
     if odds is None:
         return "N/A"
     if odds > 0:

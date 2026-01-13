@@ -7,7 +7,23 @@ from utils import get_leaderboard
 
 
 def show_leaderboard_tab() -> None:
-    """Display leaderboard and standings."""
+    """
+    Display the cumulative leaderboard tab.
+    
+    Shows all-time standings with columns:
+    - Rank: User position
+    - User: Player name
+    - Picks: Total picks made
+    - Wins: First TD correct predictions
+    - Losses: First TD incorrect predictions
+    - Any Time TD: Correct Any Time TD picks
+    - Points: Cumulative points (3 per First TD, 1 per Any Time TD)
+    - Total Return: Sum of actual returns from all picks
+    - Avg Return: Average return per pick
+    - Avg Odds: Average odds of picks made
+    
+    Data is cached for 5 minutes to avoid repeated database queries.
+    """
     st.header("🏆 Leaderboard & Standings")
     st.markdown("Cumulative standings throughout the season. Points: 3 for First TD, 1 for Any Time TD.")
     

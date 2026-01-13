@@ -13,7 +13,25 @@ from utils import (
 
 
 def show_results_tab(season: int) -> None:
-    """Display the results update interface."""
+    """
+    Display results review and management tab.
+    
+    Args:
+        season: Current NFL season year
+    
+    Allows admins to:
+    - View all graded and ungraded picks
+    - See actual scores and results
+    - Manually override automated grading if needed
+    - Audit the grading process
+    - Export results for record-keeping
+    
+    Results show:
+    - Which picks were correct (First TD or Any Time)
+    - Actual scoring players
+    - Point returns for each pick
+    - User-by-user performance summary
+    """
     st.header("✅ Update Game Results")
     
     col1, col2 = st.columns(2)

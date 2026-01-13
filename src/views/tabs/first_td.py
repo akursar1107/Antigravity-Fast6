@@ -7,7 +7,19 @@ import pandas as pd
 
 
 def show_first_td_tab(first_tds: pd.DataFrame) -> None:
-    """Display first touchdowns for each game."""
+    """
+    Display the First Touchdown leaders tab.
+    
+    Args:
+        first_tds: DataFrame with First TD data containing:
+            - Player: Player name
+            - Team: Player team
+            - Count: Number of games where player scored first TD
+            - Games: List of game dates when player scored first TD
+    
+    Shows players ranked by frequency of scoring the first TD of games,
+    providing valuable insights for First TD picking strategy.
+    """
     st.header("First Touchdowns per Game")
     st.markdown("This list shows the first touchdown scored in every game of the season.")
     

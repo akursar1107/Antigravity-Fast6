@@ -7,7 +7,19 @@ import pandas as pd
 
 
 def show_all_touchdowns_tab(all_tds: pd.DataFrame) -> None:
-    """Display all touchdowns with filtering options."""
+    """
+    Display the All Touchdowns (Any Time TD) leaders tab.
+    
+    Args:
+        all_tds: DataFrame with All Touchdowns data containing:
+            - Player: Player name
+            - Team: Player team
+            - Count: Number of games where player scored any TD
+            - Games: List of game dates when player scored TDs
+    
+    Shows players ranked by TD scoring frequency across all TDs,
+    useful for Any Time TD pick selection and analysis.
+    """
     st.header("All Touchdowns Scored")
     
     if not all_tds.empty:

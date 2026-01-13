@@ -9,7 +9,27 @@ from utils.csv_import import ingest_picks_from_csv
 
 
 def show_import_csv_tab(season: int) -> None:
-    """Display the CSV import interface."""
+    """
+    Display CSV import tab for bulk pick uploads.
+    
+    Args:
+        season: Current NFL season year
+    
+    Allows admins to:
+    - Upload CSV files with pick data
+    - Preview picks before import
+    - Validate pick data (teams, players, weeks)
+    - Handle duplicates and conflicts
+    - Import picks in bulk to database
+    
+    CSV format expected:
+    - user_name: User name (must exist in database)
+    - week: Game week number
+    - team: Team abbreviation
+    - player_name: Player full name
+    - odds: Optional point spread/odds
+    - game_id: Optional unique game identifier
+    """
     st.header("📥 Import Picks from CSV")
     st.markdown("Upload a CSV in the same format as 'First TD - 2025.csv'. Only regular-season weeks (1–18) are imported.")
 

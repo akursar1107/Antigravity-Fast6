@@ -26,7 +26,22 @@ from views.admin.shared import show_stats_tab
 
 
 def show_prediction_tab(schedule: pd.DataFrame, season: int) -> None:
-    """Prediction interface for first TD picks."""
+    """
+    Display admin predictions and model output tab.
+    
+    Args:
+        schedule: NFL schedule DataFrame
+        season: Current NFL season year
+    
+    Displays:
+    - Nfelo model predictions for First TD
+    - Expected value calculations
+    - Confidence scores
+    - Historical accuracy metrics
+    
+    Used by admins to review algorithmic predictions and validate
+    model performance before distributing to users.
+    """
     st.header("🔮 First TD Scorer Predictor")
     st.markdown("Pick who you think will score the first touchdown in each game!")
 
@@ -198,7 +213,23 @@ def show_prediction_tab(schedule: pd.DataFrame, season: int) -> None:
 
 
 def show_admin_interface(df: pd.DataFrame, season: int, schedule: pd.DataFrame) -> None:
-    """Admin interface with multiple tabs for database management."""
+    """
+    Display main admin interface with tabs for administrative tasks.
+    
+    Args:
+        df: Play-by-play data DataFrame
+        season: Current NFL season year
+        schedule: NFL schedule DataFrame
+    
+    Provides tabs for:
+    - Grading picks against actual results
+    - Importing picks from CSV
+    - Viewing and managing results
+    - Model predictions and validation
+    
+    Only accessible to admin users. Handles all backend data management
+    and integrity checking.
+    """
     # Initialize database if not already done
     init_db()
     

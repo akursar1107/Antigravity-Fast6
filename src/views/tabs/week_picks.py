@@ -8,7 +8,22 @@ from utils import get_all_weeks, get_all_users, get_user_week_picks, get_result_
 
 
 def show_week_picks_tab(season: int) -> None:
-    """Display picks for a selected week."""
+    """
+    Display the week picks entry and management tab.
+    
+    Args:
+        season: Current NFL season year
+    
+    Allows users to:
+    - Select a week to view picks for
+    - Add new picks for the selected week
+    - View their existing picks
+    - Delete incorrect or duplicate picks
+    - See odds and calculated returns for each pick
+    
+    Picks are automatically validated against schedules to ensure
+    games exist and teams are recognized.
+    """
     st.header("📝 Weekly Picks & Results")
     
     # Get available weeks
