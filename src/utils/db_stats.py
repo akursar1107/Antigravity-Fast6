@@ -241,7 +241,7 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
     try:
         if week_id:
             # Single week leaderboard
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT
                     u.id,
                     u.name,
@@ -262,7 +262,7 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
             """, (week_id,))
         else:
             # Cumulative leaderboard
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT
                     u.id,
                     u.name,
@@ -295,7 +295,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
     
     try:
         if week_id:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT
                     u.id,
                     u.name,
@@ -315,7 +315,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
                 GROUP BY u.id, u.name
             """, (week_id, user_id))
         else:
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT
                     u.id,
                     u.name,
