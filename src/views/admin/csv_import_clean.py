@@ -4,29 +4,29 @@ Clean CSV Import Admin Interface
 
 import streamlit as st
 import pandas as pd
-from utils.csv_import_clean import import_picks_from_csv, ImportResult
+from utils.csv_import_clean import (
+    import_picks_from_csv, 
+    validate_week, 
+    validate_team, 
+    find_player_team,
+    find_game_id
+)
 from utils.nfl_data import load_rosters, get_game_schedule, load_data
 import tempfile
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_game_players(season: int, game_id: str, rosters_df: pd.DataFrame) -> list:
     """
     Get all players from a specific game from rosters.
-    
-    Args:
-        season: NFL season
-        game_id: Game ID
-        rosters_df: Rosters DataFrame
-        
-    Returns:
-        List of (player_name, team) tuples for players in the game
     """
     try:
         nfl_data = load_data(season)
         schedule = get_game_schedule(nfl_data, season)
         
-        # Find game details
         game = schedule[schedule['game_id'] == game_id]
         if game.empty:
             return []
@@ -34,7 +34,6 @@ def get_game_players(season: int, game_id: str, rosters_df: pd.DataFrame) -> lis
         visitor = game.iloc[0]['away_team']
         home = game.iloc[0]['home_team']
         
-        # Get players from both teams
         players = []
         for team in [visitor, home]:
             team_players = rosters_df[rosters_df['team'] == team]
@@ -43,7 +42,6 @@ def get_game_players(season: int, game_id: str, rosters_df: pd.DataFrame) -> lis
                 if player_name:
                     players.append((player_name, team))
         
-        # Sort by player name
         players.sort(key=lambda x: x[0])
         return players
     except Exception as e:
@@ -51,12 +49,76 @@ def get_game_players(season: int, game_id: str, rosters_df: pd.DataFrame) -> lis
         return []
 
 
+def validate_csv_data(df: pd.DataFrame, season: int):
+    """
+    Validate CSV data and return validation results with game/roster info.
+    """
+    nfl_data = load_data(season)
+    schedule = get_game_schedule(nfl_data, season)
+    rosters = load_rosters(season)
+    
+    # Add validation columns
+    df['game_found'] = False
+    df['game_id'] = None
+    df['player_team'] = None
+    df['team_in_game'] = True
+    df['has_error'] = False
+    df['error_message'] = ""
+    
+    for idx, row in df.iterrows():
+        week = validate_week(row['Week'])
+        visitor = validate_team(row['Visitor'])
+        home = validate_team(row['Home'])
+        
+        if not (week and visitor and home):
+            df.at[idx, 'has_error'] = True
+            if not week:
+                df.at[idx, 'error_message'] = f"Invalid week: {row['Week']}"
+            elif not visitor:
+                df.at[idx, 'error_message'] = f"Invalid visitor: {row['Visitor']}"
+            else:
+                df.at[idx, 'error_message'] = f"Invalid home: {row['Home']}"
+            continue
+        
+        # Find game
+        game_id = find_game_id(season, week, visitor, home, schedule)
+        if game_id:
+            df.at[idx, 'game_found'] = True
+            df.at[idx, 'game_id'] = game_id
+        else:
+            df.at[idx, 'has_error'] = True
+            df.at[idx, 'error_message'] = f"Game not found: Week {week}, {visitor} @ {home}"
+            continue
+        
+        # Find player team
+        player_team = find_player_team(row['Player'], season, rosters)
+        if not player_team:
+            player_team = 'Unknown'
+        
+        df.at[idx, 'player_team'] = player_team
+        
+        # Check if team is in game
+        if player_team != 'Unknown' and player_team not in [visitor, home]:
+            df.at[idx, 'team_in_game'] = False
+            df.at[idx, 'has_error'] = True
+            df.at[idx, 'error_message'] = f"{row['Player']} ({player_team}) not in game {visitor} @ {home}"
+    
+    return {
+        'df': df,
+        'rosters': rosters,
+        'schedule': schedule
+    }
+
+
 def show_clean_csv_import(season: int):
     """
-    Display clean CSV import interface with validation and error correction.
+    Display clean CSV import interface with preview and corrections.
     
-    Args:
-        season: Current season year
+    Multi-step workflow:
+    1. Upload CSV
+    2. Preview data with validation
+    3. Fix any issues using dropdowns
+    4. Confirm and import
     """
     st.subheader("🔄 Import Picks from CSV")
     
@@ -66,26 +128,12 @@ def show_clean_csv_import(season: int):
     | Week | Gameday | Picker | Visitor | Home | Player | Position | 1st TD Odds |
     |------|---------|--------|---------|------|--------|----------|-------------|
     | 1 | 2024-09-08 | John | KC | BAL | Patrick Mahomes | QB | +650 |
-    | 1 | 2024-09-08 | Jane | KC | BAL | Travis Kelce | TE | +900 |
     
-    **Required Columns:**
-    - Week, Picker, Visitor, Home, Player
-    
-    **Optional Columns:**
-    - Gameday (for reference)
-    - Position (informational)
-    - 1st TD Odds (defaults to -110 if empty)
-    
-    **What This Does:**
-    1. ✓ Validates week, teams, and finds the game_id
-    2. ✓ Looks up player's actual team from NFL rosters
-    3. ✓ Validates player's team is in the game (prevents dirty data!)
-    4. ✓ Handles odds parsing (empty → -110)
-    5. ✓ Creates users that don't exist
-    6. ✓ Detects and skips duplicate picks
+    **Required Columns:** Week, Picker, Visitor, Home, Player  
+    **Optional Columns:** Gameday, Position, 1st TD Odds (→ -110)
     """)
     
-    # Upload file
+    # Step 1: Upload file
     uploaded_file = st.file_uploader(
         "Upload CSV File",
         type=['csv'],
@@ -95,338 +143,162 @@ def show_clean_csv_import(season: int):
     if not uploaded_file:
         return
     
-    # Options
+    # Read CSV
+    try:
+        df = pd.read_csv(uploaded_file)
+    except Exception as e:
+        st.error(f"Failed to read CSV: {e}")
+        return
+    
+    st.info(f"📋 Loaded {len(df)} rows from CSV")
+    
+    # Step 2: Validate data
+    with st.spinner("Validating data..."):
+        validation = validate_csv_data(df, season)
+    
+    df = validation['df']
+    rosters = validation['rosters']
+    schedule = validation['schedule']
+    
+    error_rows = df[df['has_error']]
+    
+    st.markdown("---")
+    
+    # Step 3: Show preview with corrections
+    if len(error_rows) > 0:
+        st.warning(f"⚠️ Found {len(error_rows)} row(s) with issues that need fixing:")
+        
+        # Create corrections dict in session state
+        if 'import_corrections' not in st.session_state:
+            st.session_state['import_corrections'] = {}
+        
+        # Show each error with correction dropdown
+        for idx, (row_idx, row) in enumerate(error_rows.iterrows()):
+            row_num = row_idx + 2  # +2 for header and 0-indexing
+            
+            col1, col2 = st.columns([3, 1])
+            
+            with col1:
+                st.error(f"**Row {row_num}** - {row['error_message']}")
+            
+            # Show correction options if it's a team validation error
+            if row['game_found'] and not row['team_in_game']:
+                game_id = row['game_id']
+                game = schedule[schedule['game_id'] == game_id]
+                if not game.empty:
+                    visitor = game.iloc[0]['away_team']
+                    home = game.iloc[0]['home_team']
+                    game_str = f"{visitor} @ {home}"
+                    
+                    st.caption(f"Game: {game_str} | Player: {row['Player']}")
+                    
+                    # Get available players
+                    available_players = get_game_players(season, game_id, rosters)
+                    
+                    if available_players:
+                        player_options = [f"{name} ({team})" for name, team in available_players]
+                        
+                        selected_idx = st.selectbox(
+                            f"Select correct player for Row {row_num}",
+                            options=range(len(player_options)),
+                            format_func=lambda i: player_options[i],
+                            key=f"player_select_{row_num}",
+                        )
+                        
+                        selected_player, selected_team = available_players[selected_idx]
+                        st.session_state['import_corrections'][row_num] = {
+                            'player': selected_player,
+                            'team': selected_team
+                        }
+                        st.success(f"✓ Will use: {selected_player} ({selected_team})")
+                    else:
+                        st.warning("Could not load available players")
+            
+            st.divider()
+    
+    # Step 4: Show preview table
+    st.subheader("📊 Data Preview")
+    
+    # Display columns
+    display_df = df[['Week', 'Picker', 'Visitor', 'Home', 'Player', 'player_team']].copy()
+    display_df.columns = ['Week', 'Picker', 'Visitor', 'Home', 'Player', 'Player Team']
+    display_df.insert(0, 'Row', range(2, len(df) + 2))  # Add row numbers
+    
+    # Highlight error rows
+    def highlight_errors(row):
+        if row['Row'] - 2 in df.index and df.loc[row['Row'] - 2, 'has_error']:
+            return ['background-color: #ffe6e6'] * len(row)
+        return [''] * len(row)
+    
+    st.dataframe(
+        display_df.style.apply(highlight_errors, axis=1),
+        use_container_width=True
+    )
+    
+    st.markdown("---")
+    
+    # Step 5: Confirm and import
     col1, col2 = st.columns(2)
     
     with col1:
-        dry_run = st.checkbox(
-            "Dry Run (Validate Only)",
-            value=True,
-            help="Check this to validate without importing. Uncheck to actually import data."
-        )
-    
-    with col2:
         auto_create_users = st.checkbox(
             "Auto-Create Users",
             value=True,
             help="Automatically create user accounts for pickers that don't exist"
         )
     
-    # Import button
-    if st.button("🚀 Import Picks", type="primary", disabled=not uploaded_file):
-        # Check if we have corrections to apply
-        corrections = st.session_state.get('csv_corrections', {})
-        
-        # Save uploaded file to temp location
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            tmp_path = tmp_file.name
-        
-        try:
-            with st.spinner("Processing CSV..."):
-                result = import_picks_from_csv(
-                    csv_path=tmp_path,
-                    season=season,
-                    dry_run=dry_run,
-                    auto_create_users=auto_create_users,
-                    corrections=corrections
-                )
+    with col2:
+        if st.button("✅ Confirm & Import", type="primary"):
+            # Get corrections
+            corrections = st.session_state.get('import_corrections', {})
             
-            # Clear corrections after use
-            if 'csv_corrections' in st.session_state:
-                del st.session_state['csv_corrections']
+            # Save CSV to temp file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as tmp:
+                df.to_csv(tmp, index=False)
+                tmp_path = tmp.name
             
-            # Store result in session state for error correction
-            st.session_state['last_import_result'] = result
-            st.session_state['last_csv_path'] = tmp_path
-            st.session_state['last_season'] = season
-            
-            # Display summary
-            if dry_run:
-                st.info("**DRY RUN COMPLETE** - No data was imported")
-            else:
-                st.success("**IMPORT COMPLETE**")
-            
-            # Summary metrics
-            col1, col2, col3 = st.columns(3)
-            col1.metric("✓ Successful", result.success_count)
-            col2.metric("✗ Errors", result.error_count)
-            col3.metric("⚠ Warnings", result.warning_count)
-            
-            # Show detailed results in expanders
-            if result.errors:
-                with st.expander(f"❌ Errors ({len(result.errors)})", expanded=True):
-                    # Check if we have team validation errors
-                    team_errors = [e for e in result.errors if e['field'] == 'Team Validation']
-                    
-                    if team_errors and dry_run:
-                        st.info("💡 **You can fix these by selecting the correct player from the game:**")
-                        
-                        # Load rosters for corrections
-                        rosters = load_rosters(season)
-                        corrections = {}
-                        
-                        for err in team_errors:
-                            row_num = err['row']
-                            data = err.get('data', {})
-                            game = data.get('game', 'Unknown')
-                            player_name = data.get('player', 'Unknown')
-                            picked_team = data.get('team', 'Unknown')
-                            game_id = data.get('game_id')
-                            
-                            st.error(f"**Row {row_num}** - {player_name} ({picked_team}) not in game {game}")
-                            
-                            # Load available players in this game
-                            if game_id:
-                                available_players = get_game_players(season, game_id, rosters)
-                                
-                                if available_players:
-                                    # Create display names with team
-                                    player_options = [f"{name} ({team})" for name, team in available_players]
-                                    
-                                    selected_idx = st.selectbox(
-                                        f"Select correct player for Row {row_num}",
-                                        options=range(len(player_options)),
-                                        format_func=lambda i: player_options[i],
-                                        key=f"correct_player_{row_num}",
-                                        help=f"Players available in {game}"
-                                    )
-                                    
-                                    selected_player, selected_team = available_players[selected_idx]
-                                    corrections[row_num] = {
-                                        'player': selected_player,
-                                        'team': selected_team
-                                    }
-                                    st.caption(f"✓ Will use: {selected_player} ({selected_team})")
-                                else:
-                                    st.warning(f"Could not load available players for {game}")
-                            else:
-                                st.warning("Could not determine game ID")
-                            
-                            st.divider()
-                        
-                        # Show retry button if corrections were made
-                        if corrections:
-                            st.session_state['csv_corrections'] = corrections
-                            if st.button("🔄 Re-import with Corrections", type="primary"):
-                                st.success(f"Applying {len(corrections)} correction(s)...")
-                                st.rerun()
-                    else:
-                        # Show other errors normally
+            try:
+                with st.spinner("Importing picks..."):
+                    result = import_picks_from_csv(
+                        csv_path=tmp_path,
+                        season=season,
+                        dry_run=False,
+                        auto_create_users=auto_create_users,
+                        corrections=corrections
+                    )
+                
+                # Clear session state
+                if 'import_corrections' in st.session_state:
+                    del st.session_state['import_corrections']
+                
+                st.success("✅ **Import Complete!**")
+                
+                # Show results
+                col1, col2, col3 = st.columns(3)
+                col1.metric("✓ Successful", result.success_count)
+                col2.metric("✗ Errors", result.error_count)
+                col3.metric("⚠ Warnings", result.warning_count)
+                
+                if result.success_count > 0:
+                    with st.expander("✅ Imported Picks"):
+                        success_df = pd.DataFrame(result.success_picks)
+                        st.dataframe(success_df, use_container_width=True)
+                
+                if result.errors:
+                    with st.expander("❌ Errors"):
                         for err in result.errors:
-                            st.error(f"**Row {err['row']}** - {err['field']}: {err['message']}")
-                            if err.get('data') and err['field'] != 'Team Validation':
-                                st.json(err['data'])
-            
-            if result.warnings:
-                with st.expander(f"⚠️ Warnings ({len(result.warnings)})"):
-                    for warn in result.warnings:
-                        st.warning(f"**Row {warn['row']}** - {warn['field']}: {warn['message']}")
-            
-            if result.success_picks:
-                with st.expander(f"✅ Successful Imports ({len(result.success_picks)})"):
-                    success_df = pd.DataFrame(result.success_picks)
-                    st.dataframe(success_df, use_container_width=True)
-            
-            # Show raw summary
-            with st.expander("📋 Detailed Log"):
-                st.text(result.get_summary())
-            
-            # Prompt for actual import if dry run
-            if dry_run and result.error_count == 0 and result.success_count > 0:
-                st.info("✅ Validation passed! Uncheck 'Dry Run' above and click Import to insert data.")
-        
-        except Exception as e:
-            st.error(f"Import failed: {e}")
-        finally:
-            # Clean up temp file
-            if os.path.exists(tmp_path):
+                            st.error(f"Row {err['row']}: {err['message']}")
+                
+                if result.warnings:
+                    with st.expander("⚠️ Warnings"):
+                        for warn in result.warnings:
+                            st.warning(f"Row {warn['row']}: {warn['message']}")
+                
+            except Exception as e:
+                st.error(f"Import failed: {e}")
+                logger.error(f"Import error: {e}", exc_info=True)
+            finally:
                 try:
                     os.unlink(tmp_path)
                 except:
                     pass
-
-
-def show_error_correction_ui(season: int, result: ImportResult):
-    """
-    Show UI for correcting validation errors by selecting correct players.
-    
-    Args:
-        season: NFL season
-        result: ImportResult object with errors
-    """
-    st.subheader("🔧 Fix Validation Errors")
-    
-    # Load rosters once
-    rosters = load_rosters(season)
-    
-    team_errors = [e for e in result.errors if e['field'] == 'Team Validation']
-    
-    if not team_errors:
-        st.info("No team validation errors to fix")
-        return
-    
-    st.write(f"Found {len(team_errors)} team validation error(s). Select the correct player from the game:")
-    
-    corrections = {}
-    
-    for err in team_errors:
-        row_num = err['row']
-        data = err.get('data', {})
-        game = data.get('game', 'Unknown')
-        player_name = data.get('player', 'Unknown')
-        
-        st.markdown(f"### Row {row_num}: {player_name}")
-        st.caption(f"Game: {game} | Error: {err['message']}")
-        
-        # Get available players in this game
-        game_id = data.get('game_id')
-        if game_id:
-            available_players = get_game_players(season, game_id, rosters)
-            
-            if available_players:
-                player_options = [f"{name} ({team})" for name, team in available_players]
-                selected = st.selectbox(
-                    f"Select correct player for Row {row_num}",
-                    options=player_options,
-                    key=f"correct_player_{row_num}"
-                )
-                
-                if selected:
-                    # Extract selected player name and team
-                    selected_player, selected_team = available_players[player_options.index(selected)]
-                    corrections[row_num] = {
-                        'player': selected_player,
-                        'team': selected_team
-                    }
-            else:
-                st.warning(f"Could not load available players for {game}")
-        else:
-            st.warning("Could not determine game ID for this error")
-    
-    if corrections:
-        st.success(f"Marked {len(corrections)} correction(s)")
-        return corrections
-    
-    return {}
-    """
-    Display clean CSV import interface with validation.
-    
-    Args:
-        season: Current season year
-    """
-    st.subheader("🔄 Import Picks from CSV")
-    
-    st.markdown("""
-    ### Required CSV Format
-    
-    | Week | Gameday | Picker | Visitor | Home | Player | Position | 1st TD Odds |
-    |------|---------|--------|---------|------|--------|----------|-------------|
-    | 1 | 2024-09-08 | John | KC | BAL | Patrick Mahomes | QB | +650 |
-    | 1 | 2024-09-08 | Jane | KC | BAL | Travis Kelce | TE | +900 |
-    
-    **Required Columns:**
-    - Week, Picker, Visitor, Home, Player
-    
-    **Optional Columns:**
-    - Gameday (for reference)
-    - Position (informational)
-    - 1st TD Odds (defaults to -110 if empty)
-    
-    **What This Does:**
-    1. ✓ Validates week, teams, and finds the game_id
-    2. ✓ Looks up player's actual team from NFL rosters
-    3. ✓ Validates player's team is in the game (prevents dirty data!)
-    4. ✓ Handles odds parsing (empty → -110)
-    5. ✓ Creates users that don't exist
-    6. ✓ Detects and skips duplicate picks
-    """)
-    
-    # Upload file
-    uploaded_file = st.file_uploader(
-        "Upload CSV File",
-        type=['csv'],
-        help="CSV file with required columns: Week, Picker, Visitor, Home, Player"
-    )
-    
-    if not uploaded_file:
-        return
-    
-    # Options
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        dry_run = st.checkbox(
-            "Dry Run (Validate Only)",
-            value=True,
-            help="Check this to validate without importing. Uncheck to actually import data."
-        )
-    
-    with col2:
-        auto_create_users = st.checkbox(
-            "Auto-Create Users",
-            value=True,
-            help="Automatically create user accounts for pickers that don't exist"
-        )
-    
-    # Import button
-    if st.button("🚀 Import Picks", type="primary", disabled=not uploaded_file):
-        # Save uploaded file to temp location
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            tmp_path = tmp_file.name
-        
-        try:
-            with st.spinner("Processing CSV..."):
-                result = import_picks_from_csv(
-                    csv_path=tmp_path,
-                    season=season,
-                    dry_run=dry_run,
-                    auto_create_users=auto_create_users
-                )
-            
-            # Display summary
-            if dry_run:
-                st.info("**DRY RUN COMPLETE** - No data was imported")
-            else:
-                st.success("**IMPORT COMPLETE**")
-            
-            # Summary metrics
-            col1, col2, col3 = st.columns(3)
-            col1.metric("✓ Successful", result.success_count)
-            col2.metric("✗ Errors", result.error_count)
-            col3.metric("⚠ Warnings", result.warning_count)
-            
-            # Show detailed results in expanders
-            if result.errors:
-                with st.expander(f"❌ Errors ({len(result.errors)})", expanded=True):
-                    for err in result.errors:
-                        st.error(f"**Row {err['row']}** - {err['field']}: {err['message']}")
-                        if err.get('data'):
-                            st.json(err['data'])
-            
-            if result.warnings:
-                with st.expander(f"⚠️ Warnings ({len(result.warnings)})"):
-                    for warn in result.warnings:
-                        st.warning(f"**Row {warn['row']}** - {warn['field']}: {warn['message']}")
-            
-            if result.success_picks:
-                with st.expander(f"✅ Successful Imports ({len(result.success_picks)})"):
-                    import pandas as pd
-                    success_df = pd.DataFrame(result.success_picks)
-                    st.dataframe(success_df, use_container_width=True)
-            
-            # Show raw summary
-            with st.expander("📋 Detailed Log"):
-                st.text(result.get_summary())
-            
-            # Prompt for actual import if dry run
-            if dry_run and result.error_count == 0 and result.success_count > 0:
-                st.info("✅ Validation passed! Uncheck 'Dry Run' above and click Import to insert data.")
-            
-        except Exception as e:
-            st.error(f"Import failed: {e}")
-        finally:
-            # Clean up temp file
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
