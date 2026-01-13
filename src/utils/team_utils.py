@@ -59,7 +59,7 @@ def backfill_team_for_picks(season: int) -> dict:
     import logging
     from .db_connection import get_db_connection
     from .nfl_data import load_rosters
-    from fuzzywuzzy import fuzz
+    from .name_matching import names_match
     
     logger = logging.getLogger(__name__)
     updated = 0
@@ -85,30 +85,32 @@ def backfill_team_for_picks(season: int) -> dict:
         if not unknown_picks:
             return {'updated': 0, 'failed': 0, 'duplicates': 0}
         
-        # Load NFL rosters for team lookup
-        rosters = load_rosters(season)
+        # Load NFL rosters for team lookup (returns DataFrame)
+        rosters_df = load_rosters(season)
+        
+        if rosters_df.empty:
+            logger.error(f"No roster data available for season {season}")
+            return {'updated': 0, 'failed': len(unknown_picks), 'duplicates': 0}
         
         for pick in unknown_picks:
             pick_id, player_name, _, user_name = pick
             
             # Search for player in rosters to find their team
             found_team = None
-            best_match_ratio = 0
             
-            for team_abbr, players in rosters.items():
-                for roster_player in players:
-                    # Get player full name from roster entry
-                    roster_full_name = roster_player.get('full_name', '')
-                    
-                    # Use fuzzy matching to find player (handles nickname variations)
-                    match_ratio = fuzz.ratio(player_name.lower(), roster_full_name.lower())
-                    
-                    if match_ratio > best_match_ratio:
-                        best_match_ratio = match_ratio
-                        found_team = team_abbr
+            for _, roster_player in rosters_df.iterrows():
+                roster_full_name = roster_player.get('full_name', '')
+                if not roster_full_name:
+                    continue
+                
+                # Use our existing name matching logic
+                if names_match(player_name, roster_full_name, threshold=0.70):
+                    found_team = roster_player.get('team')
+                    logger.info(f"Matched '{player_name}' → '{roster_full_name}' ({found_team})")
+                    break  # Take first match
             
-            # Accept matches with >80% confidence
-            if found_team and best_match_ratio >= 80:
+            # Update pick if team was found
+            if found_team:
                 try:
                     cursor.execute(
                         "UPDATE picks SET team = ? WHERE id = ?",
