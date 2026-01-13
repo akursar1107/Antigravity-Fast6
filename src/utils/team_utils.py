@@ -58,7 +58,7 @@ def backfill_team_for_picks(season: int) -> dict:
     """
     import logging
     from .db_connection import get_db_connection
-    from .nfl_data import get_rosters
+    from .nfl_data import load_rosters
     from fuzzywuzzy import fuzz
     
     logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def backfill_team_for_picks(season: int) -> dict:
             return {'updated': 0, 'failed': 0, 'duplicates': 0}
         
         # Load NFL rosters for team lookup
-        rosters = get_rosters(season)
+        rosters = load_rosters(season)
         
         for pick in unknown_picks:
             pick_id, player_name, _, user_name = pick
