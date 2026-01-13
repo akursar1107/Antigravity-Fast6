@@ -130,25 +130,28 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
                 is_correct = names_match(player_name, actual_first_td_player)
             
             # Check any time TD - only in the specific game that was picked
-            any_time_td = False
-            td_row = all_tds[all_tds['game_id'] == game_id]
-            if not td_row.empty:
-                # Filter to only TDs by the picked team
-                td_row_team_filtered = td_row[td_row['posteam'] == team_abbr]
-                logger.debug(f"Checking Any Time TD for {player_name} ({team_abbr}) in game {game_id}")
-                logger.debug(f"Found {len(td_row_team_filtered)} TDs by {team_abbr} in this game")
-                
-                for _, td in td_row_team_filtered.iterrows():
-                    td_player = str(td.get('td_player_name', '')).strip()
-                    match = names_match(player_name, td_player)
-                    logger.debug(f"  Comparing '{player_name}' vs '{td_player}': {match}")
-                    if match:
-                        any_time_td = True
-                        logger.info(f"✓ Any Time TD match: {player_name} = {td_player}")
-                        break
-                
-                if not any_time_td:
-                    logger.debug(f"✗ No Any Time TD match for {player_name}")
+            # NOTE: If player scored first TD, they automatically scored an any time TD
+            any_time_td = is_correct  # Start with First TD status
+            
+            if not any_time_td:  # Only check if not already true from first TD
+                td_row = all_tds[all_tds['game_id'] == game_id]
+                if not td_row.empty:
+                    # Filter to only TDs by the picked team
+                    td_row_team_filtered = td_row[td_row['posteam'] == team_abbr]
+                    logger.debug(f"Checking Any Time TD for {player_name} ({team_abbr}) in game {game_id}")
+                    logger.debug(f"Found {len(td_row_team_filtered)} TDs by {team_abbr} in this game")
+                    
+                    for _, td in td_row_team_filtered.iterrows():
+                        td_player = str(td.get('td_player_name', '')).strip()
+                        match = names_match(player_name, td_player)
+                        logger.debug(f"  Comparing '{player_name}' vs '{td_player}': {match}")
+                        if match:
+                            any_time_td = True
+                            logger.info(f"✓ Any Time TD match: {player_name} = {td_player}")
+                            break
+                    
+                    if not any_time_td:
+                        logger.debug(f"✗ No Any Time TD match for {player_name}")
             
             # Calculate actual return
             actual_return = theo_return if is_correct else 0.0
