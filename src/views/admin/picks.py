@@ -11,7 +11,7 @@ from utils import (
 )
 
 
-def show_picks_tab(schedule: pd.DataFrame, season: int) -> None:
+def show_picks_tab(season: int, schedule: pd.DataFrame) -> None:
     """Display the picks input interface."""
     st.header("📝 Input Weekly Picks")
     

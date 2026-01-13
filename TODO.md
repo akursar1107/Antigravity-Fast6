@@ -138,15 +138,85 @@ src/
 
 ---
 
-## 📋 NEXT PHASE: Testing & Deployment
+## 📋 NEXT PHASE: Config System & Feature Development
 
-### High Priority
+### ✨ NEW: JSON Configuration System (In Progress)
+
+**Objective**: Centralize all configuration (teams, seasons, scoring, API keys, UI theme) into a single JSON file for better maintainability and flexibility.
+
+#### Phase 1: Create Configuration Infrastructure
+- [ ] Create `src/config.json` with full Fast6 configuration
+  - `app`: name, version, current_season, database_path
+  - `seasons`: list of available seasons
+  - `scoring`: first_td points, any_time_td points, name match threshold
+  - `teams`: all 32 NFL teams with full names, divisions, conferences
+  - `api`: odds API configuration with key management
+  - `ui_theme`: colors, fonts, border radius for Streamlit styling
+  - `positions`: valid player positions
+  - `features`: toggles for auto_grading, csv_import, admin_panel, etc.
+- [ ] Update `src/config.py` to load JSON configuration
+  - Load from `src/config.json` on startup
+  - Expose all config values as module constants
+  - Support `st.secrets` override for API keys (e.g., `odds_api_key`)
+  - Fallback to config.json if secrets not available
+  - Add helper functions for team lookups
+
+#### Phase 2: Refactor Code to Use Config
+- [ ] Update scoring references in database queries
+  - Replace hardcoded `3` (first TD) with `CONFIG["scoring"]["first_td_win"]`
+  - Replace hardcoded `1` (any time) with `CONFIG["scoring"]["any_time_td"]`
+  - Update `utils/grading_logic.py` to use config values
+  - Update `utils/db_stats.py` leaderboard calculations
+- [ ] Update team references
+  - Replace `TEAM_ABBR_MAP` with `CONFIG["teams"]`
+  - Update `utils/team_utils.py` to use config
+  - Update `utils/analytics.py` team lookups
+- [ ] Update season references
+  - Replace hardcoded `SEASONS = [2025, 2024, ...]` with `CONFIG["seasons"]`
+  - Use `CONFIG["app"]["current_season"]` instead of hardcoded values
+  - Update sidebar season selector in `app.py`
+- [ ] Update API configuration
+  - Load API key from `st.secrets.get("odds_api_key", ...)` with config fallback
+  - Move odds API URL and parameters to config
+  - Update `utils/odds_api.py` to read from config
+
+#### Phase 3: Apply Dynamic UI Theming
+- [ ] Update `app.py` CSS generation to read from config
+  - Dynamically build gradients from `CONFIG["ui_theme"]["primary_color"]` and `secondary_color"`
+  - Read font family from config
+  - Apply border radius config to all components
+- [ ] Create helper function for building CSS from config
+  - `def generate_theme_css(theme_config) -> str:`
+  - Allows easy theme switching without code changes
+
+#### Phase 4: Documentation & Testing
+- [ ] Create `CONFIG_GUIDE.md` explaining all configuration options
+- [ ] Add example `config.json.example` for new users
+- [ ] Test configuration loading on startup
+  - Verify JSON parses correctly
+  - Verify all required keys present
+  - Test `st.secrets` override behavior
+- [ ] Verify all teams/seasons/scoring use config values
+- [ ] Add unit tests for config loading
+
+#### Benefits After Completion
+✅ **No API Key in Code**: Secrets managed via `st.secrets` or environment  
+✅ **Easy Configuration Changes**: Modify JSON, app picks up on reload  
+✅ **Feature Toggles**: Enable/disable features without code changes  
+✅ **New Seasons**: Add to JSON array, no code modifications  
+✅ **Theme Customization**: Change colors in JSON, app updates automatically  
+✅ **Centralized Reference**: All config in one place instead of scattered across modules  
+✅ **Production Ready**: Supports environment-based secrets management  
+
+---
+
+### High Priority (After Config System)
 - [ ] ROI & profitability trends
 - [ ] Defensive matchup analysis
 - [ ] User self-management (light auth)
 - [ ] Multi-group support
 - [ ] CI: lint + unit tests
-- [ ] Secrets: move `ODDS_API_KEY` to `st.secrets` or env
+- [ ] Deployment pipeline
 
 ---
 
@@ -210,3 +280,15 @@ src/
 5. Verify database backward compatibility
 
 See `REFACTORING.md` and `ROADMAP.md` for additional context.
+ features
+✅ **No Breaking Changes**: Backward compatibility maintained via `utils/__init__.py`
+
+---
+
+## 📋 NEXT PHASE: Testing & Deployment
+
+### High Priority
+- [ ] ROI & profitability trends
+- [ ] Defensive matchup analysis
+- [ ] User self-management (light auth)
+- [ ] Multi-group support
