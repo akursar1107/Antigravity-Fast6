@@ -123,3 +123,23 @@ def show_users_tab() -> None:
                 st.info("Archive directory not found.")
         except Exception as e:
             st.warning(f"Could not read archives: {str(e)}")
+
+    # Danger zone: allow admin to delete the primary picks database
+    st.markdown("---")
+    st.subheader("🗑️ Danger Zone")
+    st.markdown("This will permanently delete the current user picks database file (fast6.db). Archive first.")
+
+    delete_confirm = st.text_input("Type DELETE to confirm", key="delete_db_confirm")
+    if st.button("🗑️ Delete User Picks Database", key="delete_db_btn", type="secondary"):
+        if delete_confirm.strip().upper() != "DELETE":
+            st.warning("Please type DELETE to confirm.")
+        else:
+            try:
+                db_path = Path(__file__).parent.parent.parent.parent / "data" / "fast6.db"
+                if db_path.exists():
+                    db_path.unlink()
+                    st.success("✅ User picks database deleted. Restore from archive if needed.")
+                else:
+                    st.info("Database file not found; nothing to delete.")
+            except Exception as e:
+                st.error(f"❌ Failed to delete database: {str(e)}")

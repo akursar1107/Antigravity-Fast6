@@ -20,7 +20,7 @@ def show_results_tab(season: int) -> None:
         season: Current NFL season year
     
     Allows admins to:
-    - View all graded and ungraded picks
+    - View all graded and ungraded picks for the season
     - See actual scores and results
     - Manually override automated grading if needed
     - Audit the grading process
@@ -34,35 +34,39 @@ def show_results_tab(season: int) -> None:
     """
     st.header("✅ Update Game Results")
     
-    col1, col2 = st.columns(2)
+    # Select user and view all their season picks
+    available_users = get_all_users()
+    selected_result_user = st.selectbox(
+        "Select Member",
+        options=available_users,
+        format_func=lambda x: x['name'],
+        key="result_user_select"
+    )
     
-    with col1:
-        available_weeks = get_all_weeks(season)
-        selected_week_record = st.selectbox(
-            "Select Week",
-            options=available_weeks,
-            format_func=lambda x: f"Season {x['season']}, Week {x['week']}",
-            key="result_week_select"
-        )
-    
-    with col2:
-        available_users = get_all_users()
-        selected_result_user = st.selectbox(
-            "Select Member",
-            options=available_users,
-            format_func=lambda x: x['name'],
-            key="result_user_select"
-        )
-    
-    if selected_week_record and selected_result_user:
-        # Get picks for this user/week
-        picks = get_user_week_picks(selected_result_user['id'], selected_week_record['id'])
+    if selected_result_user:
+        # Get all picks for this user across entire season
+        from utils import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT p.*, w.week, w.season, r.is_correct, r.any_time_td, r.actual_return
+            FROM picks p
+            JOIN weeks w ON p.week_id = w.id
+            LEFT JOIN results r ON p.id = r.pick_id
+            WHERE p.user_id = ? AND w.season = ?
+            ORDER BY w.week, p.created_at
+        """, (selected_result_user['id'], season))
+        
+        picks = [dict(row) for row in cursor.fetchall()]
+        conn.close()
         
         if picks:
-            st.subheader(f"{selected_result_user['name']}'s Picks - Week {selected_week_record['week']}")
+            st.subheader(f"{selected_result_user['name']}'s Picks - Season {season}")
+            st.info(f"Showing {len(picks)} pick(s) for the entire season")
             
             for pick in picks:
-                with st.expander(f"{pick['team']} - {pick['player_name']}", expanded=False):
+                with st.expander(f"Week {pick['week']}: {pick['team']} - {pick['player_name']}", expanded=False):
                     col_result, col_return = st.columns(2)
                     # Show odds and theoretical return summary
                     odds_val = pick.get('odds')
@@ -74,10 +78,9 @@ def show_results_tab(season: int) -> None:
                     st.caption(f"Odds: {odds_str} • Potential Return: ${theo_ret:.2f}" if isinstance(theo_ret, (int, float)) else f"Odds: {odds_str}")
                     
                     # Get existing result
-                    existing_result = get_result_for_pick(pick['id'])
-                    current_correct = existing_result['is_correct'] if existing_result else None
-                    current_any_time_td = existing_result.get('any_time_td') if existing_result else None
-                    current_return = existing_result['actual_return'] if existing_result else None
+                    current_correct = pick.get('is_correct')
+                    current_any_time_td = pick.get('any_time_td')
+                    current_return = pick.get('actual_return')
                     
                     with col_result:
                         is_correct = st.selectbox(
@@ -127,35 +130,27 @@ def show_results_tab(season: int) -> None:
                         except Exception as e:
                             st.error(f"❌ Error deleting pick: {e}")
         else:
-            st.info(f"No picks found for {selected_result_user['name']} in Week {selected_week_record['week']}")
+            st.info(f"No picks found for {selected_result_user['name']} in season {season}")
 
     # Maintenance tools for duplicates and uniqueness
     st.markdown("---")
-    st.subheader("Maintenance")
+    st.subheader("Maintenance Tools")
     col_a, col_b = st.columns(2)
     with col_a:
-        if st.button("🧹 Remove Duplicate Picks for Selected User/Week"):
-            try:
-                summary = dedupe_picks_for_user_week(selected_result_user['id'], selected_week_record['id'])
-                st.success(f"Removed {summary['duplicates_removed']} duplicates. Kept {summary['unique_kept']} unique picks.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Dedupe failed: {e}")
-    with col_b:
         if st.button("🔒 Enforce Unique Picks Constraint"):
             ok = create_unique_picks_index()
             if ok:
                 st.success("Unique index created or already exists.")
             else:
                 st.warning("Could not create unique index. Remove duplicates first.")
-
-    if st.button("🧹 Full Database Dedupe"):
-        try:
-            summary = dedupe_all_picks()
-            st.success(f"Removed {summary['duplicates_removed']} duplicates globally. Kept {summary['unique_kept']} unique picks.")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Full dedupe failed: {e}")
+    with col_b:
+        if st.button("🧹 Full Database Dedupe"):
+            try:
+                summary = dedupe_all_picks()
+                st.success(f"Removed {summary['duplicates_removed']} duplicates globally. Kept {summary['unique_kept']} unique picks.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Full dedupe failed: {e}")
 
     # Override Grading Tools - Use Sparingly
     st.markdown("---")

@@ -38,6 +38,15 @@ def _cache_if_streamlit(func):
     return func
 
 
+def clear_leaderboard_cache() -> None:
+    """Clear the leaderboard cache when results are updated."""
+    if HAS_STREAMLIT:
+        try:
+            st.cache_data.clear()
+        except Exception as e:
+            logger.debug(f"Could not clear cache: {e}")
+
+
 # ============= RESULT OPERATIONS =============
 
 def add_result(pick_id: int, actual_scorer: Optional[str] = None,
@@ -48,6 +57,8 @@ def add_result(pick_id: int, actual_scorer: Optional[str] = None,
     cursor = conn.cursor()
     
     try:
+        # Clear leaderboard cache when a result is added/updated
+        clear_leaderboard_cache()
         # If a result already exists, update instead of raising an integrity error
         cursor.execute("SELECT id FROM results WHERE pick_id = ?", (pick_id,))
         existing = cursor.fetchone()
@@ -169,6 +180,8 @@ def clear_grading_results(season: int, week: Optional[int] = None) -> Dict[str, 
     cursor = conn.cursor()
     
     try:
+        # Clear leaderboard cache when clearing grading results
+        clear_leaderboard_cache()
         if week:
             # Clear results for specific week
             cursor.execute("""
@@ -253,9 +266,9 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
                     u.name,
                     COUNT(p.id) as total_picks,
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
+                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -274,9 +287,9 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
                     u.name,
                     COUNT(p.id) as total_picks,
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
+                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -307,9 +320,9 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
                     u.name,
                     COUNT(p.id) as total_picks,
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
+                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
@@ -327,9 +340,9 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
                     u.name,
                     COUNT(p.id) as total_picks,
                     SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN r.is_correct = 0 THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN r.any_time_td = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} WHEN r.any_time_td = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
+                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
+                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
+                    SUM(CASE WHEN r.is_correct = 1 THEN {_SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {_SCORING_ANY_TIME} ELSE 0 END) as points,
                     ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
                     ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
                     ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,

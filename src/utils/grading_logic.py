@@ -143,17 +143,25 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
                     logger.debug(f"Checking Any Time TD for {player_name} ({team_abbr}) in game {game_id}")
                     logger.debug(f"Found {len(td_row_team_filtered)} TDs by {team_abbr} in this game")
                     
-                    for _, td in td_row_team_filtered.iterrows():
-                        td_player = str(td.get('td_player_name', '')).strip()
-                        match = names_match(player_name, td_player)
-                        logger.debug(f"  Comparing '{player_name}' vs '{td_player}': {match}")
-                        if match:
-                            any_time_td = True
-                            logger.info(f"✓ Any Time TD match: {player_name} = {td_player}")
-                            break
-                    
-                    if not any_time_td:
-                        logger.debug(f"✗ No Any Time TD match for {player_name}")
+                    if not td_row_team_filtered.empty:
+                        for _, td in td_row_team_filtered.iterrows():
+                            td_player = str(td.get('td_player_name', '')).strip()
+                            match = names_match(player_name, td_player)
+                            logger.debug(f"  Comparing '{player_name}' vs '{td_player}': {match}")
+                            if match:
+                                any_time_td = True
+                                logger.info(f"✓ Any Time TD match: {player_name} = {td_player}")
+                                break
+                        
+                        if not any_time_td:
+                            logger.debug(f"✗ No Any Time TD match for {player_name} in {len(td_row_team_filtered)} TDs")
+                    else:
+                        logger.debug(f"No TDs found by team {team_abbr} in game {game_id} (checked {len(td_row)} total TDs)")
+                else:
+                    logger.debug(f"No touchdown data for game {game_id}")
+            
+            # Ensure any_time_td is always a boolean (not None)
+            any_time_td = bool(any_time_td)
             
             # Calculate actual return
             actual_return = theo_return if is_correct else 0.0
@@ -174,6 +182,12 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
                 stats['any_time_td'] += 1
             stats['total_return'] += actual_return
             
+            # Log detailed result
+            logger.info(
+                f"✓ Pick {pick_id}: {player_name} ({team_abbr}) game {game_id} - "
+                f"First TD: {is_correct}, Any Time TD: {any_time_td}, Return: ${actual_return:.2f}"
+            )
+            
             stats['details'].append({
                 'player': player_name,
                 'team': team,
@@ -190,5 +204,187 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
     logger.info(f"Auto-grade complete: {stats['graded_picks']} graded, "
                 f"{stats['correct_first_td']} first TD wins, "
                 f"{stats['any_time_td']} any time TD wins")
+    
+    return stats
+
+
+def grade_any_time_td_only(season: int, week: Optional[int] = None) -> Dict:
+    """
+    Grade picks for ANY TIME TD only (ignore first TD results).
+    Updates any_time_td field without touching is_correct.
+    Useful for re-grading when first TD data might be incomplete.
+    
+    Args:
+        season: NFL season year
+        week: Optional specific week to grade
+        
+    Returns:
+        Dict with grading summary
+    """
+    logger.info(f"Starting any-time TD grading for season {season}" + (f" week {week}" if week else ""))
+    
+    # Load data
+    df = load_data(season)
+    if df.empty:
+        logger.warning(f"No play-by-play data found for season {season}")
+        return {'error': 'No data found', 'graded_picks': 0}
+    
+    # Get all TDs
+    all_tds = get_touchdowns(df)
+    if all_tds.empty:
+        logger.warning(f"No TD data found for season {season}")
+        return {'error': 'No TD data found', 'graded_picks': 0}
+    
+    # Load rosters for name matching
+    rosters = load_rosters(season)
+    
+    # Get ungraded picks (where any_time_td is NULL)
+    conn = database.get_db_connection()
+    cursor = conn.cursor()
+    
+    if week:
+        cursor.execute("""
+            SELECT p.id, p.user_id, p.week_id, p.team, p.player_name, 
+                   p.odds, p.theoretical_return, p.game_id, w.week, w.season
+            FROM picks p
+            JOIN weeks w ON p.week_id = w.id
+            WHERE w.season = ? AND w.week = ?
+            AND NOT EXISTS (SELECT 1 FROM results r WHERE r.pick_id = p.id AND r.any_time_td IS NOT NULL)
+            ORDER BY p.week_id, p.id
+        """, (season, week))
+    else:
+        cursor.execute("""
+            SELECT p.id, p.user_id, p.week_id, p.team, p.player_name, 
+                   p.odds, p.theoretical_return, p.game_id, w.week, w.season
+            FROM picks p
+            JOIN weeks w ON p.week_id = w.id
+            WHERE w.season = ?
+            AND NOT EXISTS (SELECT 1 FROM results r WHERE r.pick_id = p.id AND r.any_time_td IS NOT NULL)
+            ORDER BY p.week_id, p.id
+        """, (season,))
+    
+    ungraded_picks = cursor.fetchall()
+    conn.close()
+    
+    if not ungraded_picks:
+        logger.info(f"No picks needing any-time TD grading for season {season}")
+        return {'graded_picks': 0, 'message': 'No picks need any-time TD grading'}
+    
+    logger.info(f"Found {len(ungraded_picks)} picks to grade for any-time TD")
+    
+    # Grade each pick for any-time TD
+    stats = {
+        'graded_picks': 0,
+        'any_time_td_wins': 0,
+        'failed_to_match': 0,
+        'details': []
+    }
+    
+    for pick in ungraded_picks:
+        pick_id, user_id, week_id, team, player_name, odds, theo_return, pick_game_id, pick_week, pick_season = pick
+        
+        try:
+            # Normalize team name to abbreviation
+            team_abbr = config.TEAM_ABBR_MAP.get(team, team)
+            
+            # Determine game_id: prefer stored pick.game_id, else match by team/week
+            if pick_game_id:
+                game_id = pick_game_id
+            else:
+                week_schedule = get_game_schedule(df, pick_season)
+                if week_schedule.empty:
+                    stats['failed_to_match'] += 1
+                    continue
+                game_week_data = week_schedule[week_schedule['week'] == pick_week]
+                if game_week_data.empty:
+                    stats['failed_to_match'] += 1
+                    continue
+                matching_games = game_week_data[
+                    (game_week_data['home_team'] == team_abbr) | 
+                    (game_week_data['away_team'] == team_abbr)
+                ]
+                if matching_games.empty:
+                    stats['failed_to_match'] += 1
+                    continue
+                game_id = matching_games.iloc[0]['game_id']
+            
+            # Check any time TD
+            any_time_td = False
+            td_row = all_tds[all_tds['game_id'] == game_id]
+            
+            if not td_row.empty:
+                # Filter to only TDs by the picked team
+                td_row_team_filtered = td_row[td_row['posteam'] == team_abbr]
+                logger.debug(f"Checking Any Time TD for {player_name} ({team_abbr}) in game {game_id}")
+                logger.debug(f"Found {len(td_row_team_filtered)} TDs by {team_abbr} in this game")
+                
+                if not td_row_team_filtered.empty:
+                    for _, td in td_row_team_filtered.iterrows():
+                        td_player = str(td.get('td_player_name', '')).strip()
+                        match = names_match(player_name, td_player)
+                        logger.debug(f"  Comparing '{player_name}' vs '{td_player}': {match}")
+                        if match:
+                            any_time_td = True
+                            logger.info(f"✓ Any Time TD match: {player_name} = {td_player}")
+                            break
+                    
+                    if not any_time_td:
+                        logger.debug(f"✗ No Any Time TD match for {player_name} in {len(td_row_team_filtered)} TDs")
+                else:
+                    logger.debug(f"No TDs found by team {team_abbr} in game {game_id} (checked {len(td_row)} total TDs)")
+            else:
+                logger.debug(f"No touchdown data for game {game_id}")
+            
+            # Ensure any_time_td is always a boolean
+            any_time_td = bool(any_time_td)
+            
+            # Update the any_time_td field without changing is_correct
+            conn = database.get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE results
+                SET any_time_td = ?
+                WHERE pick_id = ?
+            """, (any_time_td, pick_id))
+            
+            # If no result exists yet, create one
+            if cursor.rowcount == 0:
+                cursor.execute("""
+                    INSERT INTO results (pick_id, any_time_td)
+                    VALUES (?, ?)
+                """, (pick_id, any_time_td))
+            
+            conn.commit()
+            conn.close()
+            
+            stats['graded_picks'] += 1
+            if any_time_td:
+                stats['any_time_td_wins'] += 1
+            
+            logger.info(
+                f"✓ Pick {pick_id}: {player_name} ({team_abbr}) - Any Time TD: {any_time_td}"
+            )
+            
+            stats['details'].append({
+                'player': player_name,
+                'team': team,
+                'week': pick_week,
+                'any_time_td': any_time_td
+            })
+            
+        except Exception as e:
+            logger.warning(f"Error grading pick {pick_id} for any-time TD: {str(e)}")
+            stats['failed_to_match'] += 1
+    
+    logger.info(f"Any-time TD grading complete: {stats['graded_picks']} graded, "
+                f"{stats['any_time_td_wins']} any time TD wins")
+    
+    # Clear leaderboard cache if any picks were graded
+    if stats['graded_picks'] > 0:
+        try:
+            from .db_stats import clear_leaderboard_cache
+            clear_leaderboard_cache()
+        except Exception as e:
+            logger.debug(f"Could not clear cache: {e}")
     
     return stats

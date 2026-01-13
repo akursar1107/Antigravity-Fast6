@@ -53,6 +53,11 @@ def validate_csv_data(df: pd.DataFrame, season: int):
     """
     Validate CSV data and return validation results with game/roster info.
     """
+    required_cols = ["Week", "Visitor", "Home", "Player", "Picker"]
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required column(s): {', '.join(missing)}")
+
     nfl_data = load_data(season)
     schedule = get_game_schedule(nfl_data, season)
     rosters = load_rosters(season)
@@ -160,8 +165,12 @@ def show_clean_csv_import(season: int):
     st.info(f"📋 Loaded {len(df)} rows from CSV")
     
     # Step 2: Validate data
-    with st.spinner("Validating data..."):
-        validation = validate_csv_data(df, season)
+    try:
+        with st.spinner("Validating data..."):
+            validation = validate_csv_data(df, season)
+    except ValueError as e:
+        st.error(f"CSV validation failed: {e}")
+        return
     
     df = validation['df']
     rosters = validation['rosters']

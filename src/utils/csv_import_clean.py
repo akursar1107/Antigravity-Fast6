@@ -474,4 +474,13 @@ def import_picks_from_csv(
             logger.error(f"Error processing row {row_num}: {e}", exc_info=True)
     
     logger.info(result.get_summary())
+    
+    # Clear leaderboard cache if any picks were imported successfully
+    if result.picks_imported > 0:
+        try:
+            from .db_stats import clear_leaderboard_cache
+            clear_leaderboard_cache()
+        except Exception as e:
+            logger.debug(f"Could not clear cache: {e}")
+    
     return result

@@ -115,7 +115,7 @@ def get_user_all_picks(user_id: int) -> List[Dict]:
 
 
 def delete_pick(pick_id: int) -> bool:
-    """Delete a pick (cascades to results)."""
+    """Delete a pick (cascades to results). Clears leaderboard cache."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -125,6 +125,9 @@ def delete_pick(pick_id: int) -> bool:
         success = cursor.rowcount > 0
         if success:
             logger.info(f"Pick deleted: ID {pick_id}")
+            # Clear leaderboard cache when a pick is deleted
+            from .db_stats import clear_leaderboard_cache
+            clear_leaderboard_cache()
         return success
     finally:
         conn.close()
@@ -295,6 +298,8 @@ def dedupe_all_picks() -> Dict[str, int]:
             cursor.executemany("DELETE FROM picks WHERE id = ?", [(pid,) for pid in to_delete])
             conn.commit()
             deleted = len(to_delete)
+            # Clear leaderboard cache since picks were modified
+            clear_leaderboard_cache()
 
         return {"duplicates_removed": deleted, "unique_kept": len(seen)}
     except Exception as e:

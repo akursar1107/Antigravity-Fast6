@@ -4,6 +4,7 @@ Grading Tab - Auto-grade picks against play-by-play data
 
 import streamlit as st
 import pandas as pd
+from typing import Optional
 import config
 from utils import get_all_weeks, get_ungraded_picks, add_result
 from utils.nfl_data import load_rosters
@@ -59,9 +60,11 @@ def show_grading_tab(season: int, schedule: pd.DataFrame) -> None:
     
     with col2:
         # Get all weeks for this season
-        all_weeks = get_all_weeks()
-        season_weeks = [w for w in all_weeks if w['season'] == grade_season]
-        week_options = ["All"] + [f"Week {w['week']}" for w in season_weeks]
+        all_weeks = get_all_weeks(grade_season)
+        if not all_weeks:
+            st.warning(f"⚠️ No weeks found for Season {grade_season}. Add picks to create weeks.")
+            return
+        week_options = ["All"] + [f"Week {w['week']}" for w in all_weeks]
         selected_week_str = st.selectbox("Week", options=week_options, key="grade_week")
         if selected_week_str == "All":
             grade_week = None
@@ -125,7 +128,11 @@ def show_grading_tab(season: int, schedule: pd.DataFrame) -> None:
     )
     
     if not ungraded:
-        st.info("No ungraded picks found for the selected filters.")
+        st.warning(
+            f"No ungraded picks found for Season {grade_season}, Week {grade_week or 'All'}, "
+            f"Game: {selected_game}, Player: {selected_player}. "
+            f"Check that picks exist in the database or use the CSV import to add picks."
+        )
         return
     
     st.write(f"**{len(ungraded)} ungraded pick(s) found**")
@@ -142,6 +149,11 @@ def show_grading_tab(season: int, schedule: pd.DataFrame) -> None:
     
     # Display and handle editable table
     _show_editable_preview_table(preview_data, grade_schedule, grade_season, first_td_map, ungraded)
+    
+    # Add verification section
+    st.markdown("---")
+    with st.expander("🔍 View Saved Results (Database Verification)", expanded=False):
+        _show_database_verification(grade_season, grade_week)
     
     # Grading actions
     _show_grading_actions(preview_data)
@@ -192,7 +204,7 @@ def _get_filtered_ungraded_picks(grade_season, grade_week, selected_game, select
 
 def _show_auto_grade_button(ungraded, grade_season, grade_week):
     """Show auto-grade button and handle grading."""
-    col_auto_grade = st.columns(3)
+    col_auto_grade = st.columns(2)
     with col_auto_grade[0]:
         if st.button("⚡ Auto-Grade All Against Database", type="primary", key="auto_grade_btn"):
             with st.spinner(f"Auto-grading {len(ungraded)} pick(s)..."):
@@ -211,9 +223,51 @@ def _show_auto_grade_button(ungraded, grade_season, grade_week):
                             f"• Failed to Match: {result['failed_to_match']}\n"
                             f"• Total Return: ${result['total_return']:.2f}"
                         )
+                        
+                        # Show detailed results verification
+                        if result['graded_picks'] > 0:
+                            with st.expander("📋 View Graded Details"):
+                                details_df = pd.DataFrame(result.get('details', []))
+                                if not details_df.empty:
+                                    st.dataframe(details_df, use_container_width=True, hide_index=True)
+                        
                         st.rerun()
                 except Exception as e:
+                    import traceback
                     st.error(f"❌ Auto-grade failed: {str(e)}")
+                    with st.expander("🔧 Error Details"):
+                        st.code(traceback.format_exc(), language="python")
+    
+    with col_auto_grade[1]:
+        if st.button("📺 Grade Any Time TD Only", type="secondary", key="any_time_td_btn"):
+            with st.spinner(f"Grading {len(ungraded)} pick(s) for any-time TD..."):
+                try:
+                    from utils.grading_logic import grade_any_time_td_only
+                    result = grade_any_time_td_only(grade_season, grade_week)
+                    
+                    if 'error' in result:
+                        st.error(f"❌ {result['error']}")
+                    else:
+                        st.success(
+                            f"✅ Graded {result['graded_picks']} picks for any-time TD\n\n"
+                            f"📊 **Results:**\n"
+                            f"• Any Time TD Wins: {result['any_time_td_wins']}\n"
+                            f"• Failed to Match: {result['failed_to_match']}"
+                        )
+                        
+                        # Show detailed results
+                        if result['graded_picks'] > 0:
+                            with st.expander("📋 View Graded Details"):
+                                details_df = pd.DataFrame(result.get('details', []))
+                                if not details_df.empty:
+                                    st.dataframe(details_df, use_container_width=True, hide_index=True)
+                        
+                        st.rerun()
+                except Exception as e:
+                    import traceback
+                    st.error(f"❌ Grading failed: {str(e)}")
+                    with st.expander("🔧 Error Details"):
+                        st.code(traceback.format_exc(), language="python")
 
 
 def _show_unknown_teams_fix(ungraded, grade_season):
@@ -472,3 +526,82 @@ def _show_grading_actions(preview_data):
             
             st.success(f"Auto-graded {graded_correct} correct, {graded_incorrect} incorrect.")
             st.rerun()
+
+
+def _show_database_verification(season: int, week: Optional[int] = None) -> None:
+    """Show what's actually saved in the database for this season/week."""
+    try:
+        from utils import get_db_connection
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get all graded picks for this season/week
+        if week:
+            cursor.execute("""
+                SELECT 
+                    p.id, p.player_name, p.team, u.name as user,
+                    r.is_correct, r.any_time_td, r.actual_scorer,
+                    w.week, w.season
+                FROM picks p
+                JOIN users u ON p.user_id = u.id
+                JOIN weeks w ON p.week_id = w.id
+                LEFT JOIN results r ON p.id = r.pick_id
+                WHERE w.season = ? AND w.week = ? AND r.id IS NOT NULL
+                ORDER BY w.week, u.name
+            """, (season, week))
+        else:
+            cursor.execute("""
+                SELECT 
+                    p.id, p.player_name, p.team, u.name as user,
+                    r.is_correct, r.any_time_td, r.actual_scorer,
+                    w.week, w.season
+                FROM picks p
+                JOIN users u ON p.user_id = u.id
+                JOIN weeks w ON p.week_id = w.id
+                LEFT JOIN results r ON p.id = r.pick_id
+                WHERE w.season = ? AND r.id IS NOT NULL
+                ORDER BY w.week, u.name
+            """, (season,))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        if rows:
+            # Convert to DataFrame for display
+            data = []
+            for row in rows:
+                data.append({
+                    'Pick ID': row[0],
+                    'Player': row[1],
+                    'Team': row[2],
+                    'User': row[3],
+                    'First TD': '✅' if row[4] else '❌',
+                    'Any Time TD': '✅' if row[5] else '❌',
+                    'Actual Scorer': row[6] or 'N/A',
+                    'Week': row[7]
+                })
+            
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            # Statistics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                first_td_count = sum(1 for row in rows if row[4])
+                st.metric("First TD Wins", first_td_count)
+            with col2:
+                any_time_count = sum(1 for row in rows if row[5])
+                st.metric("Any Time TD", any_time_count)
+            with col3:
+                total = len(rows)
+                st.metric("Total Graded", total)
+            with col4:
+                first_td_pct = (first_td_count / total * 100) if total > 0 else 0
+                st.metric("Win Rate", f"{first_td_pct:.1f}%")
+        else:
+            st.info(f"No graded picks found for Season {season}" + (f" Week {week}" if week else ""))
+    
+    except Exception as e:
+        st.error(f"Error loading verification data: {e}")
+

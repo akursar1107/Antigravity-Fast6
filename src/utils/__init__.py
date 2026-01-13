@@ -26,7 +26,8 @@ except ImportError:
 
 try:
     from utils.grading_logic import (
-        auto_grade_season
+        auto_grade_season,
+        grade_any_time_td_only
     )
 except ImportError:
     pass
@@ -103,6 +104,7 @@ __all__ = [
     'extract_last_name',
     # Grading
     'auto_grade_season',
+    'grade_any_time_td_only',
     # Analytics
     'get_team_first_td_counts',
     'get_player_first_td_counts',

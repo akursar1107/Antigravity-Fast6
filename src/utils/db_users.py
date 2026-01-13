@@ -76,7 +76,7 @@ def get_all_users() -> List[Dict]:
 
 
 def delete_user(user_id: int) -> bool:
-    """Delete a user (cascades to picks and results)."""
+    """Delete a user (cascades to picks and results). Clears leaderboard cache."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -86,6 +86,9 @@ def delete_user(user_id: int) -> bool:
         success = cursor.rowcount > 0
         if success:
             logger.info(f"User deleted: ID {user_id}")
+            # Clear leaderboard cache since user was deleted
+            from .db_stats import clear_leaderboard_cache
+            clear_leaderboard_cache()
         return success
     finally:
         conn.close()

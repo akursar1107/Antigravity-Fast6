@@ -14,13 +14,9 @@ def show_leaderboard_tab() -> None:
     - Rank: User position
     - User: Player name
     - Picks: Total picks made
-    - Wins: First TD correct predictions
-    - Losses: First TD incorrect predictions
+    - First TD: First TD correct predictions
     - Any Time TD: Correct Any Time TD picks
     - Points: Cumulative points (3 per First TD, 1 per Any Time TD)
-    - Total Return: Sum of actual returns from all picks
-    - Avg Return: Average return per pick
-    - Avg Odds: Average odds of picks made
     
     Data is cached for 5 minutes to avoid repeated database queries.
     """
@@ -37,13 +33,9 @@ def show_leaderboard_tab() -> None:
                 'Rank': len(rows) + 1,
                 'User': entry['name'],
                 'Picks': entry.get('total_picks', 0) or 0,
-                'Wins': entry.get('wins', 0) or 0,
-                'Losses': entry.get('losses', 0) or 0,
+                'First TD': entry.get('wins', 0) or 0,
                 'Any Time TD': entry.get('any_time_td_wins', 0) or 0,
                 'Points': entry.get('points', 0) or 0,
-                'Total Return': f"${entry.get('total_return', 0) or 0:.2f}",
-                'Avg Return': f"${entry.get('avg_return', 0) or 0:.2f}",
-                'Avg Odds': f"{entry.get('avg_odds', 0) or 0:.0f}"
             })
         
         import pandas as pd
@@ -57,11 +49,23 @@ def show_leaderboard_tab() -> None:
                 'Rank': st.column_config.NumberColumn(format="%d"),
                 'User': st.column_config.TextColumn(),
                 'Picks': st.column_config.NumberColumn(format="%d"),
-                'Wins': st.column_config.NumberColumn(format="%d"),
-                'Losses': st.column_config.NumberColumn(format="%d"),
+                'First TD': st.column_config.NumberColumn(format="%d"),
                 'Any Time TD': st.column_config.NumberColumn(format="%d"),
                 'Points': st.column_config.NumberColumn(format="%d"),
-            }
+            },
+            use_container_width=True,
         )
+        
+        # Center the dataframe content using CSS
+        st.markdown("""
+        <style>
+        [data-testid="dataframe"] {
+            margin: 0 auto;
+        }
+        [data-testid="dataframe"] td, [data-testid="dataframe"] th {
+            text-align: center !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
     else:
         st.info("No leaderboard data available yet.")
