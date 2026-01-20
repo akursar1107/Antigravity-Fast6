@@ -12,6 +12,19 @@ init_db()
 ensure_game_id_column()
 ensure_any_time_td_column()
 
+# Initialize session state for persistent UI selections
+if 'selected_season' not in st.session_state:
+    st.session_state.selected_season = config.CURRENT_SEASON
+
+if 'selected_week' not in st.session_state:
+    st.session_state.selected_week = config.CURRENT_WEEK
+
+if 'game_type_filter' not in st.session_state:
+    st.session_state.game_type_filter = "All"
+
+if 'selected_page' not in st.session_state:
+    st.session_state.selected_page = "📊 Public Dashboard"
+
 # Page Configuration
 st.set_page_config(
     page_title="NFL TD Tracker",
@@ -31,25 +44,34 @@ with st.sidebar:
     season = st.selectbox(
         "Select Season",
         options=config.SEASONS,
-        index=0
+        index=config.SEASONS.index(st.session_state.selected_season) if st.session_state.selected_season in config.SEASONS else 0,
+        key='season_selector'
     )
+    # Update session state when selection changes
+    st.session_state.selected_season = season
     
     # Game Type Filter
     game_type_filter = st.radio(
         "Game Type",
         options=["All", "Main Slate", "Standalone"],
-        index=0,
+        index=["All", "Main Slate", "Standalone"].index(st.session_state.game_type_filter),
+        key='game_type_selector',
         help="Main Slate: Sunday games < 8PM EST. Standalone: All others."
     )
+    # Update session state when selection changes
+    st.session_state.game_type_filter = game_type_filter
     
     # Page Selection
     st.markdown("---")
     page = st.radio(
         "Select View",
         options=["📊 Public Dashboard", "🔐 Admin Interface"],
-        index=0,
+        index=["📊 Public Dashboard", "🔐 Admin Interface"].index(st.session_state.selected_page),
+        key='page_selector',
         help="Public Dashboard: Data views for all users. Admin Interface: Pick management."
     )
+    # Update session state when selection changes
+    st.session_state.selected_page = page
 
     st.markdown("---")
     st.markdown("""

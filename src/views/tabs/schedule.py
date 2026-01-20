@@ -28,12 +28,25 @@ def show_schedule_tab(schedule: pd.DataFrame) -> None:
         available_weeks = sorted(schedule['week'].unique())
         default_ix = len(available_weeks) - 1 if available_weeks else 0
         
+        # Initialize session state for schedule week selection
+        if 'schedule_selected_week' not in st.session_state:
+            st.session_state.schedule_selected_week = available_weeks[default_ix] if available_weeks else None
+        
+        # Find index of currently selected week
+        try:
+            week_index = available_weeks.index(st.session_state.schedule_selected_week)
+        except (ValueError, KeyError):
+            week_index = default_ix
+        
         selected_schedule_week = st.selectbox(
             "Select Week", 
             options=available_weeks, 
-            index=default_ix,
-            format_func=lambda x: f"Week {x}"
+            index=week_index,
+            format_func=lambda x: f"Week {x}",
+            key="schedule_week_selector"
         )
+        # Update session state
+        st.session_state.schedule_selected_week = selected_schedule_week
         
         week_schedule = schedule[schedule['week'] == selected_schedule_week]
         

@@ -64,8 +64,23 @@ def show_grading_tab(season: int, schedule: pd.DataFrame) -> None:
         if not all_weeks:
             st.warning(f"⚠️ No weeks found for Season {grade_season}. Add picks to create weeks.")
             return
+        
+        # Initialize session state for grading week selection
+        if 'admin_grading_selected_week' not in st.session_state:
+            st.session_state.admin_grading_selected_week = "All"
+        
         week_options = ["All"] + [f"Week {w['week']}" for w in all_weeks]
-        selected_week_str = st.selectbox("Week", options=week_options, key="grade_week")
+        
+        # Find index of currently selected week
+        try:
+            week_index = week_options.index(st.session_state.admin_grading_selected_week)
+        except ValueError:
+            week_index = 0
+        
+        selected_week_str = st.selectbox("Week", options=week_options, index=week_index, key="grade_week")
+        # Update session state
+        st.session_state.admin_grading_selected_week = selected_week_str
+        
         if selected_week_str == "All":
             grade_week = None
         else:

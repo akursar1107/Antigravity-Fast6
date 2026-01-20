@@ -135,9 +135,38 @@ def show_maintenance_section() -> None:
     col1, col2 = st.columns(2)
     
     with col1:
-        selected_user = st.selectbox("Select User", get_all_users(), format_func=lambda x: x['name'], key="maintenance_user")
-        selected_week = st.selectbox("Select Week", get_all_weeks(), 
-                                     format_func=lambda x: f"S{x['season']}W{x['week']}", key="maintenance_week")
+        # Initialize session state for maintenance user selection
+        if 'maintenance_selected_user_id' not in st.session_state:
+            all_users_list = get_all_users()
+            st.session_state.maintenance_selected_user_id = all_users_list[0]['id'] if all_users_list else None
+        
+        users_list = get_all_users()
+        # Find index of currently selected user
+        try:
+            user_index = next(i for i, u in enumerate(users_list) if u['id'] == st.session_state.maintenance_selected_user_id)
+        except StopIteration:
+            user_index = 0
+        
+        selected_user = st.selectbox("Select User", users_list, format_func=lambda x: x['name'], index=user_index, key="maintenance_user")
+        # Update session state
+        st.session_state.maintenance_selected_user_id = selected_user['id']
+        
+        # Initialize session state for maintenance week selection
+        if 'maintenance_selected_week_id' not in st.session_state:
+            all_weeks_list = get_all_weeks()
+            st.session_state.maintenance_selected_week_id = all_weeks_list[0]['id'] if all_weeks_list else None
+        
+        weeks_list = get_all_weeks()
+        # Find index of currently selected week
+        try:
+            week_index = next(i for i, w in enumerate(weeks_list) if w['id'] == st.session_state.maintenance_selected_week_id)
+        except StopIteration:
+            week_index = 0
+        
+        selected_week = st.selectbox("Select Week", weeks_list, 
+                                     format_func=lambda x: f"S{x['season']}W{x['week']}", index=week_index, key="maintenance_week")
+        # Update session state
+        st.session_state.maintenance_selected_week_id = selected_week['id']
         
         if st.button("🧹 Remove Duplicates for User/Week"):
             try:

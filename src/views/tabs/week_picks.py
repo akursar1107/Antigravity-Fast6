@@ -33,24 +33,54 @@ def show_week_picks_tab(season: int) -> None:
         st.info("No weeks recorded yet.")
         return
     
+    # Initialize session state for week selection if not exists
+    if 'week_picks_selected_week_id' not in st.session_state:
+        st.session_state.week_picks_selected_week_id = weeks[0]['id'] if weeks else None
+    
+    # Initialize session state for user filter if not exists
+    if 'week_picks_selected_user_id' not in st.session_state:
+        st.session_state.week_picks_selected_user_id = None
+    
     col1, col2 = st.columns(2)
     
     with col1:
+        # Find index of currently selected week
+        try:
+            week_index = next(i for i, w in enumerate(weeks) if w['id'] == st.session_state.week_picks_selected_week_id)
+        except (StopIteration, KeyError):
+            week_index = 0
+        
         selected_week_record = st.selectbox(
             "Select Week",
             options=weeks,
             format_func=lambda x: f"Week {x['week']}",
+            index=week_index,
             key="public_week_select"
         )
+        # Update session state
+        st.session_state.week_picks_selected_week_id = selected_week_record['id']
     
     with col2:
         users = get_all_users()
+        
+        # Find index of currently selected user
+        if st.session_state.week_picks_selected_user_id is None:
+            user_index = 0
+        else:
+            try:
+                user_index = next(i + 1 for i, u in enumerate(users) if u['id'] == st.session_state.week_picks_selected_user_id)
+            except StopIteration:
+                user_index = 0
+        
         selected_user = st.selectbox(
             "Select Member (optional)",
             options=[None] + users,
             format_func=lambda x: "All Members" if x is None else x['name'],
+            index=user_index,
             key="public_member_select"
         )
+        # Update session state
+        st.session_state.week_picks_selected_user_id = selected_user['id'] if selected_user else None
     
     if selected_week_record:
         week_id = selected_week_record['id']
