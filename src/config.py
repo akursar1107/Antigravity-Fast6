@@ -26,6 +26,7 @@ except Exception as e:
 APP_NAME = _CONFIG.get("app", {}).get("name", "Fast6")
 APP_VERSION = _CONFIG.get("app", {}).get("version", "1.0.0")
 CURRENT_SEASON = _CONFIG.get("app", {}).get("current_season", 2025)
+CURRENT_WEEK = _CONFIG.get("app", {}).get("current_week", 1)  # Default to week 1
 DATABASE_PATH = _CONFIG.get("app", {}).get("database_path", "data/fast6.db")
 
 # ===== SEASONS =====
