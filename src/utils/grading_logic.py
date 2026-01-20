@@ -5,6 +5,8 @@ Handles auto-grading of picks against actual play-by-play data.
 
 import logging
 from typing import Dict, Optional
+from dataclasses import dataclass
+from datetime import datetime
 import pandas as pd
 from utils.nfl_data import load_data, get_game_schedule, get_first_tds, get_touchdowns, load_rosters
 from utils.name_matching import names_match
@@ -12,7 +14,106 @@ from utils import db_picks, db_stats
 from utils.db_connection import get_db_connection, get_db_context
 import config
 
+try:
+    import streamlit as st
+    HAS_STREAMLIT = True
+except ImportError:
+    HAS_STREAMLIT = False
+
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TDLookupCache:
+    """
+    Pre-computed touchdown lookup tables organized by game_id for fast access.
+    Reduces memory usage and lookup time by avoiding repeated processing of full season data.
+    """
+    first_tds_by_game: Dict[str, pd.DataFrame]
+    all_tds_by_game: Dict[str, pd.DataFrame]
+    season: int
+    cached_at: datetime
+    
+    def get_first_td_for_game(self, game_id: str) -> Optional[pd.DataFrame]:
+        """Get first TD data for a specific game."""
+        return self.first_tds_by_game.get(game_id)
+    
+    def get_all_tds_for_game(self, game_id: str) -> Optional[pd.DataFrame]:
+        """Get all TD data for a specific game."""
+        return self.all_tds_by_game.get(game_id)
+
+
+def _build_td_lookup_cache(season: int) -> TDLookupCache:
+    """
+    Build TD lookup cache for fast game-specific TD lookups.
+    This function is called internally and should be decorated with @st.cache_data in Streamlit context.
+    
+    Args:
+        season: NFL season year
+        
+    Returns:
+        TDLookupCache with pre-computed TD data organized by game_id
+    """
+    logger.info(f"Building TD lookup cache for season {season}")
+    
+    # Load full season data
+    df = load_data(season)
+    if df.empty:
+        logger.warning(f"No play-by-play data for season {season}")
+        return TDLookupCache(
+            first_tds_by_game={},
+            all_tds_by_game={},
+            season=season,
+            cached_at=datetime.now()
+        )
+    
+    # Get first TDs and all TDs
+    first_tds = get_first_tds(df)
+    all_tds = get_touchdowns(df)
+    
+    # Organize by game_id
+    first_tds_by_game = {}
+    all_tds_by_game = {}
+    
+    if not first_tds.empty and 'game_id' in first_tds.columns:
+        for game_id, group in first_tds.groupby('game_id'):
+            first_tds_by_game[game_id] = group
+    
+    if not all_tds.empty and 'game_id' in all_tds.columns:
+        for game_id, group in all_tds.groupby('game_id'):
+            all_tds_by_game[game_id] = group
+    
+    logger.info(f"Built TD cache: {len(first_tds_by_game)} games with first TDs, {len(all_tds_by_game)} games with all TDs")
+    
+    return TDLookupCache(
+        first_tds_by_game=first_tds_by_game,
+        all_tds_by_game=all_tds_by_game,
+        season=season,
+        cached_at=datetime.now()
+    )
+
+
+def get_td_lookup_cache(season: int) -> TDLookupCache:
+    """
+    Get cached TD lookup data for a season. Uses Streamlit caching if available, 
+    otherwise returns fresh data. Cache TTL: 1 hour.
+    
+    Args:
+        season: NFL season year
+        
+    Returns:
+        TDLookupCache with TD data
+    """
+    if HAS_STREAMLIT:
+        # Use Streamlit caching with 1 hour TTL
+        @st.cache_data(ttl=3600, show_spinner=f"Loading TD data for {season} season...")
+        def _cached_build(season: int) -> TDLookupCache:
+            return _build_td_lookup_cache(season)
+        
+        return _cached_build(season)
+    else:
+        # No caching outside Streamlit
+        return _build_td_lookup_cache(season)
 
 
 def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
@@ -34,17 +135,10 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
     """
     logger.info(f"Starting auto-grade for season {season}" + (f" week {week}" if week else ""))
     
-    # Load data
-    df = load_data(season)
-    if df.empty:
-        logger.warning(f"No play-by-play data found for season {season}")
-        return {'error': 'No data found', 'graded_picks': 0}
+    # Get TD lookup cache for this season
+    td_cache = get_td_lookup_cache(season)
     
-    # Get first TDs and all TDs
-    first_tds = get_first_tds(df)
-    all_tds = get_touchdowns(df)
-    
-    if first_tds.empty:
+    if not td_cache.first_tds_by_game:
         logger.warning(f"No first TD data found for season {season}")
         return {'error': 'No TD data found', 'graded_picks': 0}
     
@@ -102,33 +196,20 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
             # Normalize team name to abbreviation
             team_abbr = config.TEAM_ABBR_MAP.get(team, team)
             
-            # Determine game_id: prefer stored pick.game_id, else match by team/week
-            if pick_game_id:
-                game_id = pick_game_id
-            else:
-                week_schedule = get_game_schedule(df, pick_season)
-                if week_schedule.empty:
-                    stats['failed_to_match'] += 1
-                    continue
-                game_week_data = week_schedule[week_schedule['week'] == pick_week]
-                if game_week_data.empty:
-                    stats['failed_to_match'] += 1
-                    continue
-                matching_games = game_week_data[
-                    (game_week_data['home_team'] == team_abbr) | 
-                    (game_week_data['away_team'] == team_abbr)
-                ]
-                if matching_games.empty:
-                    stats['failed_to_match'] += 1
-                    continue
-                game_id = matching_games.iloc[0]['game_id']
+            # Determine game_id: prefer stored pick.game_id, else skip (requires game_id)
+            if not pick_game_id:
+                logger.warning(f"Pick {pick_id} missing game_id, skipping (player: {player_name}, team: {team})")
+                stats['failed_to_match'] += 1
+                continue
             
-            # Check first TD
-            first_td_match = first_tds[first_tds['game_id'] == game_id]
+            game_id = pick_game_id
+            
+            # Check first TD using cached data
+            first_td_match = td_cache.get_first_td_for_game(game_id)
             is_correct = False
             actual_first_td_scorer = None  # Track who actually scored the first TD
             
-            if not first_td_match.empty:
+            if first_td_match is not None and not first_td_match.empty:
                 actual_first_td_scorer = str(first_td_match.iloc[0]['td_player_name']).strip()
                 is_correct = names_match(player_name, actual_first_td_scorer)
             
@@ -137,8 +218,8 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
             any_time_td = is_correct  # Start with First TD status
             
             if not any_time_td:  # Only check if not already true from first TD
-                td_row = all_tds[all_tds['game_id'] == game_id]
-                if not td_row.empty:
+                td_row = td_cache.get_all_tds_for_game(game_id)
+                if td_row is not None and not td_row.empty:
                     # Filter to only TDs by the picked team
                     td_row_team_filtered = td_row[td_row['posteam'] == team_abbr]
                     logger.debug(f"Checking Any Time TD for {player_name} ({team_abbr}) in game {game_id}")
@@ -224,15 +305,10 @@ def grade_any_time_td_only(season: int, week: Optional[int] = None) -> Dict:
     """
     logger.info(f"Starting any-time TD grading for season {season}" + (f" week {week}" if week else ""))
     
-    # Load data
-    df = load_data(season)
-    if df.empty:
-        logger.warning(f"No play-by-play data found for season {season}")
-        return {'error': 'No data found', 'graded_picks': 0}
+    # Get TD lookup cache for this season
+    td_cache = get_td_lookup_cache(season)
     
-    # Get all TDs
-    all_tds = get_touchdowns(df)
-    if all_tds.empty:
+    if not td_cache.all_tds_by_game:
         logger.warning(f"No TD data found for season {season}")
         return {'error': 'No TD data found', 'graded_picks': 0}
     
@@ -288,32 +364,19 @@ def grade_any_time_td_only(season: int, week: Optional[int] = None) -> Dict:
             # Normalize team name to abbreviation
             team_abbr = config.TEAM_ABBR_MAP.get(team, team)
             
-            # Determine game_id: prefer stored pick.game_id, else match by team/week
-            if pick_game_id:
-                game_id = pick_game_id
-            else:
-                week_schedule = get_game_schedule(df, pick_season)
-                if week_schedule.empty:
-                    stats['failed_to_match'] += 1
-                    continue
-                game_week_data = week_schedule[week_schedule['week'] == pick_week]
-                if game_week_data.empty:
-                    stats['failed_to_match'] += 1
-                    continue
-                matching_games = game_week_data[
-                    (game_week_data['home_team'] == team_abbr) | 
-                    (game_week_data['away_team'] == team_abbr)
-                ]
-                if matching_games.empty:
-                    stats['failed_to_match'] += 1
-                    continue
-                game_id = matching_games.iloc[0]['game_id']
+            # Determine game_id: prefer stored pick.game_id, else skip (requires game_id)
+            if not pick_game_id:
+                logger.warning(f"Pick {pick_id} missing game_id, skipping (player: {player_name}, team: {team})")
+                stats['failed_to_match'] += 1
+                continue
+            
+            game_id = pick_game_id
             
             # Check any time TD
             any_time_td = False
-            td_row = all_tds[all_tds['game_id'] == game_id]
+            td_row = td_cache.get_all_tds_for_game(game_id)
             
-            if not td_row.empty:
+            if td_row is not None and not td_row.empty:
                 # Filter to only TDs by the picked team
                 td_row_team_filtered = td_row[td_row['posteam'] == team_abbr]
                 logger.debug(f"Checking Any Time TD for {player_name} ({team_abbr}) in game {game_id}")

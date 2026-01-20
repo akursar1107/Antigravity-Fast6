@@ -77,7 +77,7 @@ def show_week_picks_tab(season: int) -> None:
                         'Player': pick['player_name'],
                         'Odds': odds_str,
                         'Theo Return': f"${theo_ret:.2f}" if isinstance(theo_ret, (int, float)) else "$0.00",
-                        'Result': '✅ Correct' if result and result['is_correct'] else ('❌ Incorrect' if result and result['is_correct'] is False else '⏳ Pending'),
+                        'Result': '✅ Correct' if result and result['is_correct'] == 1 else ('❌ Incorrect' if result and result['is_correct'] == 0 else '⏳ Pending'),
                         'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "$0.00"
                     })
                 
@@ -116,7 +116,7 @@ def show_week_picks_tab(season: int) -> None:
                                 'Player': pick['player_name'],
                                 'Odds': odds_str,
                                 'Theo Return': f"${theo_ret:.2f}" if isinstance(theo_ret, (int, float)) else "$0.00",
-                                'Result': '✅' if result and result['is_correct'] else ('❌' if result and result['is_correct'] is False else '⏳'),
+                                'Result': '✅' if result and result['is_correct'] == 1 else ('❌' if result and result['is_correct'] == 0 else '⏳'),
                                 'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "$0.00"
                             })
                         
