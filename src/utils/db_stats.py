@@ -14,7 +14,7 @@ try:
 except ImportError:
     HAS_STREAMLIT = False
 
-from .db_connection import get_db_connection
+from .db_connection import get_db_connection, get_db_context
 from .type_utils import safe_int as _safe_int
 
 logger = logging.getLogger(__name__)
@@ -53,12 +53,10 @@ def add_result(pick_id: int, actual_scorer: Optional[str] = None,
                is_correct: Optional[bool] = None, actual_return: Optional[float] = None,
                any_time_td: Optional[bool] = None) -> int:
     """Add or update result for a pick. Idempotent and quiet when already present."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Clear leaderboard cache when a result is added/updated
-        clear_leaderboard_cache()
+    # Clear leaderboard cache when a result is added/updated
+    clear_leaderboard_cache()
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         # If a result already exists, update instead of raising an integrity error
         cursor.execute("SELECT id FROM results WHERE pick_id = ?", (pick_id,))
         existing = cursor.fetchone()
@@ -72,7 +70,6 @@ def add_result(pick_id: int, actual_scorer: Optional[str] = None,
                 """,
                 (actual_scorer, is_correct, actual_return, any_time_td, pick_id)
             )
-            conn.commit()
             return result_id
 
         cursor.execute(
@@ -82,36 +79,25 @@ def add_result(pick_id: int, actual_scorer: Optional[str] = None,
             """,
             (pick_id, actual_scorer, is_correct, actual_return, any_time_td)
         )
-        conn.commit()
         return cursor.lastrowid
-    finally:
-        conn.close()
 
 
 def get_result(result_id: int) -> Optional[Dict]:
     """Get result by ID."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM results WHERE id = ?", (result_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
-    finally:
-        conn.close()
 
 
 def get_result_for_pick(pick_id: int) -> Optional[Dict]:
     """Get result for a specific pick."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM results WHERE pick_id = ?", (pick_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
-    finally:
-        conn.close()
 
 
 def delete_season_data(season: int) -> Dict[str, int]:
@@ -119,91 +105,18 @@ def delete_season_data(season: int) -> Dict[str, int]:
     Delete all picks and results for a specific season.
     Returns counts of deleted items.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
     try:
-        # Count picks to be deleted
-        cursor.execute("""
-            SELECT COUNT(*) FROM picks p
-            JOIN weeks w ON p.week_id = w.id
-            WHERE w.season = ?
-        """, (season,))
-        picks_count = cursor.fetchone()[0]
-        
-        # Count results to be deleted (cascading)
-        cursor.execute("""
-            SELECT COUNT(*) FROM results r
-            JOIN picks p ON r.pick_id = p.id
-            JOIN weeks w ON p.week_id = w.id
-            WHERE w.season = ?
-        """, (season,))
-        results_count = cursor.fetchone()[0]
-        
-        # Delete picks (results cascade automatically via foreign key)
-        cursor.execute("""
-            DELETE FROM picks
-            WHERE week_id IN (SELECT id FROM weeks WHERE season = ?)
-        """, (season,))
-        
-        # Optionally delete weeks for this season if empty
-        cursor.execute("""
-            DELETE FROM weeks
-            WHERE season = ? AND id NOT IN (SELECT DISTINCT week_id FROM picks)
-        """, (season,))
-        weeks_deleted = cursor.rowcount
-        
-        conn.commit()
-        
-        logger.info(f"Season {season} data deleted: {picks_count} picks, {results_count} results, {weeks_deleted} weeks")
-        
-        return {
-            'picks_deleted': picks_count,
-            'results_deleted': results_count,
-            'weeks_deleted': weeks_deleted
-        }
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error deleting season {season} data: {e}")
-        raise
-    finally:
-        conn.close()
-
-
-def clear_grading_results(season: int, week: Optional[int] = None) -> Dict[str, int]:
-    """
-    Clear all grading results for a season (optionally filtered by week).
-    Deletes results but keeps picks intact - allows re-grading.
-    Used sparingly for override grading when needed.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Clear leaderboard cache when clearing grading results
-        clear_leaderboard_cache()
-        if week:
-            # Clear results for specific week
+        with get_db_context() as conn:
+            cursor = conn.cursor()
+            # Count picks to be deleted
             cursor.execute("""
-                SELECT COUNT(*) FROM results r
-                JOIN picks p ON r.pick_id = p.id
+                SELECT COUNT(*) FROM picks p
                 JOIN weeks w ON p.week_id = w.id
-                WHERE w.season = ? AND w.week = ?
-            """, (season, week))
-            results_count = cursor.fetchone()[0]
+                WHERE w.season = ?
+            """, (season,))
+            picks_count = cursor.fetchone()[0]
             
-            cursor.execute("""
-                DELETE FROM results
-                WHERE pick_id IN (
-                    SELECT p.id FROM picks p
-                    JOIN weeks w ON p.week_id = w.id
-                    WHERE w.season = ? AND w.week = ?
-                )
-            """, (season, week))
-            
-            logger.info(f"Cleared grading for Season {season} Week {week}: {results_count} results deleted")
-        else:
-            # Clear results for entire season
+            # Count results to be deleted (cascading)
             cursor.execute("""
                 SELECT COUNT(*) FROM results r
                 JOIN picks p ON r.pick_id = p.id
@@ -212,35 +125,96 @@ def clear_grading_results(season: int, week: Optional[int] = None) -> Dict[str, 
             """, (season,))
             results_count = cursor.fetchone()[0]
             
+            # Delete picks (results cascade automatically via foreign key)
             cursor.execute("""
-                DELETE FROM results
-                WHERE pick_id IN (
-                    SELECT p.id FROM picks p
-                    JOIN weeks w ON p.week_id = w.id
-                    WHERE w.season = ?
-                )
+                DELETE FROM picks
+                WHERE week_id IN (SELECT id FROM weeks WHERE season = ?)
             """, (season,))
             
-            logger.info(f"Cleared grading for Season {season}: {results_count} results deleted")
-        
-        conn.commit()
-        
-        return {
-            'results_cleared': results_count,
-            'picks_remaining': cursor.execute(
-                "SELECT COUNT(*) FROM picks p JOIN weeks w ON p.week_id = w.id WHERE w.season = ?", 
-                (season,)
-            ).fetchone()[0] if not week else cursor.execute(
-                "SELECT COUNT(*) FROM picks p JOIN weeks w ON p.week_id = w.id WHERE w.season = ? AND w.week = ?",
-                (season, week)
-            ).fetchone()[0]
-        }
+            # Optionally delete weeks for this season if empty
+            cursor.execute("""
+                DELETE FROM weeks
+                WHERE season = ? AND id NOT IN (SELECT DISTINCT week_id FROM picks)
+            """, (season,))
+            weeks_deleted = cursor.rowcount
+            
+            logger.info(f"Season {season} data deleted: {picks_count} picks, {results_count} results, {weeks_deleted} weeks")
+            
+            return {
+                'picks_deleted': picks_count,
+                'results_deleted': results_count,
+                'weeks_deleted': weeks_deleted
+            }
     except Exception as e:
-        conn.rollback()
+        logger.error(f"Error deleting season {season} data: {e}")
+        raise
+
+
+def clear_grading_results(season: int, week: Optional[int] = None) -> Dict[str, int]:
+    """
+    Clear all grading results for a season (optionally filtered by week).
+    Deletes results but keeps picks intact - allows re-grading.
+    Used sparingly for override grading when needed.
+    """
+    # Clear leaderboard cache when clearing grading results
+    clear_leaderboard_cache()
+    try:
+        with get_db_context() as conn:
+            cursor = conn.cursor()
+            if week:
+                # Clear results for specific week
+                cursor.execute("""
+                    SELECT COUNT(*) FROM results r
+                    JOIN picks p ON r.pick_id = p.id
+                    JOIN weeks w ON p.week_id = w.id
+                    WHERE w.season = ? AND w.week = ?
+                """, (season, week))
+                results_count = cursor.fetchone()[0]
+                
+                cursor.execute("""
+                    DELETE FROM results
+                    WHERE pick_id IN (
+                        SELECT p.id FROM picks p
+                        JOIN weeks w ON p.week_id = w.id
+                        WHERE w.season = ? AND w.week = ?
+                    )
+                """, (season, week))
+                
+                logger.info(f"Cleared grading for Season {season} Week {week}: {results_count} results deleted")
+            else:
+                # Clear results for entire season
+                cursor.execute("""
+                    SELECT COUNT(*) FROM results r
+                    JOIN picks p ON r.pick_id = p.id
+                    JOIN weeks w ON p.week_id = w.id
+                    WHERE w.season = ?
+                """, (season,))
+                results_count = cursor.fetchone()[0]
+                
+                cursor.execute("""
+                    DELETE FROM results
+                    WHERE pick_id IN (
+                        SELECT p.id FROM picks p
+                        JOIN weeks w ON p.week_id = w.id
+                        WHERE w.season = ?
+                    )
+                """, (season,))
+                
+                logger.info(f"Cleared grading for Season {season}: {results_count} results deleted")
+            
+            return {
+                'results_cleared': results_count,
+                'picks_remaining': cursor.execute(
+                    "SELECT COUNT(*) FROM picks p JOIN weeks w ON p.week_id = w.id WHERE w.season = ?", 
+                    (season,)
+                ).fetchone()[0] if not week else cursor.execute(
+                    "SELECT COUNT(*) FROM picks p JOIN weeks w ON p.week_id = w.id WHERE w.season = ? AND w.week = ?",
+                    (season, week)
+                ).fetchone()[0]
+            }
+    except Exception as e:
         logger.error(f"Error clearing grading results: {e}")
         raise
-    finally:
-        conn.close()
 
 
 # ============= LEADERBOARD & STATISTICS =============
@@ -254,10 +228,8 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
     Includes both First TD wins and Any Time TD wins.
     Points: 3 for First TD, 1 for Any Time TD
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         if week_id:
             # Single week leaderboard
             cursor.execute(f"""
@@ -303,16 +275,12 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
         
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
-    finally:
-        conn.close()
 
 
 def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict]:
     """Get stats for a specific user. Includes First TD and Any Time TD stats. Points: 3 for First TD, 1 for Any Time TD."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         if week_id:
             cursor.execute(f"""
                 SELECT
@@ -356,16 +324,12 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
         
         row = cursor.fetchone()
         return dict(row) if row else None
-    finally:
-        conn.close()
 
 
 def get_weekly_summary(week_id: int) -> Dict:
     """Get summary stats for a week."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         # Week info
         cursor.execute("SELECT * FROM weeks WHERE id = ?", (week_id,))
         week_row = cursor.fetchone()
@@ -399,5 +363,3 @@ def get_weekly_summary(week_id: int) -> Dict:
         results = dict(cursor.fetchone())
         
         return {**week, **counts, **results}
-    finally:
-        conn.close()

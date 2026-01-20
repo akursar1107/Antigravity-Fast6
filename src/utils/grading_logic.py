@@ -8,7 +8,8 @@ from typing import Dict, Optional
 import pandas as pd
 from utils.nfl_data import load_data, get_game_schedule, get_first_tds, get_touchdowns, load_rosters
 from utils.name_matching import names_match
-import database
+from utils import db_picks, db_stats
+from utils.db_connection import get_db_connection, get_db_context
 import config
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
     rosters = load_rosters(season)
     
     # Get ungraded picks
-    conn = database.get_db_connection()
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     if week:
@@ -167,7 +168,7 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
             actual_return = theo_return if is_correct else 0.0
             
             # Save result - use the actual first TD scorer, not the picked player
-            database.add_result(
+            db_stats.add_result(
                 pick_id=pick_id,
                 actual_scorer=actual_first_td_scorer,  # Who actually scored first TD (or None if no TD)
                 is_correct=is_correct,
@@ -239,7 +240,7 @@ def grade_any_time_td_only(season: int, week: Optional[int] = None) -> Dict:
     rosters = load_rosters(season)
     
     # Get ungraded picks (where any_time_td is NULL)
-    conn = database.get_db_connection()
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     if week:
@@ -339,23 +340,20 @@ def grade_any_time_td_only(season: int, week: Optional[int] = None) -> Dict:
             any_time_td = bool(any_time_td)
             
             # Update the any_time_td field without changing is_correct
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE results
-                SET any_time_td = ?
-                WHERE pick_id = ?
-            """, (any_time_td, pick_id))
-            
-            # If no result exists yet, create one
-            if cursor.rowcount == 0:
+            with get_db_context() as conn:
+                cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO results (pick_id, any_time_td)
-                    VALUES (?, ?)
-                """, (pick_id, any_time_td))
-            
-            conn.commit()
-            conn.close()
+                    UPDATE results
+                    SET any_time_td = ?
+                    WHERE pick_id = ?
+                """, (any_time_td, pick_id))
+                
+                # If no result exists yet, create one
+                if cursor.rowcount == 0:
+                    cursor.execute("""
+                        INSERT INTO results (pick_id, any_time_td)
+                        VALUES (?, ?)
+                    """, (pick_id, any_time_td))
             
             stats['graded_picks'] += 1
             if any_time_td:

@@ -111,6 +111,9 @@ def init_db() -> None:
         # Create indexes for frequently queried columns
         # This dramatically improves query performance on larger datasets
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_picks_user_week ON picks(user_id, week_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_picks_week_id ON picks(week_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_picks_user_id ON picks(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_picks_game_id ON picks(game_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_pick_id ON results(pick_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_correct ON results(is_correct)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_weeks_season ON weeks(season)")

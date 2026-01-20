@@ -7,7 +7,7 @@ import sqlite3
 import logging
 from typing import Optional, List, Dict, Tuple
 
-from .db_connection import get_db_connection
+from .db_connection import get_db_connection, get_db_context
 from .type_utils import safe_int as _safe_int
 
 logger = logging.getLogger(__name__)
@@ -17,44 +17,30 @@ def add_pick(user_id: int, week_id: int, team: str, player_name: str,
              odds: Optional[float] = None, theoretical_return: Optional[float] = None,
              game_id: Optional[str] = None) -> int:
     """Add a user's pick for a week."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO picks (user_id, week_id, team, player_name, odds, theoretical_return, game_id)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (user_id, week_id, team, player_name, odds, theoretical_return, game_id))
-        conn.commit()
         pick_id = cursor.lastrowid
         logger.info(f"Pick added: User {user_id}, Week {week_id}, {team} {player_name}, game_id={game_id}")
         return pick_id
-    except Exception as e:
-        logger.error(f"Error adding pick: {e}")
-        raise
-    finally:
-        conn.close()
 
 
 def get_pick(pick_id: int) -> Optional[Dict]:
     """Get pick by ID."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM picks WHERE id = ?", (pick_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
-    finally:
-        conn.close()
 
 
 def get_user_week_picks(user_id: int, week_id: int) -> List[Dict]:
     """Get all picks for a user in a specific week."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT * FROM picks
             WHERE user_id = ? AND week_id = ?
@@ -62,16 +48,12 @@ def get_user_week_picks(user_id: int, week_id: int) -> List[Dict]:
         """, (user_id, week_id))
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
-    finally:
-        conn.close()
 
 
 def get_week_all_picks(week_id: int) -> List[Dict]:
     """Get all picks for a week (all users)."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT p.*, u.name as user_name
             FROM picks p
@@ -81,16 +63,12 @@ def get_week_all_picks(week_id: int) -> List[Dict]:
         """, (week_id,))
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
-    finally:
-        conn.close()
 
 
 def get_user_all_picks(user_id: int) -> List[Dict]:
     """Get all picks for a user across all weeks."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT p.*, w.season, w.week, u.name as user_name
             FROM picks p
@@ -110,18 +88,13 @@ def get_user_all_picks(user_id: int) -> List[Dict]:
                 row_dict['week'] = _safe_int(row_dict['week'])
             result.append(row_dict)
         return result
-    finally:
-        conn.close()
 
 
 def delete_pick(pick_id: int) -> bool:
     """Delete a pick (cascades to results). Clears leaderboard cache."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("DELETE FROM picks WHERE id = ?", (pick_id,))
-        conn.commit()
         success = cursor.rowcount > 0
         if success:
             logger.info(f"Pick deleted: ID {pick_id}")
@@ -129,8 +102,6 @@ def delete_pick(pick_id: int) -> bool:
             from .db_stats import clear_leaderboard_cache
             clear_leaderboard_cache()
         return success
-    finally:
-        conn.close()
 
 
 def get_ungraded_picks(season: int, week: Optional[int] = None, game_id: Optional[str] = None) -> List[Dict]:
@@ -146,10 +117,8 @@ def get_ungraded_picks(season: int, week: Optional[int] = None, game_id: Optiona
     Returns:
         List of pick dictionaries with user and week info
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         query = """
             SELECT p.*, u.name as user_name, w.season, w.week
             FROM picks p
@@ -179,8 +148,6 @@ def get_ungraded_picks(season: int, week: Optional[int] = None, game_id: Optiona
                 row_dict['week'] = _safe_int(row_dict['week'])
             result.append(row_dict)
         return result
-    finally:
-        conn.close()
 
 
 # ============= MAINTENANCE / DEDUPE =============
@@ -191,10 +158,8 @@ def dedupe_picks_for_user_week(user_id: int, week_id: int) -> Dict[str, int]:
     for each (team, player_name) and deleting the rest. Returns a summary dict.
     Results tied to deleted picks are removed via ON DELETE CASCADE.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         # Fetch picks ordered by canonical fields
         cursor.execute(
             """
@@ -224,15 +189,9 @@ def dedupe_picks_for_user_week(user_id: int, week_id: int) -> Dict[str, int]:
         if to_delete:
             # Delete duplicates; results will cascade
             cursor.executemany("DELETE FROM picks WHERE id = ?", [(pid,) for pid in to_delete])
-            conn.commit()
             deleted = len(to_delete)
 
         return {"duplicates_removed": deleted, "unique_kept": len(seen)}
-    except Exception as e:
-        logger.error(f"Error deduping picks: {e}")
-        raise
-    finally:
-        conn.close()
 
 
 def create_unique_picks_index() -> bool:
@@ -241,25 +200,19 @@ def create_unique_picks_index() -> bool:
     future duplicates. Returns True on success, False if the index could not be
     created (likely due to existing duplicates).
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute(
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS picks_unique_idx
-            ON picks(user_id, week_id, team, player_name)
-            """
-        )
-        conn.commit()
-        return True
+        with get_db_context() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS picks_unique_idx
+                ON picks(user_id, week_id, team, player_name)
+                """
+            )
+            return True
     except sqlite3.IntegrityError as e:
         logger.warning(f"Could not create unique index: {e}")
         return False
-    except Exception as e:
-        logger.error(f"Error creating unique picks index: {e}")
-        return False
-    finally:
-        conn.close()
 
 
 def dedupe_all_picks() -> Dict[str, int]:
@@ -267,9 +220,8 @@ def dedupe_all_picks() -> Dict[str, int]:
     Remove duplicate picks across the entire database, keeping the earliest entry
     per (user_id, week_id, team, player_name). Returns a summary dict.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute(
             """
             SELECT id, user_id, week_id, team, player_name, created_at
@@ -296,17 +248,12 @@ def dedupe_all_picks() -> Dict[str, int]:
         deleted = 0
         if to_delete:
             cursor.executemany("DELETE FROM picks WHERE id = ?", [(pid,) for pid in to_delete])
-            conn.commit()
             deleted = len(to_delete)
             # Clear leaderboard cache since picks were modified
+            from .db_stats import clear_leaderboard_cache
             clear_leaderboard_cache()
 
         return {"duplicates_removed": deleted, "unique_kept": len(seen)}
-    except Exception as e:
-        logger.error(f"Error deduping all picks: {e}")
-        raise
-    finally:
-        conn.close()
 
 
 def backfill_theoretical_return_from_odds() -> int:
@@ -314,17 +261,10 @@ def backfill_theoretical_return_from_odds() -> int:
     Populate picks.theoretical_return based on American odds where missing.
     Returns the number of rows updated.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("UPDATE picks SET theoretical_return = odds/100.0 WHERE theoretical_return IS NULL AND odds > 0")
         updated_pos = cursor.rowcount if cursor.rowcount is not None else 0
         cursor.execute("UPDATE picks SET theoretical_return = 100.0/ABS(odds) WHERE theoretical_return IS NULL AND odds < 0")
         updated_neg = cursor.rowcount if cursor.rowcount is not None else 0
-        conn.commit()
         return (updated_pos or 0) + (updated_neg or 0)
-    except Exception as e:
-        logger.error(f"Error backfilling theoretical returns: {e}")
-        raise
-    finally:
-        conn.close()

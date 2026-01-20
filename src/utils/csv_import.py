@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Optional
 import pandas as pd
 from utils.nfl_data import load_data, get_game_schedule, get_first_tds
 import config
-import database
+from utils import db_users, db_weeks, db_picks, db_stats
 
 
 TEAM_CORRECTIONS = {
@@ -62,7 +62,7 @@ def ingest_picks_from_csv(file_path: str, season: int) -> Dict[str, int]:
     Expected columns: Week, Gameday, Picker, Visitor (or Vistor), Home, Player, 1st TD Odds
     """
     # Wipe season data first
-    deleted = database.delete_season_data(int(season))
+    deleted = db_stats.delete_season_data(int(season))
 
     df = pd.read_csv(file_path)
     cols = [c.strip() for c in df.columns]
@@ -103,16 +103,16 @@ def ingest_picks_from_csv(file_path: str, season: int) -> Dict[str, int]:
             home = _to_abbr(home_raw)
 
             # Find or create user
-            user = database.get_user_by_name(picker)
+            user = db_users.get_user_by_name(picker)
             if not user:
-                user_id = database.add_user(picker)
+                user_id = db_users.add_user(picker)
             else:
                 user_id = user['id']
 
             # Ensure week exists
-            week_row = database.get_week_by_season_week(int(season), week)
+            week_row = db_weeks.get_week_by_season_week(int(season), week)
             if not week_row:
-                week_id = database.add_week(int(season), week)
+                week_id = db_weeks.add_week(int(season), week)
             else:
                 week_id = week_row['id']
 
@@ -124,7 +124,7 @@ def ingest_picks_from_csv(file_path: str, season: int) -> Dict[str, int]:
                     game_id = str(match.iloc[0]['game_id'])
 
             # Store pick with Unknown team; grading will prefer game_id
-            database.add_pick(
+            db_picks.add_pick(
                 user_id=user_id,
                 week_id=week_id,
                 team='Unknown',

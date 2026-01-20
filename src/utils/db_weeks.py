@@ -8,7 +8,7 @@ import logging
 from typing import Optional, List, Dict
 from datetime import datetime
 
-from .db_connection import get_db_connection
+from .db_connection import get_db_connection, get_db_context
 from .type_utils import safe_int as _safe_int
 
 logger = logging.getLogger(__name__)
@@ -17,34 +17,30 @@ logger = logging.getLogger(__name__)
 def add_week(season: int, week: int, started_at: Optional[datetime] = None,
              ended_at: Optional[datetime] = None) -> int:
     """Add a season/week entry."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
     try:
-        cursor.execute("""
-            INSERT INTO weeks (season, week, started_at, ended_at)
-            VALUES (?, ?, ?, ?)
-        """, (season, week, started_at, ended_at))
-        conn.commit()
-        week_id = cursor.lastrowid
-        logger.info(f"Week added: Season {season}, Week {week} (ID: {week_id})")
-        return week_id
+        with get_db_context() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO weeks (season, week, started_at, ended_at)
+                VALUES (?, ?, ?, ?)
+            """, (season, week, started_at, ended_at))
+            week_id = cursor.lastrowid
+            logger.info(f"Week added: Season {season}, Week {week} (ID: {week_id})")
+            return week_id
     except sqlite3.IntegrityError:
         logger.warning(f"Week already exists: Season {season}, Week {week}")
         # Return existing week ID
-        cursor.execute("SELECT id FROM weeks WHERE season = ? AND week = ?", (season, week))
-        row = cursor.fetchone()
-        return row[0] if row else -1
-    finally:
-        conn.close()
+        with get_db_context() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM weeks WHERE season = ? AND week = ?", (season, week))
+            row = cursor.fetchone()
+            return row[0] if row else -1
 
 
 def get_week(week_id: int) -> Optional[Dict]:
     """Get week by ID."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM weeks WHERE id = ?", (week_id,))
         row = cursor.fetchone()
         if not row:
@@ -57,16 +53,12 @@ def get_week(week_id: int) -> Optional[Dict]:
             'ended_at': row['ended_at'],
             'created_at': row['created_at']
         }
-    finally:
-        conn.close()
 
 
 def get_week_by_season_week(season: int, week: int) -> Optional[Dict]:
     """Get week by season and week number."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM weeks WHERE season = ? AND week = ?", (season, week))
         row = cursor.fetchone()
         if not row:
@@ -79,16 +71,12 @@ def get_week_by_season_week(season: int, week: int) -> Optional[Dict]:
             'ended_at': row['ended_at'],
             'created_at': row['created_at']
         }
-    finally:
-        conn.close()
 
 
 def get_all_weeks(season: Optional[int] = None) -> List[Dict]:
     """Get all weeks, optionally filtered by season."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
+    with get_db_context() as conn:
+        cursor = conn.cursor()
         if season:
             cursor.execute("SELECT * FROM weeks WHERE season = ? ORDER BY week", (season,))
         else:
@@ -106,5 +94,3 @@ def get_all_weeks(season: Optional[int] = None) -> List[Dict]:
             }
             for row in rows
         ]
-    finally:
-        conn.close()

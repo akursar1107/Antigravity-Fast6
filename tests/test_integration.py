@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from config import THEME, SEASONS, TEAM_MAP, FEATURES, SCORING_FIRST_TD
 from utils.theming import generate_theme_css
-from database import init_db
+from utils.db_connection import init_db
 
 
 class TestConfigurationLoading(unittest.TestCase):
