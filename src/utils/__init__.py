@@ -44,10 +44,14 @@ except ImportError:
 # Database operations - These should always work
 from utils.db_connection import (
     get_db_connection,
-    init_db,
-    ensure_game_id_column,
-    ensure_any_time_td_column,
+    get_db_context,
     DB_PATH
+)
+
+from utils.migrations import (
+    run_migrations,
+    get_current_version,
+    get_migration_history
 )
 
 from utils.db_users import (
