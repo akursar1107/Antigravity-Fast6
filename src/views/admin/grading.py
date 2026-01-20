@@ -219,6 +219,8 @@ def _get_filtered_ungraded_picks(grade_season, grade_week, selected_game, select
 
 def _show_auto_grade_button(ungraded, grade_season, grade_week):
     """Show auto-grade button and handle grading."""
+    from utils.exceptions import GradingError, NFLDataError
+    
     col_auto_grade = st.columns(2)
     with col_auto_grade[0]:
         if st.button("⚡ Auto-Grade All Against Database", type="primary", key="auto_grade_btn"):
@@ -247,6 +249,12 @@ def _show_auto_grade_button(ungraded, grade_season, grade_week):
                                     st.dataframe(details_df, use_container_width=True, hide_index=True)
                         
                         st.rerun()
+                except NFLDataError as e:
+                    st.error(f"❌ NFL Data Not Available: {e}")
+                    st.info("💡 **Tip:** NFL play-by-play data may not be available yet for recent games. Try again later.")
+                except GradingError as e:
+                    st.error(f"❌ Grading Failed: {e}")
+                    st.warning("Check the logs for details or contact support.")
                 except Exception as e:
                     import traceback
                     st.error(f"❌ Auto-grade failed: {str(e)}")

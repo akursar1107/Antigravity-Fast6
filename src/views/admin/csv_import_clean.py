@@ -12,6 +12,7 @@ from utils.csv_import_clean import (
     find_game_id
 )
 from utils.nfl_data import load_rosters, get_game_schedule, load_data
+from utils.exceptions import ImportError, NFLDataError, ValidationError
 import tempfile
 import os
 import logging
@@ -158,18 +159,35 @@ def show_clean_csv_import(season: int):
     # Read CSV
     try:
         df = pd.read_csv(uploaded_file)
+    except pd.errors.EmptyDataError:
+        st.error("❌ CSV file is empty. Please upload a file with data.")
+        return
+    except pd.errors.ParserError as e:
+        st.error(f"❌ CSV Parse Error: {e}")
+        st.info("💡 **Tip:** Ensure your CSV is properly formatted with commas separating values.")
+        return
     except Exception as e:
-        st.error(f"Failed to read CSV: {e}")
+        st.error(f"❌ Failed to read CSV: {e}")
+        logger.exception("CSV read error")
         return
     
     st.info(f"📋 Loaded {len(df)} rows from CSV")
     
     # Step 2: Validate data
     try:
-        with st.spinner("Validating data..."):
+        with st.spinner("Validating data against NFL schedules and rosters..."):
             validation = validate_csv_data(df, season)
+    except NFLDataError as e:
+        st.error(f"❌ {e}")
+        st.info("💡 **Tip:** NFL data may not be available yet. Check back later or verify the season.")
+        return
     except ValueError as e:
-        st.error(f"CSV validation failed: {e}")
+        st.error(f"❌ CSV validation failed: {e}")
+        st.info("💡 **Tip:** Check that all required columns are present: Week, Picker, Visitor, Home, Player")
+        return
+    except Exception as e:
+        st.error(f"❌ Validation error: {e}")
+        logger.exception("CSV validation error")
         return
     
     df = validation['df']
