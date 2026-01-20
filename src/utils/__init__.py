@@ -45,6 +45,7 @@ except ImportError:
 from utils.db_connection import (
     get_db_connection,
     get_db_context,
+    init_db,
     DB_PATH
 )
 
