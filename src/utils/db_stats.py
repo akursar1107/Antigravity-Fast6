@@ -39,10 +39,17 @@ def _cache_if_streamlit(func):
 
 
 def clear_leaderboard_cache() -> None:
-    """Clear the leaderboard cache when results are updated."""
+    """
+    Clear only the leaderboard-related caches when results are updated.
+    Uses selective cache clearing instead of clearing all Streamlit caches.
+    """
     if HAS_STREAMLIT:
         try:
-            st.cache_data.clear()
+            # Clear only the specific cached functions that depend on results
+            get_leaderboard.clear()
+            get_user_stats.clear()
+            get_weekly_summary.clear()
+            logger.debug("Cleared leaderboard caches (get_leaderboard, get_user_stats, get_weekly_summary)")
         except Exception as e:
             logger.debug(f"Could not clear cache: {e}")
 
@@ -326,6 +333,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
         return dict(row) if row else None
 
 
+@_cache_if_streamlit
 def get_weekly_summary(week_id: int) -> Dict:
     """Get summary stats for a week."""
     with get_db_context() as conn:
