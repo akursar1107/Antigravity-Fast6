@@ -96,8 +96,15 @@ class PickerPerformanceService:
         for min_odds, max_odds, label in buckets:
             picks_in_range = [
                 p for p in picks
-                if min_odds <= abs(p.get('odds', 250)) < max_odds
+                if p.get('odds') is not None and min_odds <= abs(p.get('odds')) < max_odds
             ]
+            
+            # If no picks in range with non-None odds, try with default
+            if not picks_in_range:
+                picks_in_range = [
+                    p for p in picks
+                    if p.get('odds') is None and min_odds <= 250 < max_odds
+                ]
             
             if not picks_in_range:
                 continue
@@ -110,7 +117,7 @@ class PickerPerformanceService:
             
             total_return = 0.0
             for p in picks_in_range:
-                odds = p.get('odds', 250)
+                odds = p.get('odds') or 250  # Default to 250 if None
                 if p.get('is_correct'):
                     if odds > 0:
                         total_return += 1.0 + (odds / 100.0)
