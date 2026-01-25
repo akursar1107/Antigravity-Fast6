@@ -1,0 +1,51 @@
+# Ignore git files
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+.venv
+venv
+env
+ENV
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test files
+tests/
+*.test.py
+.pytest_cache
+.coverage
+htmlcov/
+
+# Archive and backup files
+archive/
+*.bak
+*.backup
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
