@@ -92,7 +92,8 @@ from utils.db_stats import (
     clear_grading_results,
     get_leaderboard,
     get_user_stats,
-    get_weekly_summary
+    get_weekly_summary,
+    get_user_picks_with_results
 )
 
 __all__ = [
@@ -152,4 +153,5 @@ __all__ = [
     'get_leaderboard',
     'get_user_stats',
     'get_weekly_summary',
+    'get_user_picks_with_results',
 ]

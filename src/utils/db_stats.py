@@ -367,3 +367,47 @@ def get_weekly_summary(week_id: int) -> Dict:
         results = dict(cursor.fetchone())
         
         return {**week, **counts, **results}
+
+
+def get_user_picks_with_results(user_id: int, season: int) -> List[Dict]:
+    """
+    Get all picks for a user in a season with result data joined.
+    
+    Args:
+        user_id: User ID
+        season: NFL season
+        
+    Returns:
+        List of pick dictionaries with joined result fields (odds, is_correct, actual_return, etc.)
+    """
+    with get_db_context() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                p.*,
+                w.season,
+                w.week,
+                r.id as result_id,
+                r.actual_scorer,
+                r.is_correct,
+                r.actual_return,
+                r.any_time_td
+            FROM picks p
+            JOIN weeks w ON p.week_id = w.id
+            LEFT JOIN results r ON p.id = r.pick_id
+            WHERE p.user_id = ? AND w.season = ?
+            ORDER BY w.season DESC, w.week DESC
+        """, (user_id, season))
+        
+        rows = cursor.fetchall()
+        result = []
+        for row in rows:
+            row_dict = dict(row)
+            # Ensure integer conversion
+            if 'season' in row_dict:
+                row_dict['season'] = _safe_int(row_dict['season'])
+            if 'week' in row_dict:
+                row_dict['week'] = _safe_int(row_dict['week'])
+            result.append(row_dict)
+        
+        return result

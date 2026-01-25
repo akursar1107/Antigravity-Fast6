@@ -46,7 +46,7 @@ def show_player_trends_tab(pbp_df: pd.DataFrame, season: int, roster_df: pd.Data
         window_size = st.radio(
             "Rolling Window",
             options=[4, 8, 12],
-            value=8,
+            index=1,
             horizontal=True,
             help="Games to average over"
         )
