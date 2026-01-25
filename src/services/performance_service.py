@@ -53,7 +53,9 @@ class PickerPerformanceService:
         
         for pick in picks:
             # Get odds (default to +250 if not available)
-            odds = pick.get('odds', 250)
+            odds = pick.get('odds')
+            if odds is None:
+                odds = 250
             implied_prob = american_to_probability(odds)
             
             # Actual outcome: 1 if correct, 0 if incorrect
@@ -94,17 +96,13 @@ class PickerPerformanceService:
         results = []
         
         for min_odds, max_odds, label in buckets:
-            picks_in_range = [
-                p for p in picks
-                if p.get('odds') is not None and min_odds <= abs(p.get('odds')) < max_odds
-            ]
-            
-            # If no picks in range with non-None odds, try with default
-            if not picks_in_range:
-                picks_in_range = [
-                    p for p in picks
-                    if p.get('odds') is None and min_odds <= 250 < max_odds
-                ]
+            picks_in_range = []
+            for p in picks:
+                odds = p.get('odds')
+                if odds is None:
+                    odds = 250  # Default
+                if min_odds <= abs(odds) < max_odds:
+                    picks_in_range.append(p)
             
             if not picks_in_range:
                 continue
