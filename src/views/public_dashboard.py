@@ -53,8 +53,8 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
     with st.spinner("Loading rosters..."):
         roster_df = load_rosters(season)
 
-    # Tabs - use modular components
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+    # Dashboard view selector - responsive to all screen sizes
+    view_options = [
         "🏆 Leaderboard",
         "📝 Week Picks",
         "📋 All Touchdowns", 
@@ -65,51 +65,61 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
         "🏈 Team Trends",
         "👤 User Stats",
         "📊 Performance Breakdown"
-    ])
-
-    with tab1:
+    ]
+    
+    selected_view = st.selectbox(
+        "Select Dashboard View",
+        options=view_options,
+        index=0,
+        key="dashboard_view_selector"
+    )
+    
+    st.markdown("---")
+    
+    # Render selected view
+    if selected_view == view_options[0]:
         show_leaderboard_tab()
-
-    with tab2:
+    
+    elif selected_view == view_options[1]:
         show_week_picks_tab(season)
-
-    with tab3:
+    
+    elif selected_view == view_options[2]:
         show_all_touchdowns_tab(all_tds)
-            
-    with tab4:
+    
+    elif selected_view == view_options[3]:
         show_schedule_tab(schedule)
-
-    with tab5:
+    
+    elif selected_view == view_options[4]:
         show_analysis_tab(df, season)
-
-    with tab6:
+    
+    elif selected_view == view_options[5]:
         show_first_td_tab(first_tds)
-
-    with tab7:
+    
+    elif selected_view == view_options[6]:
         try:
             show_player_trends_tab(df, season, roster_df)
         except Exception as e:
             st.error(f"Error in Player Trends: {str(e)}")
             import traceback
             st.write(traceback.format_exc())
-
-    with tab8:
+    
+    elif selected_view == view_options[7]:
         try:
             show_team_trends_tab(first_tds, season)
         except Exception as e:
             st.error(f"Error in Team Trends: {str(e)}")
             import traceback
             st.write(traceback.format_exc())
-
-    with tab9:
+    
+    elif selected_view == view_options[8]:
         try:
             show_user_stats_tab(season)
         except Exception as e:
             st.error(f"Error in User Stats: {str(e)}")
             import traceback
             st.write(traceback.format_exc())
-
-    with tab10:
+    
+    elif selected_view == view_options[9]:
         try:
             show_performance_breakdown_tab(season)
         except Exception as e:
