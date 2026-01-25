@@ -23,6 +23,7 @@ from views.admin import (
     show_grading_tab
 )
 from views.admin.shared import show_stats_tab
+from views.admin.exports import show_exports_tab
 
 
 def show_prediction_tab(schedule: pd.DataFrame, season: int) -> None:
@@ -234,13 +235,14 @@ def show_admin_interface(df: pd.DataFrame, season: int, schedule: pd.DataFrame) 
     init_db()
     
     # Create tabs for different admin functions
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "👥 User Management",
         "📝 Input Picks",
         "✅ Update Results",
         "📊 View Stats",
         "📥 Import CSV",
-        "🎯 Grade Picks"
+        "🎯 Grade Picks",
+        "📥 Data Exports"
     ])
     
     # Use modular tab components
@@ -261,3 +263,6 @@ def show_admin_interface(df: pd.DataFrame, season: int, schedule: pd.DataFrame) 
     
     with tab6:
         show_grading_tab(season, schedule)
+    
+    with tab7:
+        show_exports_tab(season, df)

@@ -6,11 +6,23 @@ Fetch First TD odds from The Odds API service
 import streamlit as st
 import requests
 import logging
-from typing import Dict, Tuple
+import os
+from typing import Dict, Tuple, Optional
 import config
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def get_odds_api_key() -> Optional[str]:
+    """
+    Safely retrieve ODDS_API_KEY from st.secrets or environment.
+    Returns None if not found (graceful degradation).
+    """
+    try:
+        return st.secrets.get("ODDS_API_KEY") or os.getenv("ODDS_API_KEY")
+    except (AttributeError, FileNotFoundError):
+        return os.getenv("ODDS_API_KEY")
 
 
 @st.cache_data(ttl=3600)
@@ -20,13 +32,18 @@ def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) ->
     Matches games based on date window.
     
     Args:
-        api_key: The Odds API key
+        api_key: The Odds API key. If None or empty, returns empty dict (graceful degradation).
         week_start_date: Start date in YYYY-MM-DD format
         week_end_date: End date in YYYY-MM-DD format
         
     Returns:
-        Dict mapping (home_team_abbr, away_team_abbr) to {player_name: odds_price}
+        Dict mapping (home_team_abbr, away_team_abbr) to {player_name: odds_price}.
+        Empty dict if api_key is unavailable.
     """
+    if not api_key:
+        logger.warning("ODDS_API_KEY not available; skipping odds fetch")
+        return {}
+    
     from utils.team_utils import get_team_abbr
     
     # 1. Get Events

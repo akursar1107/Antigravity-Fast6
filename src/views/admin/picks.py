@@ -5,6 +5,12 @@ Admin Picks Tab - Input and manage user picks for the week.
 import streamlit as st
 import pandas as pd
 from utils.nfl_data import load_rosters
+from utils.odds_utils import (
+    american_to_probability,
+    calculate_expected_value,
+    is_positive_ev,
+    kelly_criterion,
+)
 from utils import (
     add_week, get_week_by_season_week, get_all_users, get_user_week_picks,
     add_pick
@@ -113,6 +119,51 @@ def show_picks_tab(season: int, schedule: pd.DataFrame) -> None:
                     'player_name': clean_name,
                     'game': f"{away_team} @ {home_team}"
                 })
+
+                # Odds & EV helper (optional inputs)
+                st.markdown("---")
+                st.caption("Odds & EV (optional)")
+                odds = st.number_input(
+                    "American Odds",
+                    value=250,
+                    step=25,
+                    key=f"odds_{away_team}_{home_team}",
+                    help="Enter bookmaker odds for the selected player"
+                )
+                est_prob = st.slider(
+                    "Estimated Win Probability",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.30,
+                    step=0.01,
+                    key=f"prob_{away_team}_{home_team}",
+                    help="Your belief the player scores first TD"
+                )
+
+                try:
+                    implied = american_to_probability(odds)
+                    ev = calculate_expected_value(odds, est_prob)
+                    positive = is_positive_ev(odds, est_prob)
+                    st.write(
+                        f"Implied Prob: {implied:.2%} · Your Prob: {est_prob:.2%} · EV: {ev:.2f} per $1"
+                    )
+                    if positive:
+                        st.success("✅ +EV pick (expected profit > 0)")
+                    else:
+                        st.info("ℹ️ EV ≤ 0 (consider adjusting odds/probability)")
+
+                    # Kelly suggested stake (quarter Kelly by default)
+                    bankroll = st.number_input(
+                        "Bankroll (for Kelly sizing)",
+                        value=100.0,
+                        step=10.0,
+                        key=f"bankroll_{away_team}_{home_team}"
+                    )
+                    suggested = kelly_criterion(odds, est_prob, bankroll, fraction=0.25)
+                    if suggested > 0:
+                        st.write(f"Suggested Stake (¼ Kelly): ${suggested:.2f}")
+                except Exception as e:
+                    st.warning(f"EV/Kelly calculation unavailable: {e}")
     
     # Save picks button
     if picks_to_add:

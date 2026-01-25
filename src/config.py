@@ -81,8 +81,10 @@ except (ImportError, AttributeError, RuntimeError):
 if not ODDS_API_KEY:
     ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
 
-if not ODDS_API_KEY:
-    logger.warning("ODDS_API_KEY not found in st.secrets or environment variables")
+# Only warn if odds features are explicitly enabled and key is missing
+# This allows graceful degradation when odds API is not configured
+if not ODDS_API_KEY and _api_config.get("enabled", True):
+    logger.debug("ODDS_API_KEY not configured; odds features will be unavailable")
 
 ODDS_API_BASE_URL = _api_config.get("base_url", "https://api.the-odds-api.com/v4")
 ODDS_API_SPORT = _api_config.get("sport", "americanfootball_nfl")

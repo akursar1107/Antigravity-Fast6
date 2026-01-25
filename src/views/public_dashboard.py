@@ -1,12 +1,12 @@
 """
 Public Dashboard - Read-only views for all users.
-Displays first TD analysis, leaderboard, picks history, and weekly schedule.
+Displays first TD analysis, leaderboard, picks history, weekly schedule, and Phase 2 analytics.
 Data sourced from NFL API and SQLite database.
 """
 
 import streamlit as st
 import pandas as pd
-from utils.nfl_data import get_touchdowns, get_first_tds
+from utils.nfl_data import get_touchdowns, get_first_tds, load_rosters
 from utils import init_db
 from views.tabs import (
     show_first_td_tab,
@@ -16,6 +16,10 @@ from views.tabs import (
     show_analysis_tab,
     show_week_picks_tab
 )
+from views.tabs.player_trends import show_player_trends_tab
+from views.tabs.team_trends import show_team_trends_tab
+from views.tabs.user_stats import show_user_stats_tab
+from views.tabs.performance_breakdown import show_performance_breakdown_tab
 
 
 
@@ -45,14 +49,22 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
 
     st.markdown("---")
 
+    # Load rosters once for tabs
+    with st.spinner("Loading rosters..."):
+        roster_df = load_rosters(season)
+
     # Tabs - use modular components
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
         "🏆 Leaderboard",
         "📝 Week Picks",
         "📋 All Touchdowns", 
         "📅 Weekly Schedule", 
         "📊 Analysis",
-        "🚀 First TD of Game"
+        "🚀 First TD of Game",
+        "📈 Player Trends",
+        "🏈 Team Trends",
+        "👤 User Stats",
+        "📊 Performance Breakdown"
     ])
 
     with tab1:
@@ -72,3 +84,15 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
 
     with tab6:
         show_first_td_tab(first_tds)
+
+    with tab7:
+        show_player_trends_tab(df, season, roster_df)
+
+    with tab8:
+        show_team_trends_tab(first_tds, season)
+
+    with tab9:
+        show_user_stats_tab(season)
+
+    with tab10:
+        show_performance_breakdown_tab(season)
