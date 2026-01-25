@@ -14,12 +14,12 @@ from views.tabs import (
     show_all_touchdowns_tab,
     show_schedule_tab,
     show_analysis_tab,
-    show_week_picks_tab
+    show_week_picks_tab,
+    show_player_trends_tab,
+    show_team_trends_tab,
+    show_user_stats_tab,
+    show_performance_breakdown_tab
 )
-from views.tabs.player_trends import show_player_trends_tab
-from views.tabs.team_trends import show_team_trends_tab
-from views.tabs.user_stats import show_user_stats_tab
-from views.tabs.performance_breakdown import show_performance_breakdown_tab
 
 
 

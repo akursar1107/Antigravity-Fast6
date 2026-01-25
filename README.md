@@ -138,7 +138,24 @@ See [ROADMAP.md](ROADMAP.md) for planned enhancements.
 
 ## Deployment
 
-For cloud deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+### 🚀 Deploy to Railway (Recommended)
+
+Railway is the recommended hosting platform - it offers a free tier, automatic Docker detection, and persistent storage.
+
+```bash
+# Option 1: GitHub Integration (Easiest)
+# 1. Push to GitHub
+# 2. Connect repo at railway.app
+# 3. Railway auto-deploys!
+
+# Option 2: Railway CLI
+npm install -g @railway/cli
+railway login
+railway init
+railway up
+```
+
+For detailed deployment instructions, see [DOCKER.md](DOCKER.md).
 
 ## Contributing
 

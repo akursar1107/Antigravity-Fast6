@@ -9,6 +9,10 @@ from .all_touchdowns import show_all_touchdowns_tab
 from .schedule import show_schedule_tab
 from .analysis import show_analysis_tab
 from .week_picks import show_week_picks_tab
+from .player_trends import show_player_trends_tab
+from .team_trends import show_team_trends_tab
+from .user_stats import show_user_stats_tab
+from .performance_breakdown import show_performance_breakdown_tab
 
 __all__ = [
     'show_first_td_tab',
@@ -17,4 +21,8 @@ __all__ = [
     'show_schedule_tab',
     'show_analysis_tab',
     'show_week_picks_tab',
+    'show_player_trends_tab',
+    'show_team_trends_tab',
+    'show_user_stats_tab',
+    'show_performance_breakdown_tab',
 ]

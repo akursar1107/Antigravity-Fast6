@@ -241,9 +241,83 @@ docker run -d \
 
 ---
 
-## Free Hosting Options
+## Hosting Options
 
-### Streamlit Community Cloud (Easiest)
+### Railway.app ⭐ RECOMMENDED
+
+Railway is the preferred hosting platform for Fast6 - it offers a generous free tier, automatic Docker detection, persistent volumes, and easy GitHub integration.
+
+#### Quick Deploy to Railway
+
+1. **Create Railway Account**
+   - Go to [railway.app](https://railway.app)
+   - Sign up with GitHub
+
+2. **Create New Project**
+   - Click "New Project"
+   - Select "Deploy from GitHub repo"
+   - Choose the `Antigravity-Fast6` repository
+
+3. **Configure Environment Variables**
+   - Go to your project → Variables tab
+   - Add: `ODDS_API_KEY` = your API key (optional)
+
+4. **Set Up Persistent Storage (Important!)**
+   - Go to your project → Settings
+   - Under "Service", add a Volume
+   - Mount path: `/app/data`
+   - This ensures your SQLite database persists across deploys
+
+5. **Configure Port**
+   - Railway auto-detects the Dockerfile
+   - Ensure `PORT` is set to `8501` or Railway will assign one automatically
+
+6. **Deploy**
+   - Railway automatically deploys on every git push
+   - First deploy takes ~2-3 minutes
+
+#### Railway CLI (Alternative)
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login
+railway login
+
+# Initialize project
+railway init
+
+# Link to existing project (if already created)
+railway link
+
+# Deploy
+railway up
+
+# Open your app
+railway open
+```
+
+#### Railway Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ODDS_API_KEY` | No | The Odds API key for betting odds |
+| `PORT` | Auto | Railway sets this automatically |
+
+#### Railway Pricing
+
+- **Free Tier**: $5 credit/month (enough for small apps)
+- **Hobby**: $5/month + usage
+- **Pro**: $20/month + usage
+
+The free tier is sufficient for Fast6 with moderate usage.
+
+---
+
+### Alternative Hosting Options
+
+#### Streamlit Community Cloud (Easiest, but no persistence)
 
 1. Push your code to GitHub
 2. Go to [share.streamlit.io](https://share.streamlit.io)
@@ -251,9 +325,9 @@ docker run -d \
 4. Select `src/app.py` as the main file
 5. Add secrets in the dashboard settings
 
-⚠️ **Note**: SQLite data is NOT persistent on Streamlit Cloud.
+⚠️ **Note**: SQLite data is NOT persistent on Streamlit Cloud. Data resets on each deploy.
 
-### Fly.io (~$2/month with persistent data)
+#### Fly.io (~$2/month with persistent data)
 
 ```bash
 # Install flyctl
@@ -269,13 +343,6 @@ fly volumes create fast6_data --size 1
 fly deploy
 ```
 
-### Railway.app (Free tier available)
-
-1. Connect GitHub repo at [railway.app](https://railway.app)
-2. Railway auto-detects the Dockerfile
-3. Set environment variables in dashboard
-4. Deploy automatically on git push
-
 ---
 
 ## Need Help?
@@ -283,3 +350,5 @@ fly deploy
 - Check the main [README.md](README.md) for app documentation
 - Review [config.json.example](config.json.example) for configuration options
 - Open an issue on GitHub for bugs or feature requests
+(easiest, truly free) or Fly.io ($2/month for persistent SQLite data).
+
