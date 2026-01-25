@@ -1,11 +1,9 @@
 """
-User Stats Tab - Comprehensive performance breakdown per user.
+User Stats Tab - Simple performance breakdown per user.
 """
 
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from services.performance_service import PickerPerformanceService
 from utils import get_all_users
 
@@ -66,37 +64,10 @@ def show_user_stats_tab(season: int) -> None:
             st.metric("Brier Score", f"{summary['brier_score']:.3f}")
         
         st.markdown("---")
+        st.success("✅ Performance data loaded successfully!")
         
-        # Tabs for different views
-        tab1, tab2, tab3, tab4 = st.tabs(["Streaks", "ROI by Odds", "By Position", "By Game Type"])
-        
-        # ===== TAB 1: STREAKS =====
-        with tab1:
-            st.subheader("Streak Analysis")
-            
-            streaks = summary['streaks']
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                current = streaks.get('current_streak', 0)
-                if current > 0:
-                    st.metric("🔥 Current Win Streak", current)
-                elif current < 0:
-                    st.metric("❄️ Current Loss Streak", abs(current))
-                else:
-                    st.metric("Current Streak", "None")
-            
-            with col2:
-                st.metric("🏆 Longest Win", streaks.get('longest_win_streak', 0))
-            
-            with col3:
-                st.metric("😰 Longest Loss", streaks.get('longest_loss_streak', 0))
-            
-            st.markdown("---")
-            
-            is_hot = streaks.get('is_hot', False)
-            if is_hot:
-                st.success("🔥 **User is HOT!** 3+ wins in last 5 picks.")
+    except Exception as e:
+        st.error(f"Error loading user stats: {str(e)}")
             else:
                 st.info("Temperature: Regular. Keep grinding.")
         

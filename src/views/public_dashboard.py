@@ -86,13 +86,33 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
         show_first_td_tab(first_tds)
 
     with tab7:
-        show_player_trends_tab(df, season, roster_df)
+        try:
+            show_player_trends_tab(df, season, roster_df)
+        except Exception as e:
+            st.error(f"Error in Player Trends: {str(e)}")
+            import traceback
+            st.write(traceback.format_exc())
 
     with tab8:
-        show_team_trends_tab(first_tds, season)
+        try:
+            show_team_trends_tab(first_tds, season)
+        except Exception as e:
+            st.error(f"Error in Team Trends: {str(e)}")
+            import traceback
+            st.write(traceback.format_exc())
 
     with tab9:
-        show_user_stats_tab(season)
+        try:
+            show_user_stats_tab(season)
+        except Exception as e:
+            st.error(f"Error in User Stats: {str(e)}")
+            import traceback
+            st.write(traceback.format_exc())
 
     with tab10:
-        show_performance_breakdown_tab(season)
+        try:
+            show_performance_breakdown_tab(season)
+        except Exception as e:
+            st.error(f"Error in Performance Breakdown: {str(e)}")
+            import traceback
+            st.write(traceback.format_exc())
