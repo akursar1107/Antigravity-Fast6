@@ -434,7 +434,7 @@ def _show_editable_preview_table(preview_data, grade_schedule, grade_season, fir
 
 def _save_edits_and_recalculate(edited_df, preview_df, preview_data, grade_schedule, first_td_map):
     """Save edits and recalculate matches."""
-    from utils import get_db_connection
+    from utils import update_pick_player_name
     
     changes_saved = 0
     for idx, row in edited_df.iterrows():
@@ -447,13 +447,8 @@ def _save_edits_and_recalculate(edited_df, preview_df, preview_data, grade_sched
             
             if row['Player Pick'] != orig_row['Player Pick']:
                 try:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("UPDATE picks SET player_name = ? WHERE id = ?", 
-                                 (row['Player Pick'], pick_id))
-                    conn.commit()
-                    conn.close()
-                    changes_saved += 1
+                    if update_pick_player_name(pick_id, row['Player Pick']):
+                        changes_saved += 1
                 except Exception as e:
                     st.error(f"Failed to update pick {pick_id}: {e}")
             
@@ -554,55 +549,23 @@ def _show_grading_actions(preview_data):
 def _show_database_verification(season: int, week: Optional[int] = None) -> None:
     """Show what's actually saved in the database for this season/week."""
     try:
-        from utils import get_db_connection
+        from utils import get_graded_picks
         
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        graded = get_graded_picks(season, week)
         
-        # Get all graded picks for this season/week
-        if week:
-            cursor.execute("""
-                SELECT 
-                    p.id, p.player_name, p.team, u.name as user,
-                    r.is_correct, r.any_time_td, r.actual_scorer,
-                    w.week, w.season
-                FROM picks p
-                JOIN users u ON p.user_id = u.id
-                JOIN weeks w ON p.week_id = w.id
-                LEFT JOIN results r ON p.id = r.pick_id
-                WHERE w.season = ? AND w.week = ? AND r.id IS NOT NULL
-                ORDER BY w.week, u.name
-            """, (season, week))
-        else:
-            cursor.execute("""
-                SELECT 
-                    p.id, p.player_name, p.team, u.name as user,
-                    r.is_correct, r.any_time_td, r.actual_scorer,
-                    w.week, w.season
-                FROM picks p
-                JOIN users u ON p.user_id = u.id
-                JOIN weeks w ON p.week_id = w.id
-                LEFT JOIN results r ON p.id = r.pick_id
-                WHERE w.season = ? AND r.id IS NOT NULL
-                ORDER BY w.week, u.name
-            """, (season,))
-        
-        rows = cursor.fetchall()
-        conn.close()
-        
-        if rows:
+        if graded:
             # Convert to DataFrame for display
             data = []
-            for row in rows:
+            for row in graded:
                 data.append({
-                    'Pick ID': row[0],
-                    'Player': row[1],
-                    'Team': row[2],
-                    'User': row[3],
-                    'First TD': '✅' if row[4] else '❌',
-                    'Any Time TD': '✅' if row[5] else '❌',
-                    'Actual Scorer': row[6] or 'N/A',
-                    'Week': row[7]
+                    'Pick ID': row['pick_id'],
+                    'Player': row['player_name'],
+                    'Team': row['team'],
+                    'User': row['user_name'],
+                    'First TD': '✅' if row['is_correct'] else '❌',
+                    'Any Time TD': '✅' if row['any_time_td'] else '❌',
+                    'Actual Scorer': row['actual_scorer'] or 'N/A',
+                    'Week': row['week']
                 })
             
             df = pd.DataFrame(data)
@@ -611,13 +574,13 @@ def _show_database_verification(season: int, week: Optional[int] = None) -> None
             # Statistics
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                first_td_count = sum(1 for row in rows if row[4])
+                first_td_count = sum(1 for row in graded if row['is_correct'])
                 st.metric("First TD Wins", first_td_count)
             with col2:
-                any_time_count = sum(1 for row in rows if row[5])
+                any_time_count = sum(1 for row in graded if row['any_time_td'])
                 st.metric("Any Time TD", any_time_count)
             with col3:
-                total = len(rows)
+                total = len(graded)
                 st.metric("Total Graded", total)
             with col4:
                 first_td_pct = (first_td_count / total * 100) if total > 0 else 0

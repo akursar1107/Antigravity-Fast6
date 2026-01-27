@@ -28,6 +28,48 @@ def add_pick(user_id: int, week_id: int, team: str, player_name: str,
         return pick_id
 
 
+def add_picks_batch(picks: List[Dict]) -> int:
+    """
+    Add multiple picks in a single transaction.
+    Much more efficient than calling add_pick() in a loop.
+    
+    Args:
+        picks: List of dicts with keys: user_id, week_id, team, player_name, 
+               and optionally: odds, theoretical_return, game_id
+               
+    Returns:
+        Number of picks inserted
+    """
+    if not picks:
+        return 0
+    
+    with get_db_context() as conn:
+        cursor = conn.cursor()
+        
+        # Prepare data for batch insert
+        insert_data = [
+            (
+                p['user_id'],
+                p['week_id'],
+                p['team'],
+                p['player_name'],
+                p.get('odds'),
+                p.get('theoretical_return'),
+                p.get('game_id')
+            )
+            for p in picks
+        ]
+        
+        cursor.executemany("""
+            INSERT INTO picks (user_id, week_id, team, player_name, odds, theoretical_return, game_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, insert_data)
+        
+        inserted = len(insert_data)
+        logger.info(f"Batch inserted {inserted} picks")
+        return inserted
+
+
 def get_pick(pick_id: int) -> Optional[Dict]:
     """Get pick by ID."""
     with get_db_context() as conn:
@@ -268,3 +310,85 @@ def backfill_theoretical_return_from_odds() -> int:
         cursor.execute("UPDATE picks SET theoretical_return = 100.0/ABS(odds) WHERE theoretical_return IS NULL AND odds < 0")
         updated_neg = cursor.rowcount if cursor.rowcount is not None else 0
         return (updated_pos or 0) + (updated_neg or 0)
+
+
+def update_pick_player_name(pick_id: int, player_name: str) -> bool:
+    """
+    Update the player name for a specific pick.
+    
+    Args:
+        pick_id: ID of the pick to update
+        player_name: New player name
+        
+    Returns:
+        True if update was successful, False otherwise
+    """
+    with get_db_context() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE picks SET player_name = ? WHERE id = ?",
+            (player_name, pick_id)
+        )
+        success = cursor.rowcount > 0
+        if success:
+            logger.info(f"Updated pick {pick_id} player_name to '{player_name}'")
+        return success
+
+
+def get_graded_picks(season: int, week: Optional[int] = None) -> List[Dict]:
+    """
+    Get all graded picks (with results) for a season, optionally filtered by week.
+    Used for verification/display in admin UI.
+    
+    Args:
+        season: Season year
+        week: Optional week number to filter
+        
+    Returns:
+        List of dicts with pick info, user name, and result data
+    """
+    with get_db_context() as conn:
+        cursor = conn.cursor()
+        
+        if week:
+            cursor.execute("""
+                SELECT 
+                    p.id, p.player_name, p.team, u.name as user_name,
+                    r.is_correct, r.any_time_td, r.actual_scorer,
+                    w.week, w.season
+                FROM picks p
+                JOIN users u ON p.user_id = u.id
+                JOIN weeks w ON p.week_id = w.id
+                LEFT JOIN results r ON p.id = r.pick_id
+                WHERE w.season = ? AND w.week = ? AND r.id IS NOT NULL
+                ORDER BY w.week, u.name
+            """, (season, week))
+        else:
+            cursor.execute("""
+                SELECT 
+                    p.id, p.player_name, p.team, u.name as user_name,
+                    r.is_correct, r.any_time_td, r.actual_scorer,
+                    w.week, w.season
+                FROM picks p
+                JOIN users u ON p.user_id = u.id
+                JOIN weeks w ON p.week_id = w.id
+                LEFT JOIN results r ON p.id = r.pick_id
+                WHERE w.season = ? AND r.id IS NOT NULL
+                ORDER BY w.week, u.name
+            """, (season,))
+        
+        rows = cursor.fetchall()
+        result = []
+        for row in rows:
+            result.append({
+                'pick_id': row[0],
+                'player_name': row[1],
+                'team': row[2],
+                'user_name': row[3],
+                'is_correct': bool(row[4]) if row[4] is not None else None,
+                'any_time_td': bool(row[5]) if row[5] is not None else None,
+                'actual_scorer': row[6],
+                'week': _safe_int(row[7]),
+                'season': _safe_int(row[8])
+            })
+        return result

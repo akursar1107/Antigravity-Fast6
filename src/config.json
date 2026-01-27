@@ -16,6 +16,17 @@
     "auto_grade_enabled": true
   },
 
+  "analytics": {
+    "default_odds": 250,
+    "odds_buckets": [
+      {"min": 100, "max": 300, "label": "Favorites"},
+      {"min": 300, "max": 500, "label": "Moderate"},
+      {"min": 500, "max": 700, "label": "Longshots"},
+      {"min": 700, "max": 1000, "label": "Heavy Longshots"},
+      {"min": 1000, "max": 5000, "label": "Extreme Longshots"}
+    ]
+  },
+
   "teams": {
     "ARI": {
       "full_name": "Arizona Cardinals",

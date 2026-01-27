@@ -38,6 +38,19 @@ SCORING_ANY_TIME = _CONFIG.get("scoring", {}).get("any_time_td", 1)
 NAME_MATCH_THRESHOLD = _CONFIG.get("scoring", {}).get("name_match_threshold", 0.75)
 AUTO_GRADE_ENABLED = _CONFIG.get("scoring", {}).get("auto_grade_enabled", True)
 
+# ===== ANALYTICS CONFIGURATION =====
+_analytics = _CONFIG.get("analytics", {})
+DEFAULT_ODDS = _analytics.get("default_odds", 250)
+# Convert JSON format to tuple format: [(min, max, label), ...]
+_buckets_config = _analytics.get("odds_buckets", [
+    {"min": 100, "max": 300, "label": "Favorites"},
+    {"min": 300, "max": 500, "label": "Moderate"},
+    {"min": 500, "max": 700, "label": "Longshots"},
+    {"min": 700, "max": 1000, "label": "Heavy Longshots"},
+    {"min": 1000, "max": 5000, "label": "Extreme Longshots"}
+])
+ODDS_BUCKETS = [(b["min"], b["max"], b["label"]) for b in _buckets_config]
+
 # ===== TEAM CONFIGURATION =====
 _teams_config = _CONFIG.get("teams", {})
 TEAM_MAP = {abbr: info.get("full_name", "") for abbr, info in _teams_config.items()}

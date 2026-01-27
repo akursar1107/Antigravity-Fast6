@@ -5,6 +5,7 @@ Week Picks Tab - Display picks and results for selected week
 import streamlit as st
 import pandas as pd
 from utils import get_all_weeks, get_all_users, get_user_week_picks, get_result_for_pick
+from utils.common import ensure_session_state, format_pick_for_display, format_pick_for_display_compact
 
 
 def show_week_picks_tab(season: int) -> None:
@@ -33,13 +34,10 @@ def show_week_picks_tab(season: int) -> None:
         st.info("No weeks recorded yet.")
         return
     
-    # Initialize session state for week selection if not exists
-    if 'week_picks_selected_week_id' not in st.session_state:
-        st.session_state.week_picks_selected_week_id = weeks[0]['id'] if weeks else None
-    
-    # Initialize session state for user filter if not exists
-    if 'week_picks_selected_user_id' not in st.session_state:
-        st.session_state.week_picks_selected_user_id = None
+    # Initialize session state using helper
+    default_week_id = weeks[0]['id'] if weeks else None
+    ensure_session_state('week_picks_selected_week_id', default_week_id)
+    ensure_session_state('week_picks_selected_user_id', None)
     
     col1, col2 = st.columns(2)
     
@@ -95,21 +93,7 @@ def show_week_picks_tab(season: int) -> None:
                 picks_data = []
                 for pick in picks:
                     result = get_result_for_pick(pick['id'])
-                    # Format odds as string (e.g., +1500) if available
-                    odds_val = pick.get('odds')
-                    odds_str = (
-                        f"+{int(odds_val)}" if isinstance(odds_val, (int, float)) and odds_val >= 0 else
-                        (str(int(odds_val)) if isinstance(odds_val, (int, float)) else "-")
-                    )
-                    theo_ret = pick.get('theoretical_return')
-                    picks_data.append({
-                        'Team': pick['team'],
-                        'Player': pick['player_name'],
-                        'Odds': odds_str,
-                        'Theo Return': f"${theo_ret:.2f}" if isinstance(theo_ret, (int, float)) else "$0.00",
-                        'Result': '✅ Correct' if result and result['is_correct'] == 1 else ('❌ Incorrect' if result and result['is_correct'] == 0 else '⏳ Pending'),
-                        'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "$0.00"
-                    })
+                    picks_data.append(format_pick_for_display(pick, result))
                 
                 picks_df = pd.DataFrame(picks_data)
                 st.dataframe(picks_df, width='stretch', hide_index=True)
@@ -135,20 +119,8 @@ def show_week_picks_tab(season: int) -> None:
                         
                         for pick in picks:
                             result = get_result_for_pick(pick['id'])
-                            odds_val = pick.get('odds')
-                            odds_str = (
-                                f"+{int(odds_val)}" if isinstance(odds_val, (int, float)) and odds_val >= 0 else
-                                (str(int(odds_val)) if isinstance(odds_val, (int, float)) else "-")
-                            )
-                            theo_ret = pick.get('theoretical_return')
-                            picks_data.append({
-                                'Team': pick['team'],
-                                'Player': pick['player_name'],
-                                'Odds': odds_str,
-                                'Theo Return': f"${theo_ret:.2f}" if isinstance(theo_ret, (int, float)) else "$0.00",
-                                'Result': '✅' if result and result['is_correct'] == 1 else ('❌' if result and result['is_correct'] == 0 else '⏳'),
-                                'Return': f"${result['actual_return']:.2f}" if result and result['actual_return'] is not None else "$0.00"
-                            })
+                            # Use compact format for space efficiency in expanders
+                            picks_data.append(format_pick_for_display_compact(pick, result))
                         
                         picks_df = pd.DataFrame(picks_data)
                         st.dataframe(picks_df, width='stretch', hide_index=True)

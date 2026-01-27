@@ -85,6 +85,81 @@ def add_result(pick_id: int, actual_scorer: Optional[str] = None,
         return cursor.lastrowid
 
 
+def add_results_batch(results: List[Dict]) -> Dict[str, int]:
+    """
+    Add or update multiple results in a single transaction.
+    Much more efficient than calling add_result() in a loop.
+    
+    Args:
+        results: List of dicts with keys: pick_id, actual_scorer, is_correct, actual_return, any_time_td
+        
+    Returns:
+        Dict with counts: {'inserted': n, 'updated': m}
+    """
+    if not results:
+        return {'inserted': 0, 'updated': 0}
+    
+    inserted = 0
+    updated = 0
+    
+    with get_db_context() as conn:
+        cursor = conn.cursor()
+        
+        # Get all existing result pick_ids in one query
+        pick_ids = [r['pick_id'] for r in results]
+        placeholders = ','.join('?' * len(pick_ids))
+        cursor.execute(f"SELECT pick_id FROM results WHERE pick_id IN ({placeholders})", pick_ids)
+        existing_pick_ids = {row[0] for row in cursor.fetchall()}
+        
+        # Separate into inserts and updates
+        to_insert = []
+        to_update = []
+        
+        for r in results:
+            row = (
+                r['pick_id'],
+                r.get('actual_scorer'),
+                r.get('is_correct'),
+                r.get('actual_return'),
+                r.get('any_time_td')
+            )
+            if r['pick_id'] in existing_pick_ids:
+                # Reorder for UPDATE: values first, then pick_id for WHERE
+                to_update.append((row[1], row[2], row[3], row[4], row[0]))
+            else:
+                to_insert.append(row)
+        
+        # Batch insert
+        if to_insert:
+            cursor.executemany(
+                """
+                INSERT INTO results (pick_id, actual_scorer, is_correct, actual_return, any_time_td)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                to_insert
+            )
+            inserted = len(to_insert)
+        
+        # Batch update
+        if to_update:
+            cursor.executemany(
+                """
+                UPDATE results
+                SET actual_scorer = ?, is_correct = ?, actual_return = ?, any_time_td = ?
+                WHERE pick_id = ?
+                """,
+                to_update
+            )
+            updated = len(to_update)
+    
+    # Clear cache once after all operations
+    if inserted > 0 or updated > 0:
+        clear_leaderboard_cache()
+    
+    logger.info(f"Batch add_results: {inserted} inserted, {updated} updated")
+    return {'inserted': inserted, 'updated': updated}
+
+
 def get_result(result_id: int) -> Optional[Dict]:
     """Get result by ID."""
     with get_db_context() as conn:
@@ -222,6 +297,33 @@ def clear_grading_results(season: int, week: Optional[int] = None) -> Dict[str, 
 
 # ============= LEADERBOARD & STATISTICS =============
 
+def _build_stats_select_clause() -> str:
+    """
+    Build the common SELECT clause for leaderboard/user stats queries.
+    
+    This is extracted to avoid duplicating the complex scoring/aggregation logic
+    across get_leaderboard() and get_user_stats().
+    
+    Returns:
+        SQL SELECT clause string with config-based scoring values
+    """
+    return f"""
+        SELECT
+            u.id,
+            u.name,
+            COUNT(p.id) as total_picks,
+            SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
+            SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
+            SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
+            SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
+            ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
+            ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
+            ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
+            ROUND(COALESCE(SUM(p.theoretical_return), 0), 2) as total_theoretical_return
+        FROM users u
+    """
+
+
 @_cache_if_streamlit
 def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
     """
@@ -231,99 +333,56 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
     Includes both First TD wins and Any Time TD wins.
     Points: 3 for First TD, 1 for Any Time TD
     """
+    select_clause = _build_stats_select_clause()
+    
     with get_db_context() as conn:
         cursor = conn.cursor()
         if week_id:
             # Single week leaderboard
-            cursor.execute(f"""
-                SELECT
-                    u.id,
-                    u.name,
-                    COUNT(p.id) as total_picks,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
-                    ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
-                    ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
-                    ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
-                    ROUND(COALESCE(SUM(p.theoretical_return), 0), 2) as total_theoretical_return
-                FROM users u
+            query = select_clause + """
                 LEFT JOIN picks p ON u.id = p.user_id AND p.week_id = ?
                 LEFT JOIN results r ON p.id = r.pick_id
                 GROUP BY u.id, u.name
                 ORDER BY points DESC, total_return DESC
-            """, (week_id,))
+            """
+            cursor.execute(query, (week_id,))
         else:
             # Cumulative leaderboard
-            cursor.execute(f"""
-                SELECT
-                    u.id,
-                    u.name,
-                    COUNT(p.id) as total_picks,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
-                    ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
-                    ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
-                    ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
-                    ROUND(COALESCE(SUM(p.theoretical_return), 0), 2) as total_theoretical_return
-                FROM users u
+            query = select_clause + """
                 LEFT JOIN picks p ON u.id = p.user_id
                 LEFT JOIN results r ON p.id = r.pick_id
                 GROUP BY u.id, u.name
                 ORDER BY points DESC, total_return DESC
-            """)
+            """
+            cursor.execute(query)
         
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
 
+@_cache_if_streamlit
 def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict]:
     """Get stats for a specific user. Includes First TD and Any Time TD stats. Points: 3 for First TD, 1 for Any Time TD."""
+    select_clause = _build_stats_select_clause()
+    
     with get_db_context() as conn:
         cursor = conn.cursor()
         if week_id:
-            cursor.execute(f"""
-                SELECT
-                    u.id,
-                    u.name,
-                    COUNT(p.id) as total_picks,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
-                    ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
-                    ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
-                    ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
-                    ROUND(COALESCE(SUM(p.theoretical_return), 0), 2) as total_theoretical_return
-                FROM users u
+            query = select_clause + """
                 LEFT JOIN picks p ON u.id = p.user_id AND p.week_id = ?
                 LEFT JOIN results r ON p.id = r.pick_id
                 WHERE u.id = ?
                 GROUP BY u.id, u.name
-            """, (week_id, user_id))
+            """
+            cursor.execute(query, (week_id, user_id))
         else:
-            cursor.execute(f"""
-                SELECT
-                    u.id,
-                    u.name,
-                    COUNT(p.id) as total_picks,
-                    SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as wins,
-                    SUM(CASE WHEN COALESCE(r.is_correct, 0) = 0 AND p.id IS NOT NULL THEN 1 ELSE 0 END) as losses,
-                    SUM(CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN 1 ELSE 0 END) as any_time_td_wins,
-                    SUM(CASE WHEN r.is_correct = 1 THEN {config.SCORING_FIRST_TD} ELSE 0 END + CASE WHEN COALESCE(r.any_time_td, 0) = 1 THEN {config.SCORING_ANY_TIME} ELSE 0 END) as points,
-                    ROUND(COALESCE(SUM(r.actual_return), 0), 2) as total_return,
-                    ROUND(COALESCE(AVG(r.actual_return), 0), 2) as avg_return,
-                    ROUND(COALESCE(AVG(p.odds), 0), 0) as avg_odds,
-                    ROUND(COALESCE(SUM(p.theoretical_return), 0), 2) as total_theoretical_return
-                FROM users u
+            query = select_clause + """
                 LEFT JOIN picks p ON u.id = p.user_id
                 LEFT JOIN results r ON p.id = r.pick_id
                 WHERE u.id = ?
                 GROUP BY u.id, u.name
-            """, (user_id,))
+            """
+            cursor.execute(query, (user_id,))
         
         row = cursor.fetchone()
         return dict(row) if row else None

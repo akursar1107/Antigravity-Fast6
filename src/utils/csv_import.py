@@ -55,11 +55,33 @@ def _theoretical_return_from_odds(odds: Optional[int]) -> Optional[float]:
         return None
 
 
+def _build_schedule_lookup(schedule: pd.DataFrame) -> Dict[Tuple[int, str, str], str]:
+    """
+    Build a lookup dict from schedule DataFrame for O(1) game_id lookups.
+    
+    Args:
+        schedule: DataFrame with columns: week, home_team, away_team, game_id
+        
+    Returns:
+        Dict mapping (week, home_team, away_team) -> game_id
+    """
+    if schedule.empty:
+        return {}
+    
+    lookup = {}
+    for _, row in schedule.iterrows():
+        key = (int(row['week']), str(row['home_team']), str(row['away_team']))
+        lookup[key] = str(row['game_id'])
+    return lookup
+
+
 def ingest_picks_from_csv(file_path: str, season: int) -> Dict[str, int]:
     """
     Import picks from a CSV file and associate game_id using Home/Visitor + Week matching.
     Auto-wipes existing season data before import.
     Expected columns: Week, Gameday, Picker, Visitor (or Vistor), Home, Player, 1st TD Odds
+    
+    Uses batch operations for improved performance.
     """
     # Wipe season data first
     deleted = db_stats.delete_season_data(int(season))
@@ -82,11 +104,17 @@ def ingest_picks_from_csv(file_path: str, season: int) -> Dict[str, int]:
     df['WeekInt'] = df['Week'].apply(_week_to_int)
     df = df[df['WeekInt'].between(1, 18, inclusive='both')]
 
-    # Load schedule once
+    # Load schedule once and build lookup dict for O(1) game_id lookups
     pbp = load_data(int(season))
     schedule = get_game_schedule(pbp, int(season))
+    schedule_lookup = _build_schedule_lookup(schedule)
 
-    picks_imported = 0
+    # Cache for users and weeks to avoid repeated DB lookups
+    user_cache: Dict[str, int] = {}  # picker_name -> user_id
+    week_cache: Dict[int, int] = {}   # week_num -> week_id
+
+    # Collect picks for batch insert
+    picks_to_insert = []
 
     for _, row in df.iterrows():
         try:
@@ -102,41 +130,45 @@ def ingest_picks_from_csv(file_path: str, season: int) -> Dict[str, int]:
             away = _to_abbr(away_raw)
             home = _to_abbr(home_raw)
 
-            # Find or create user
-            user = db_users.get_user_by_name(picker)
-            if not user:
-                user_id = db_users.add_user(picker)
-            else:
-                user_id = user['id']
+            # Find or create user (with caching)
+            if picker not in user_cache:
+                user = db_users.get_user_by_name(picker)
+                if not user:
+                    user_id = db_users.add_user(picker)
+                else:
+                    user_id = user['id']
+                user_cache[picker] = user_id
+            user_id = user_cache[picker]
 
-            # Ensure week exists
-            week_row = db_weeks.get_week_by_season_week(int(season), week)
-            if not week_row:
-                week_id = db_weeks.add_week(int(season), week)
-            else:
-                week_id = week_row['id']
+            # Ensure week exists (with caching)
+            if week not in week_cache:
+                week_row = db_weeks.get_week_by_season_week(int(season), week)
+                if not week_row:
+                    week_id = db_weeks.add_week(int(season), week)
+                else:
+                    week_id = week_row['id']
+                week_cache[week] = week_id
+            week_id = week_cache[week]
 
-            # Match game_id
-            game_id = None
-            if not schedule.empty:
-                match = schedule[(schedule['week'] == week) & (schedule['home_team'] == home) & (schedule['away_team'] == away)]
-                if not match.empty:
-                    game_id = str(match.iloc[0]['game_id'])
+            # Match game_id using O(1) lookup
+            game_id = schedule_lookup.get((week, home, away))
 
-            # Store pick with Unknown team; grading will prefer game_id
-            db_picks.add_pick(
-                user_id=user_id,
-                week_id=week_id,
-                team='Unknown',
-                player_name=player,
-                odds=odds,
-                theoretical_return=theo,
-                game_id=game_id
-            )
-            picks_imported += 1
+            # Collect pick for batch insert
+            picks_to_insert.append({
+                'user_id': user_id,
+                'week_id': week_id,
+                'team': 'Unknown',  # grading will use game_id
+                'player_name': player,
+                'odds': odds,
+                'theoretical_return': theo,
+                'game_id': game_id
+            })
         except Exception:
             # Skip bad rows quietly for now
             continue
+
+    # Batch insert all picks in a single transaction
+    picks_imported = db_picks.add_picks_batch(picks_to_insert) if picks_to_insert else 0
 
     return {
         'picks_deleted': deleted.get('picks_deleted', 0),

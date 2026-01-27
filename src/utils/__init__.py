@@ -72,6 +72,7 @@ from utils.db_weeks import (
 
 from utils.db_picks import (
     add_pick,
+    add_picks_batch,
     get_pick,
     get_user_week_picks,
     get_week_all_picks,
@@ -81,11 +82,14 @@ from utils.db_picks import (
     dedupe_picks_for_user_week,
     create_unique_picks_index,
     dedupe_all_picks,
-    backfill_theoretical_return_from_odds
+    backfill_theoretical_return_from_odds,
+    update_pick_player_name,
+    get_graded_picks
 )
 
 from utils.db_stats import (
     add_result,
+    add_results_batch,
     get_result,
     get_result_for_pick,
     delete_season_data,
@@ -94,6 +98,25 @@ from utils.db_stats import (
     get_user_stats,
     get_weekly_summary,
     get_user_picks_with_results
+)
+
+# Common utilities
+from utils.common import (
+    normalize_week_record,
+    ensure_session_state,
+    format_odds,
+    format_currency,
+    format_implied_probability,
+    format_pick_for_display,
+    format_pick_for_display_compact
+)
+
+# Type utilities
+from utils.type_utils import (
+    safe_int,
+    safe_str,
+    safe_float,
+    safe_bool
 )
 
 __all__ = [
@@ -134,6 +157,7 @@ __all__ = [
     'get_all_weeks',
     # Database - Picks
     'add_pick',
+    'add_picks_batch',
     'get_pick',
     'get_user_week_picks',
     'get_week_all_picks',
@@ -144,8 +168,11 @@ __all__ = [
     'create_unique_picks_index',
     'dedupe_all_picks',
     'backfill_theoretical_return_from_odds',
+    'update_pick_player_name',
+    'get_graded_picks',
     # Database - Results & Stats
     'add_result',
+    'add_results_batch',
     'get_result',
     'get_result_for_pick',
     'delete_season_data',
@@ -154,4 +181,17 @@ __all__ = [
     'get_user_stats',
     'get_weekly_summary',
     'get_user_picks_with_results',
+    # Common utilities
+    'normalize_week_record',
+    'ensure_session_state',
+    'format_odds',
+    'format_currency',
+    'format_implied_probability',
+    'format_pick_for_display',
+    'format_pick_for_display_compact',
+    # Type utilities
+    'safe_int',
+    'safe_str',
+    'safe_float',
+    'safe_bool',
 ]

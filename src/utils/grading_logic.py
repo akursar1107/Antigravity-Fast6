@@ -179,7 +179,7 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
     
     logger.info(f"Found {len(ungraded_picks)} ungraded picks to grade")
     
-    # Grade each pick
+    # Grade each pick - collect results for batch insert
     stats = {
         'graded_picks': 0,
         'correct_first_td': 0,
@@ -188,6 +188,9 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
         'total_return': 0.0,
         'details': []
     }
+    
+    # Collect results for batch insert
+    results_to_save = []
     
     for pick in ungraded_picks:
         pick_id, user_id, week_id, team, player_name, odds, theo_return, pick_game_id, pick_week, pick_season = pick
@@ -248,14 +251,14 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
             # Calculate actual return
             actual_return = theo_return if is_correct else 0.0
             
-            # Save result - use the actual first TD scorer, not the picked player
-            db_stats.add_result(
-                pick_id=pick_id,
-                actual_scorer=actual_first_td_scorer,  # Who actually scored first TD (or None if no TD)
-                is_correct=is_correct,
-                actual_return=actual_return,
-                any_time_td=any_time_td
-            )
+            # Collect result for batch insert (instead of individual db call)
+            results_to_save.append({
+                'pick_id': pick_id,
+                'actual_scorer': actual_first_td_scorer,
+                'is_correct': is_correct,
+                'actual_return': actual_return,
+                'any_time_td': any_time_td
+            })
             
             stats['graded_picks'] += 1
             if is_correct:
@@ -282,6 +285,11 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
         except Exception as e:
             logger.warning(f"Error grading pick {pick_id}: {str(e)}")
             stats['failed_to_match'] += 1
+    
+    # Batch save all results in a single transaction
+    if results_to_save:
+        batch_result = db_stats.add_results_batch(results_to_save)
+        logger.info(f"Batch saved {batch_result['inserted']} new results, {batch_result['updated']} updated")
     
     logger.info(f"Auto-grade complete: {stats['graded_picks']} graded, "
                 f"{stats['correct_first_td']} first TD wins, "

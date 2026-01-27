@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 from typing import List, Dict, Optional
 from utils import get_all_weeks, get_all_users, get_user_stats, get_user_all_picks, get_result_for_pick, add_result
+from utils.common import format_odds, format_currency, ensure_session_state
 
 
 def get_season_and_week_selectors(season: int, seasons_list: List[int], key_prefix: str = "") -> tuple:
@@ -59,28 +60,8 @@ def get_season_and_week_selectors(season: int, seasons_list: List[int], key_pref
     return selected_season, selected_week
 
 
-def format_odds(odds: Optional[float]) -> str:
-    """
-    Format American odds for display.
-    
-    Args:
-        odds: American odds as float/int or None
-    
-    Returns:
-        str: Formatted odds string (e.g., "-110", "+150", "N/A")
-    
-    Handles None values by returning "N/A".
-    Converts float odds to integer representation.
-    """
-    if odds is None:
-        return "N/A"
-    if odds > 0:
-        return f"+{int(odds)}"
-    return str(int(odds))
-
-
-def format_currency(value: Optional[float]) -> str:
-    """Format value as currency."""
+def format_currency_local(value: Optional[float]) -> str:
+    """Format value as currency. (Local wrapper for backwards compatibility)"""
     if value is None or (isinstance(value, float) and value == 0.0):
         return "N/A"
     return f"${float(value):.2f}"
@@ -135,10 +116,10 @@ def show_maintenance_section() -> None:
     col1, col2 = st.columns(2)
     
     with col1:
-        # Initialize session state for maintenance user selection
-        if 'maintenance_selected_user_id' not in st.session_state:
-            all_users_list = get_all_users()
-            st.session_state.maintenance_selected_user_id = all_users_list[0]['id'] if all_users_list else None
+        # Initialize session state for maintenance user selection using helper
+        all_users_list = get_all_users()
+        default_user_id = all_users_list[0]['id'] if all_users_list else None
+        ensure_session_state('maintenance_selected_user_id', default_user_id)
         
         users_list = get_all_users()
         # Find index of currently selected user
@@ -151,10 +132,10 @@ def show_maintenance_section() -> None:
         # Update session state
         st.session_state.maintenance_selected_user_id = selected_user['id']
         
-        # Initialize session state for maintenance week selection
-        if 'maintenance_selected_week_id' not in st.session_state:
-            all_weeks_list = get_all_weeks()
-            st.session_state.maintenance_selected_week_id = all_weeks_list[0]['id'] if all_weeks_list else None
+        # Initialize session state for maintenance week selection using helper
+        all_weeks_list = get_all_weeks()
+        default_week_id = all_weeks_list[0]['id'] if all_weeks_list else None
+        ensure_session_state('maintenance_selected_week_id', default_week_id)
         
         weeks_list = get_all_weeks()
         # Find index of currently selected week
@@ -168,7 +149,7 @@ def show_maintenance_section() -> None:
         # Update session state
         st.session_state.maintenance_selected_week_id = selected_week['id']
         
-        if st.button("🧹 Remove Duplicates for User/Week"):
+        if st.button("Remove Duplicates for User/Week"):
             try:
                 summary = dedupe_picks_for_user_week(selected_user['id'], selected_week['id'])
                 st.success(f"Removed {summary['duplicates_removed']} duplicates. Kept {summary['unique_kept']} unique.")
@@ -178,14 +159,14 @@ def show_maintenance_section() -> None:
     with col2:
         st.write("**Global Maintenance**")
         
-        if st.button("🔒 Create Unique Index"):
+        if st.button("Create Unique Index"):
             ok = create_unique_picks_index()
             if ok:
                 st.success("Unique index created or already exists.")
             else:
                 st.warning("Could not create index. Remove duplicates first.")
         
-        if st.button("🧹 Full Database Dedupe"):
+        if st.button("Full Database Dedupe"):
             try:
                 summary = dedupe_all_picks()
                 st.success(f"Removed {summary['duplicates_removed']} duplicates globally.")
@@ -245,11 +226,7 @@ def show_stats_tab() -> None:
                 ("Correct" if res['is_correct'] else "Incorrect")
             )
             rtn = float(res['actual_return']) if res and res['actual_return'] is not None else 0.0
-            odds_val = p.get('odds')
-            odds_str = (
-                f"+{int(odds_val)}" if isinstance(odds_val, (int, float)) and odds_val >= 0 else
-                (str(int(odds_val)) if isinstance(odds_val, (int, float)) else "-")
-            )
+            odds_str = format_odds(p.get('odds'))
             theo_ret = p.get('theoretical_return')
             rows.append({
                 'Pick ID': p['id'],
