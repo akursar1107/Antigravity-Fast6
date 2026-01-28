@@ -6,7 +6,7 @@ import streamlit as st
 import pandas as pd
 from typing import Optional
 import config
-from utils import get_all_weeks, get_ungraded_picks, add_result
+from database import get_all_weeks, get_ungraded_picks, add_result
 from utils.nfl_data import load_rosters
 from utils.csv_import import get_first_td_map
 from utils.name_matching import names_match

@@ -22,7 +22,7 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple
-from utils.db_connection import get_db_context
+from database import get_db_context
 from utils.nfl_data import load_data
 import logging
 

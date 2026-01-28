@@ -11,7 +11,7 @@ from utils.odds_utils import (
     is_positive_ev,
     kelly_criterion,
 )
-from utils import (
+from database import (
     add_week, get_week_by_season_week, get_all_users, get_user_week_picks,
     add_pick
 )

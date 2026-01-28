@@ -4,7 +4,7 @@ Database operations for kickoff decisions table.
 
 import sqlite3
 from typing import Optional, List, Dict
-from .db_connection import get_db_connection, get_db_context
+from .connection import get_db_connection, get_db_context
 
 
 def add_kickoff_decision(game_id: str, team: str, decision: str, result: Optional[str] = None) -> int:

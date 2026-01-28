@@ -57,7 +57,7 @@ def backfill_team_for_picks(season: int) -> dict:
         >>> print(f"Updated {result['updated']} picks")
     """
     import logging
-    from .db_connection import get_db_connection
+    from database import get_db_connection
     from .nfl_data import load_rosters
     from .name_matching import names_match
     

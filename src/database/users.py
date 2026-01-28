@@ -7,7 +7,7 @@ import sqlite3
 import logging
 from typing import Optional, List, Dict
 
-from .db_connection import get_db_connection, get_db_context
+from .connection import get_db_connection, get_db_context
 
 logger = logging.getLogger(__name__)
 

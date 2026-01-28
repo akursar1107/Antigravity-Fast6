@@ -41,64 +41,60 @@ try:
 except ImportError:
     pass
 
-# Database operations - These should always work
-from utils.db_connection import (
-    get_db_connection,
-    get_db_context,
-    init_db,
-    DB_PATH
-)
-
-from utils.migrations import (
-    run_migrations,
-    get_current_version,
-    get_migration_history
-)
-
-from utils.db_users import (
-    add_user,
-    get_user,
-    get_user_by_name,
-    get_all_users,
-    delete_user
-)
-
-from utils.db_weeks import (
-    add_week,
-    get_week,
-    get_week_by_season_week,
-    get_all_weeks
-)
-
-from utils.db_picks import (
-    add_pick,
-    add_picks_batch,
-    get_pick,
-    get_user_week_picks,
-    get_week_all_picks,
-    get_user_all_picks,
-    delete_pick,
-    get_ungraded_picks,
-    dedupe_picks_for_user_week,
-    create_unique_picks_index,
-    dedupe_all_picks,
-    backfill_theoretical_return_from_odds,
-    update_pick_player_name,
-    get_graded_picks
-)
-
-from utils.db_stats import (
-    add_result,
-    add_results_batch,
-    get_result,
-    get_result_for_pick,
-    delete_season_data,
-    clear_grading_results,
-    get_leaderboard,
-    get_user_stats,
-    get_weekly_summary,
-    get_user_picks_with_results
-)
+# Database operations - Now in database package
+# Note: These imports are delayed to avoid circular imports with database modules
+try:
+    from database import (
+        # Connection
+        get_db_connection,
+        get_db_context,
+        init_db,
+        DB_PATH,
+        # Migrations
+        run_migrations,
+        get_current_version,
+        get_migration_history,
+        # Users
+        add_user,
+        get_user,
+        get_user_by_name,
+        get_all_users,
+        delete_user,
+        # Weeks
+        add_week,
+        get_week,
+        get_week_by_season_week,
+        get_all_weeks,
+        # Picks
+        add_pick,
+        add_picks_batch,
+        get_pick,
+        get_user_week_picks,
+        get_week_all_picks,
+        get_user_all_picks,
+        delete_pick,
+        get_ungraded_picks,
+        dedupe_picks_for_user_week,
+        create_unique_picks_index,
+        dedupe_all_picks,
+        backfill_theoretical_return_from_odds,
+        update_pick_player_name,
+        get_graded_picks,
+        # Stats
+        add_result,
+        add_results_batch,
+        get_result,
+        get_result_for_pick,
+        delete_season_data,
+        clear_grading_results,
+        get_leaderboard,
+        get_user_stats,
+        get_weekly_summary,
+        get_user_picks_with_results
+    )
+except ImportError:
+    # Will be available after database package is fully initialized
+    pass
 
 # Common utilities
 from utils.common import (

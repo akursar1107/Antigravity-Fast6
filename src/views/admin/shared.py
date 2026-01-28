@@ -6,7 +6,7 @@ Common functions used across admin tabs.
 import streamlit as st
 import pandas as pd
 from typing import List, Dict, Optional
-from utils import get_all_weeks, get_all_users, get_user_stats, get_user_all_picks, get_result_for_pick, add_result
+from database import get_all_weeks, get_all_users, get_user_stats, get_user_all_picks, get_result_for_pick, add_result
 from utils.common import format_odds, format_currency, ensure_session_state
 
 

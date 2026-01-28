@@ -8,7 +8,7 @@ import pandas as pd
 import shutil
 from pathlib import Path
 from datetime import datetime
-from utils import get_all_users, add_user, delete_user
+from database import get_all_users, add_user, delete_user
 
 
 def show_users_tab() -> None:

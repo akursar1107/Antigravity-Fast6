@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Optional
 import pandas as pd
 from utils.nfl_data import load_data, get_game_schedule, get_first_tds
 import config
-from utils import db_users, db_weeks, db_picks, db_stats
+from database import users as db_users, weeks as db_weeks, picks as db_picks, stats as db_stats
 
 
 TEAM_CORRECTIONS = {

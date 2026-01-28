@@ -7,8 +7,8 @@ import sqlite3
 import logging
 from typing import Optional, List, Dict, Tuple
 
-from .db_connection import get_db_connection, get_db_context
-from .type_utils import safe_int as _safe_int
+from .connection import get_db_connection, get_db_context
+from utils.type_utils import safe_int as _safe_int
 
 logger = logging.getLogger(__name__)
 

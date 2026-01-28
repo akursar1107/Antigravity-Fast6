@@ -11,10 +11,7 @@ import re
 
 from .nfl_data import get_game_schedule, load_rosters
 from .name_matching import names_match
-from .db_connection import get_db_connection
-from .db_users import add_user, get_all_users
-from .db_weeks import add_week, get_week_by_season_week
-from .db_picks import add_pick
+from database import get_db_connection, add_user, get_all_users, add_week, get_week_by_season_week, add_pick
 import config
 
 logger = logging.getLogger(__name__)
@@ -478,7 +475,7 @@ def import_picks_from_csv(
     # Clear leaderboard cache if any picks were imported successfully
     if result.picks_imported > 0:
         try:
-            from .db_stats import clear_leaderboard_cache
+            from database import clear_leaderboard_cache
             clear_leaderboard_cache()
         except Exception as e:
             logger.debug(f"Could not clear cache: {e}")

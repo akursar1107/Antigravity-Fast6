@@ -9,8 +9,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from services.player_stats_service import update_player_stats
-from services.elo_rating_service import initialize_team_ratings
+from services.analytics import update_player_stats, initialize_team_ratings
 import config
 
 def main():

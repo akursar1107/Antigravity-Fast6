@@ -10,7 +10,7 @@ Displays player statistics including:
 
 import streamlit as st
 import pandas as pd
-from services.player_stats_service import (
+from services.analytics import (
     get_hot_players,
     get_position_leaders,
     get_team_top_scorers,

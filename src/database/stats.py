@@ -14,8 +14,8 @@ try:
 except ImportError:
     HAS_STREAMLIT = False
 
-from .db_connection import get_db_connection, get_db_context
-from .type_utils import safe_int as _safe_int
+from .connection import get_db_connection, get_db_context
+from utils.type_utils import safe_int as _safe_int
 
 logger = logging.getLogger(__name__)
 

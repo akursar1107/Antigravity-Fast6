@@ -44,3 +44,9 @@ venv.bak/
 
 # OS
 .DS_Store
+
+# SSH Keys (should never be committed)
+id_rsa
+id_rsa.pub
+*.pem
+*.key

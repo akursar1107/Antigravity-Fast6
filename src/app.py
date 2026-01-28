@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from utils.nfl_data import load_data, get_game_schedule
-from utils.migrations import run_migrations
+from database import run_migrations
 from views.public_dashboard import show_public_dashboard
 from views.admin_page import show_admin_interface
 from utils.theming import generate_theme_css

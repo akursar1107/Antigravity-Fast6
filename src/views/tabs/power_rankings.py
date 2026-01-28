@@ -13,7 +13,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from services.elo_rating_service import (
+from services.analytics import (
     get_power_rankings,
     get_team_rating_history,
     get_matchup_prediction,

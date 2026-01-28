@@ -23,7 +23,7 @@ import sqlite3
 import pandas as pd
 import numpy as np
 from typing import Optional, Dict, List, Tuple
-from utils.db_connection import get_db_context
+from database import get_db_context
 from utils.nfl_data import load_data, get_game_schedule
 from datetime import datetime
 import logging

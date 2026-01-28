@@ -4,7 +4,7 @@ Results Tab - Manually update game results and manage picks
 
 import streamlit as st
 import config
-from utils import (
+from database import (
     get_all_weeks, get_all_users, get_user_week_picks, 
     get_result_for_pick, add_result, delete_pick,
     dedupe_picks_for_user_week, create_unique_picks_index,
@@ -45,7 +45,7 @@ def show_results_tab(season: int) -> None:
     
     if selected_result_user:
         # Get all picks for this user across entire season
-        from utils import get_db_connection
+        from database import get_db_connection
         conn = get_db_connection()
         cursor = conn.cursor()
         

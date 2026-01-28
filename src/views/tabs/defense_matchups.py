@@ -13,7 +13,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from services.defense_analysis_service import (
+from services.analytics import (
     get_worst_defenses,
     get_best_defenses,
     get_position_matchups,

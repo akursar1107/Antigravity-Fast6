@@ -13,7 +13,7 @@ from utils.exports import (
     list_exported_files,
     DEFAULT_EXPORT_DIR
 )
-from utils import get_all_users
+from database import get_all_users
 from services.performance_service import PickerPerformanceService
 import os
 

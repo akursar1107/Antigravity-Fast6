@@ -13,7 +13,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from services.roi_trends_service import (
+from services.analytics import (
     get_user_roi_trend,
     get_weekly_roi_all_users,
     get_best_worst_picks,
@@ -23,7 +23,7 @@ from services.roi_trends_service import (
     get_profitability_summary,
     get_user_rank_by_roi
 )
-from utils import get_all_users
+from database import get_all_users
 
 
 def show_roi_trends_tab(season: int):

@@ -4,7 +4,7 @@ Week Picks Tab - Display picks and results for selected week
 
 import streamlit as st
 import pandas as pd
-from utils import get_all_weeks, get_all_users, get_user_week_picks, get_result_for_pick
+from database import get_all_weeks, get_all_users, get_user_week_picks, get_result_for_pick
 from utils.common import ensure_session_state, format_pick_for_display, format_pick_for_display_compact, decode_bytes_to_int
 
 

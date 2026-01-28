@@ -10,8 +10,7 @@ from datetime import datetime
 import pandas as pd
 from utils.nfl_data import load_data, get_game_schedule, get_first_tds, get_touchdowns, load_rosters
 from utils.name_matching import names_match
-from utils import db_picks, db_stats
-from utils.db_connection import get_db_connection, get_db_context
+from database import get_db_connection, get_db_context, add_results_batch
 import config
 
 try:
@@ -288,7 +287,7 @@ def auto_grade_season(season: int, week: Optional[int] = None) -> Dict:
     
     # Batch save all results in a single transaction
     if results_to_save:
-        batch_result = db_stats.add_results_batch(results_to_save)
+        batch_result = add_results_batch(results_to_save)
         logger.info(f"Batch saved {batch_result['inserted']} new results, {batch_result['updated']} updated")
     
     logger.info(f"Auto-grade complete: {stats['graded_picks']} graded, "
@@ -451,7 +450,7 @@ def grade_any_time_td_only(season: int, week: Optional[int] = None) -> Dict:
     # Clear leaderboard cache if any picks were graded
     if stats['graded_picks'] > 0:
         try:
-            from .db_stats import clear_leaderboard_cache
+            from database import clear_leaderboard_cache
             clear_leaderboard_cache()
         except Exception as e:
             logger.debug(f"Could not clear cache: {e}")
