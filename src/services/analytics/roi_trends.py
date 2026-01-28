@@ -78,8 +78,16 @@ def get_user_roi_trend(user_id: int, season: int) -> pd.DataFrame:
         
         # Calculate cumulative ROI
         df['cumulative_profit'] = df['week_profit'].cumsum()
-        df['cumulative_roi'] = (df['cumulative_profit'] / df['picks_count'].cumsum()) * 100
+        df['cumulative_picks'] = df['picks_count'].cumsum()
+        
+        # ROI calculation: (profit / investment) * 100
+        # Assuming $1 per pick, investment = number of picks
+        df['cumulative_roi'] = (df['cumulative_profit'] / df['cumulative_picks']) * 100
         df['week_roi'] = (df['week_profit'] / df['picks_count']) * 100
+        
+        # Handle edge case: if cumulative_picks is 0, set ROI to 0
+        df['cumulative_roi'] = df['cumulative_roi'].fillna(0)
+        df['week_roi'] = df['week_roi'].fillna(0)
         
         return df
 

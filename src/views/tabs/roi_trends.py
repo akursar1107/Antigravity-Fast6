@@ -52,6 +52,8 @@ def show_roi_trends_tab(season: int):
     with tab1:
         st.subheader("Cumulative ROI Over Time")
         
+        st.info("📊 **Note:** Charts only show weeks where users have graded picks. If a line starts late or has gaps, that user didn't make picks in those weeks.")
+        
         # User selector
         user_names = [u['name'] for u in users]
         selected_users = st.multiselect(
@@ -70,11 +72,14 @@ def show_roi_trends_tab(season: int):
                     trend_df = get_user_roi_trend(user_data['id'], season)
                     
                     if not trend_df.empty:
+                        # Important: Don't connect to origin if user didn't start in week 1
+                        # This prevents the flat line artifact
                         fig.add_trace(go.Scatter(
                             x=trend_df['week'],
                             y=trend_df['cumulative_roi'],
                             mode='lines+markers',
                             name=user_name,
+                            connectgaps=False,  # Don't connect across missing data
                             hovertemplate='<b>%{fullData.name}</b><br>' +
                                         'Week %{x}<br>' +
                                         'ROI: %{y:.1f}%<br>' +

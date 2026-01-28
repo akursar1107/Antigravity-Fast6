@@ -228,15 +228,18 @@
     }
   },
   "ui_theme": {
-    "primary_color": "#2D3748",
-    "secondary_color": "#0A1A2F",
-    "accent_color": "#228B22",
-    "success_color": "#228B22",
-    "error_color": "#E53E3E",
-    "warning_color": "#FFD700",
-    "info_color": "#808080",
+    "primary_color": "#5B8FF9",
+    "secondary_color": "#1A2332",
+    "accent_color": "#FF6B6B",
+    "success_color": "#51CF66",
+    "error_color": "#FF6B6B",
+    "warning_color": "#FFA94D",
+    "info_color": "#748FFC",
+    "background": "#0F1419",
+    "surface": "#1A2332",
+    "border": "#2D3748",
     "font_family": "Inter, sans-serif",
-    "border_radius": "16px"
+    "border_radius": "8px"
   },
   "positions": [
     "QB",

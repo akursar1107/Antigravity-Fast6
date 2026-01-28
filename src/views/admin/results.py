@@ -10,6 +10,7 @@ from database import (
     dedupe_picks_for_user_week, create_unique_picks_index,
     dedupe_all_picks, clear_grading_results
 )
+from utils.common import decode_bytes_to_int
 
 
 def show_results_tab(season: int) -> None:
@@ -66,7 +67,8 @@ def show_results_tab(season: int) -> None:
             st.info(f"Showing {len(picks)} pick(s) for the entire season")
             
             for pick in picks:
-                with st.expander(f"Week {pick['week']}: {pick['team']} - {pick['player_name']}", expanded=False):
+                week_num = decode_bytes_to_int(pick['week'])
+                with st.expander(f"Week {week_num}: {pick['team']} - {pick['player_name']}", expanded=False):
                     col_result, col_return = st.columns(2)
                     # Show odds and theoretical return summary
                     odds_val = pick.get('odds')

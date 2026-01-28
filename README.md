@@ -1,6 +1,10 @@
 # 🏈 Fast6 - NFL First TD Prediction Tool
 
-A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds. **Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅**
+A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds. 
+
+**Status:** Phase 1-5 Complete ✅ | UI/UX Refactored ✅ | Architecture Modernized ✅
+
+> **Latest Update (Jan 27, 2026):** Complete UI/UX overhaul with high-contrast colors, tab navigation, simplified layouts, and mobile-responsive design. See [CHANGELOG_UI_UX.md](CHANGELOG_UI_UX.md) for details.
 
 ## Quick Start
 

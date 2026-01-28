@@ -53,13 +53,12 @@ def show_schedule_tab(schedule: pd.DataFrame) -> None:
             st.markdown("""
                 <style>
                 .schedule-card {
-                    background: rgba(45, 55, 72, 0.4);
-                    border-radius: 12px;
+                    background: #1A2332;
+                    border-radius: 8px;
                     padding: 15px;
                     margin-bottom: 15px;
-                    border: 1px solid rgba(255, 255, 255, 0.05);
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-                    backdrop-filter: blur(8px);
+                    border: 1px solid #2D3748;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
                 }
                 .team-row {
                     display: flex;
@@ -72,8 +71,8 @@ def show_schedule_tab(schedule: pd.DataFrame) -> None:
                     align-items: center;
                 }
                 .team-logo {
-                    width: 30px;
-                    height: 30px;
+                    width: 40px;
+                    height: 40px;
                     margin-right: 12px;
                     object-fit: contain;
                 }
@@ -83,21 +82,21 @@ def show_schedule_tab(schedule: pd.DataFrame) -> None:
                     color: #F7FAFC;
                 }
                 .score {
-                    font-weight: 800;
+                    font-weight: 700;
                     font-size: 1.25rem;
                     color: #F7FAFC;
                     font-family: 'Roboto Mono', monospace;
                 }
                 .game-meta {
-                    font-size: 0.8rem;
+                    font-size: 0.85rem;
                     color: #A0AEC0;
-                    border-top: 1px solid rgba(255, 255, 255, 0.05);
+                    border-top: 1px solid #2D3748;
                     margin-top: 10px;
                     padding-top: 8px;
                     display: flex;
                     justify-content: space-between;
                 }
-                .win-inc { color: #228B22; font-weight: 700; text-shadow: 0 0 10px rgba(34, 139, 34, 0.3); }
+                .win-inc { color: #51CF66; font-weight: 700; }
                 </style>
             """, unsafe_allow_html=True)
 

@@ -16,11 +16,13 @@ from utils.team_utils import get_team_full_name
 import config
 from utils import init_db
 from views.admin import (
+    show_dashboard_tab,
     show_users_tab,
     show_picks_tab,
     show_results_tab,
     show_import_csv_tab,
-    show_grading_tab
+    show_grading_tab,
+    show_settings_tab
 )
 from views.admin.shared import show_stats_tab
 from views.admin.exports import show_exports_tab
@@ -234,35 +236,91 @@ def show_admin_interface(df: pd.DataFrame, season: int, schedule: pd.DataFrame) 
     # Initialize database if not already done
     init_db()
     
-    # Create tabs for different admin functions
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "👥 User Management",
-        "📝 Input Picks",
-        "✅ Update Results",
-        "📊 View Stats",
-        "📥 Import CSV",
-        "🎯 Grade Picks",
-        "📥 Data Exports"
-    ])
+    # Initialize admin tab selection in session state
+    if 'active_admin_tab' not in st.session_state:
+        st.session_state.active_admin_tab = "🏠 Dashboard"
     
-    # Use modular tab components
-    with tab1:
+    # Tab selection with session state persistence
+    admin_tab_options = [
+        "🏠 Dashboard",
+        "👥 Users",
+        "📝 Picks Management",
+        "🔧 Tools",
+        "⚙️ Settings"
+    ]
+    
+    # Create columns for tab-like buttons
+    cols = st.columns(len(admin_tab_options))
+    for idx, (col, tab_name) in enumerate(zip(cols, admin_tab_options)):
+        with col:
+            # Style active tab differently
+            if st.session_state.active_admin_tab == tab_name:
+                if st.button(tab_name, key=f"admin_tab_{idx}", use_container_width=True, type="primary"):
+                    st.session_state.active_admin_tab = tab_name
+                    st.rerun()
+            else:
+                if st.button(tab_name, key=f"admin_tab_{idx}", use_container_width=True):
+                    st.session_state.active_admin_tab = tab_name
+                    st.rerun()
+    
+    st.markdown("---")
+    
+    # Render the active tab content
+    if st.session_state.active_admin_tab == "🏠 Dashboard":
+        show_dashboard_tab(season, schedule)
+    
+    elif st.session_state.active_admin_tab == "👥 Users":
         show_users_tab()
     
-    with tab2:
-        show_picks_tab(season, schedule)
+    elif st.session_state.active_admin_tab == "📝 Picks Management":
+        # Consolidated picks workflow: Input → Update → Grade → Stats
+        st.header("📝 Picks Management")
+        
+        # Initialize picks mode in session state
+        if 'picks_mode' not in st.session_state:
+            st.session_state.picks_mode = "📥 Input Picks"
+        
+        picks_mode = st.radio(
+            "Workflow Step",
+            ["📥 Input Picks", "✅ Update Results", "🎯 Grade Picks", "📊 View Stats"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="picks_mode_selector",
+            index=["📥 Input Picks", "✅ Update Results", "🎯 Grade Picks", "📊 View Stats"].index(st.session_state.picks_mode)
+        )
+        st.session_state.picks_mode = picks_mode
+        
+        if picks_mode == "📥 Input Picks":
+            show_picks_tab(season, schedule)
+        elif picks_mode == "✅ Update Results":
+            show_results_tab(season)
+        elif picks_mode == "🎯 Grade Picks":
+            show_grading_tab(season, schedule)
+        else:  # View Stats
+            show_stats_tab()
     
-    with tab3:
-        show_results_tab(season)
+    elif st.session_state.active_admin_tab == "🔧 Tools":
+        # Tools tab combines Import CSV and Data Exports
+        st.header("🔧 Admin Tools")
+        
+        # Initialize tool mode in session state
+        if 'tool_mode' not in st.session_state:
+            st.session_state.tool_mode = "📥 Import CSV"
+        
+        tool_mode = st.radio(
+            "Select Tool",
+            ["📥 Import CSV", "📤 Data Exports"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="tool_mode_selector",
+            index=["📥 Import CSV", "📤 Data Exports"].index(st.session_state.tool_mode)
+        )
+        st.session_state.tool_mode = tool_mode
+        
+        if tool_mode == "📥 Import CSV":
+            show_import_csv_tab(season)
+        else:
+            show_exports_tab(season, df)
     
-    with tab4:
-        show_stats_tab()
-    
-    with tab5:
-        show_import_csv_tab(season)
-    
-    with tab6:
-        show_grading_tab(season, schedule)
-    
-    with tab7:
-        show_exports_tab(season, df)
+    elif st.session_state.active_admin_tab == "⚙️ Settings":
+        show_settings_tab()
