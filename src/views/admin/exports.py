@@ -69,7 +69,7 @@ def show_exports_tab(season: int, df: pd.DataFrame = None) -> None:
                             perf_df = pd.DataFrame(summaries)
                             export_user_performance(season, summaries)
                             st.success(f"✅ Exported {len(summaries)} users")
-                            st.dataframe(perf_df, use_container_width=True, hide_index=True)
+                            st.dataframe(perf_df, width="stretch", hide_index=True)
                         else:
                             st.info("No performance data to export.")
                     else:
@@ -98,7 +98,7 @@ def show_exports_tab(season: int, df: pd.DataFrame = None) -> None:
                         if not player_counts.empty:
                             export_player_stats(season, player_counts)
                             st.success(f"✅ Exported {len(player_counts)} players")
-                            st.dataframe(player_counts.head(20), use_container_width=True, hide_index=True)
+                            st.dataframe(player_counts.head(20), width="stretch", hide_index=True)
                         else:
                             st.info("No player data to export.")
                     else:

@@ -9,16 +9,14 @@ import pandas as pd
 from utils.nfl_data import get_touchdowns, get_first_tds, load_rosters
 from utils import init_db
 from views.tabs import (
-    show_first_td_tab,
     show_leaderboard_tab,
-    show_all_touchdowns_tab,
     show_schedule_tab,
-    show_analysis_tab,
     show_week_picks_tab,
-    show_player_trends_tab,
-    show_team_trends_tab,
-    show_user_stats_tab,
-    show_performance_breakdown_tab
+    show_team_analysis_tab,
+    show_player_performance_tab,
+    show_roi_trends_tab,
+    show_power_rankings_tab,
+    show_defense_matchups_tab
 )
 
 
@@ -56,15 +54,13 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
     # Dashboard view selector - responsive to all screen sizes
     view_options = [
         "🏆 Leaderboard",
-        "📝 Week Picks",
-        "📋 All Touchdowns", 
-        "📅 Weekly Schedule", 
-        "📊 Analysis",
-        "🚀 First TD of Game",
-        "📈 Player Trends",
-        "🏈 Team Trends",
-        "👤 User Stats",
-        "📊 Performance Breakdown"
+        "📝 User Weekly Picks",
+        "🌟 Player Performance",
+        "💰 ROI & Profitability",
+        "⚡ Power Rankings",
+        "🛡️ Defense Matchups",
+        "📅 NFL Schedule",
+        "🧩 Team Analysis"
     ]
     
     selected_view = st.selectbox(
@@ -81,48 +77,38 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
         show_leaderboard_tab()
     
     elif selected_view == view_options[1]:
-        show_week_picks_tab(season)
+        # Default to current week if possible
+        import datetime
+        current_week = None
+        if 'week' in df.columns:
+            try:
+                # Try to get the latest week with data for the current season
+                current_week = int(df[df['season'] == season]['week'].max())
+            except Exception:
+                current_week = None
+        show_week_picks_tab(season, week=current_week) if current_week else show_week_picks_tab(season)
     
     elif selected_view == view_options[2]:
-        show_all_touchdowns_tab(all_tds)
+        show_player_performance_tab(season)
     
     elif selected_view == view_options[3]:
-        show_schedule_tab(schedule)
+        show_roi_trends_tab(season)
     
     elif selected_view == view_options[4]:
-        show_analysis_tab(df, season)
+        show_power_rankings_tab(season)
     
     elif selected_view == view_options[5]:
-        show_first_td_tab(first_tds)
+        show_defense_matchups_tab(season)
     
     elif selected_view == view_options[6]:
-        try:
-            show_player_trends_tab(df, season, roster_df)
-        except Exception as e:
-            st.error(f"Error in Player Trends: {str(e)}")
-            import traceback
-            st.write(traceback.format_exc())
-    
+        show_schedule_tab(schedule)
+
     elif selected_view == view_options[7]:
         try:
-            show_team_trends_tab(first_tds, season)
+            show_team_analysis_tab(df, season)
         except Exception as e:
-            st.error(f"Error in Team Trends: {str(e)}")
+            st.error(f"Error in Team Analysis: {str(e)}")
             import traceback
             st.write(traceback.format_exc())
-    
-    elif selected_view == view_options[8]:
-        try:
-            show_user_stats_tab(season)
-        except Exception as e:
-            st.error(f"Error in User Stats: {str(e)}")
-            import traceback
-            st.write(traceback.format_exc())
-    
-    elif selected_view == view_options[9]:
-        try:
-            show_performance_breakdown_tab(season)
-        except Exception as e:
-            st.error(f"Error in Performance Breakdown: {str(e)}")
-            import traceback
-            st.write(traceback.format_exc())
+
+

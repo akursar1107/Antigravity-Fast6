@@ -266,7 +266,7 @@ def show_clean_csv_import(season: int):
     
     st.dataframe(
         display_df.style.apply(highlight_errors, axis=1),
-        use_container_width=True
+        width="stretch"
     )
     
     st.markdown("---")
@@ -316,7 +316,7 @@ def show_clean_csv_import(season: int):
                 if result.success_count > 0:
                     with st.expander("✅ Imported Picks"):
                         success_df = pd.DataFrame(result.success_picks)
-                        st.dataframe(success_df, use_container_width=True)
+                        st.dataframe(success_df, width="stretch")
                 
                 if result.errors:
                     with st.expander("❌ Errors"):

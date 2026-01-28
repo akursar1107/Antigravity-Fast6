@@ -19,6 +19,42 @@ from .type_utils import safe_int
 from .odds_utils import american_to_probability
 
 
+def decode_bytes_to_int(value: Any) -> int:
+    """
+    Convert a value (potentially bytes) to an integer.
+    
+    Handles various data types that may come from SQLite:
+    - bytes objects (tries little-endian, then big-endian)
+    - numeric types (int, float)
+    - string representations of numbers
+    
+    Args:
+        value: Value to convert to int
+        
+    Returns:
+        Integer value, or 0 if conversion fails
+        
+    Example:
+        >>> decode_bytes_to_int(b'\\x01\\x00\\x00\\x00')  # Little-endian 1
+        1
+        >>> decode_bytes_to_int(5.0)
+        5
+        >>> decode_bytes_to_int('10')
+        10
+    """
+    if isinstance(value, bytes):
+        try:
+            # Try little-endian first (most common in SQLite)
+            return int.from_bytes(value, 'little')
+        except Exception:
+            try:
+                # Try big-endian as fallback
+                return int.from_bytes(value, 'big')
+            except Exception:
+                return 0
+    return safe_int(value)
+
+
 def normalize_week_record(row_dict: Dict) -> Dict:
     """
     Normalize a week/pick record by converting season and week to integers.

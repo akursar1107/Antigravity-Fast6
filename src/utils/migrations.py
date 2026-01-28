@@ -61,9 +61,60 @@ def set_version(conn: sqlite3.Connection, version: int, description: str) -> Non
     conn.commit()
 
 
+
+
+def migration_v5_add_kickoff_decisions_table(conn: sqlite3.Connection) -> None:
+    """
+    Version 5: Add kickoff_decisions table to track team kickoff choices per game.
+    Columns: id, game_id, team, decision (RECEIVE/DEFER), result (TD/No TD/FG/Other), created_at
+    """
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(kickoff_decisions)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if not columns:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS kickoff_decisions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id TEXT NOT NULL,
+                team TEXT NOT NULL,
+                decision TEXT CHECK(decision IN ('RECEIVE','DEFER')) NOT NULL,
+                result TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_kickoff_game_id ON kickoff_decisions(game_id)")
+        conn.commit()
+        logger.info("Applied migration v5: Added kickoff_decisions table")
+    else:
+        logger.info("Migration v5: kickoff_decisions table already exists, skipping")
+
 # ============= MIGRATION FUNCTIONS =============
 
 def migration_v1_initial_schema(conn: sqlite3.Connection) -> None:
+    def migration_v5_add_kickoff_decisions_table(conn: sqlite3.Connection) -> None:
+        """
+        Version 5: Add kickoff_decisions table to track team kickoff choices per game.
+        Columns: id, game_id, team, decision (RECEIVE/DEFER), result (TD/No TD/FG/Other), created_at
+        """
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(kickoff_decisions)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if not columns:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS kickoff_decisions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    game_id TEXT NOT NULL,
+                    team TEXT NOT NULL,
+                    decision TEXT CHECK(decision IN ('RECEIVE','DEFER')) NOT NULL,
+                    result TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_kickoff_game_id ON kickoff_decisions(game_id)")
+            conn.commit()
+            logger.info("Applied migration v5: Added kickoff_decisions table")
+        else:
+            logger.info("Migration v5: kickoff_decisions table already exists, skipping")
     """
     Version 1: Initial database schema.
     Creates users, weeks, picks, and results tables with basic indexes.
@@ -190,6 +241,94 @@ def migration_v4_additional_indexes(conn: sqlite3.Connection) -> None:
     logger.info("Applied migration v4: Additional performance indexes")
 
 
+def migration_v6_add_player_stats(conn: sqlite3.Connection) -> None:
+    """
+    Version 6: Add player_stats table for tracking player performance over time.
+    Enables hot/cold player tracking, TD rates, and performance trends.
+    """
+    cursor = conn.cursor()
+    
+    # Check if table already exists
+    cursor.execute("PRAGMA table_info(player_stats)")
+    columns = [row[1] for row in cursor.fetchall()]
+    
+    if not columns:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS player_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_name TEXT NOT NULL,
+                season INTEGER NOT NULL,
+                team TEXT NOT NULL,
+                position TEXT,
+                games_played INTEGER DEFAULT 0,
+                first_td_count INTEGER DEFAULT 0,
+                any_time_td_count INTEGER DEFAULT 0,
+                red_zone_targets INTEGER DEFAULT 0,
+                red_zone_touches INTEGER DEFAULT 0,
+                last_td_week INTEGER,
+                recent_form TEXT DEFAULT 'AVERAGE',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_name, season, team)
+            )
+        """)
+        
+        # Create indexes for efficient lookups
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_stats_season ON player_stats(season)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_stats_team ON player_stats(team)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_stats_position ON player_stats(position)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_stats_form ON player_stats(recent_form)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_stats_name_season ON player_stats(player_name, season)")
+        
+        conn.commit()
+        logger.info("Applied migration v6: Added player_stats table")
+    else:
+        logger.info("Migration v6: player_stats table already exists, skipping")
+
+
+def migration_v7_add_team_ratings(conn: sqlite3.Connection) -> None:
+    """
+    Version 7: Add team_ratings table for ELO-based team strength tracking.
+    Enables power rankings and matchup difficulty assessment.
+    """
+    cursor = conn.cursor()
+    
+    # Check if table already exists
+    cursor.execute("PRAGMA table_info(team_ratings)")
+    columns = [row[1] for row in cursor.fetchall()]
+    
+    if not columns:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS team_ratings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team TEXT NOT NULL,
+                season INTEGER NOT NULL,
+                week INTEGER NOT NULL,
+                elo_rating REAL DEFAULT 1500.0,
+                offensive_rating REAL DEFAULT 1500.0,
+                defensive_rating REAL DEFAULT 1500.0,
+                games_played INTEGER DEFAULT 0,
+                wins INTEGER DEFAULT 0,
+                losses INTEGER DEFAULT 0,
+                points_for INTEGER DEFAULT 0,
+                points_against INTEGER DEFAULT 0,
+                rating_trend TEXT DEFAULT 'STABLE',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(team, season, week)
+            )
+        """)
+        
+        # Create indexes for efficient lookups
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_season ON team_ratings(season)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_week ON team_ratings(season, week)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_team ON team_ratings(team)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_elo ON team_ratings(elo_rating)")
+        
+        conn.commit()
+        logger.info("Applied migration v7: Added team_ratings table")
+    else:
+        logger.info("Migration v7: team_ratings table already exists, skipping")
+
+
 # ============= MIGRATION REGISTRY =============
 
 MIGRATIONS: Dict[int, tuple[Callable[[sqlite3.Connection], None], str]] = {
@@ -197,6 +336,9 @@ MIGRATIONS: Dict[int, tuple[Callable[[sqlite3.Connection], None], str]] = {
     2: (migration_v2_add_game_id, "Add game_id to picks table"),
     3: (migration_v3_add_any_time_td, "Add any_time_td to results table"),
     4: (migration_v4_additional_indexes, "Add performance indexes"),
+    5: (migration_v5_add_kickoff_decisions_table, "Add kickoff_decisions table"),
+    6: (migration_v6_add_player_stats, "Add player_stats table for performance tracking"),
+    7: (migration_v7_add_team_ratings, "Add team_ratings table for ELO system"),
 }
 
 

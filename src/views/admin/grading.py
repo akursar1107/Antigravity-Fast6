@@ -246,7 +246,7 @@ def _show_auto_grade_button(ungraded, grade_season, grade_week):
                             with st.expander("📋 View Graded Details"):
                                 details_df = pd.DataFrame(result.get('details', []))
                                 if not details_df.empty:
-                                    st.dataframe(details_df, use_container_width=True, hide_index=True)
+                                    st.dataframe(details_df, width="stretch", hide_index=True)
                         
                         st.rerun()
                 except NFLDataError as e:
@@ -283,7 +283,7 @@ def _show_auto_grade_button(ungraded, grade_season, grade_week):
                             with st.expander("📋 View Graded Details"):
                                 details_df = pd.DataFrame(result.get('details', []))
                                 if not details_df.empty:
-                                    st.dataframe(details_df, use_container_width=True, hide_index=True)
+                                    st.dataframe(details_df, width="stretch", hide_index=True)
                         
                         st.rerun()
                 except Exception as e:
@@ -405,7 +405,7 @@ def _show_editable_preview_table(preview_data, grade_schedule, grade_season, fir
     # Configure editable columns
     edited_df = st.data_editor(
         preview_df[display_cols + ['Pick ID', 'Team']],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         num_rows="fixed",
         column_config={
@@ -569,7 +569,7 @@ def _show_database_verification(season: int, week: Optional[int] = None) -> None
                 })
             
             df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
             
             # Statistics
             col1, col2, col3, col4 = st.columns(4)

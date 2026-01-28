@@ -84,99 +84,77 @@ def show_picks_tab(season: int, schedule: pd.DataFrame) -> None:
     
     # Iterate through games
     for _, game in games_for_week.iterrows():
-        home_team = game['home_team']
-        away_team = game['away_team']
+        home_abbr = game['home_team']
+        away_abbr = game['away_team']
         
-        with st.expander(f"{away_team} @ {home_team}", expanded=False):
-            col_team, col_player = st.columns(2)
+        with st.expander(f"🏈 {away_abbr} @ {home_abbr}", expanded=False):
+            col_team, col_player, col_odds = st.columns([1, 1.5, 1])
+            
+            with col_team:
+                pick_team = st.radio(
+                    "Team", 
+                    options=[away_abbr, home_abbr], 
+                    key=f"team_{away_abbr}_{home_abbr}",
+                    horizontal=True
+                )
             
             # Get team-specific players
-            off_positions = ['QB', 'RB', 'WR', 'TE', 'FB']
+            off_positions = ['QB', 'RB', 'WR', 'TE', 'FB', 'K', 'D/ST']
             team_players = roster_df[
-                (roster_df['team'].isin([home_team, away_team])) & 
+                (roster_df['team'] == pick_team) & 
                 (roster_df['position'].isin(off_positions))
             ].sort_values('full_name')
             
-            options = ["-- Select Player --"] + team_players['display_name'].tolist()
-            
-            with col_team:
-                st.write(f"**{away_team} @ {home_team}**")
+            player_options = ["-- Select Player --"] + team_players['display_name'].tolist()
             
             with col_player:
                 selected_player = st.selectbox(
                     "First TD Scorer",
-                    options=options,
-                    key=f"pick_{home_team}_{away_team}",
-                    index=0
+                    options=player_options,
+                    key=f"player_{away_abbr}_{home_abbr}",
+                    help=f"Select first TD scorer for {pick_team}"
+                )
+            
+            with col_odds:
+                odds = st.number_input(
+                    "Odds",
+                    value=250,
+                    step=25,
+                    key=f"odds_{away_abbr}_{home_abbr}"
                 )
             
             if selected_player != "-- Select Player --":
                 # Extract clean name (remove position)
                 clean_name = selected_player.split(" (")[0]
                 picks_to_add.append({
-                    'game_key': f"{away_team}_{home_team}",
-                    'team': away_team,
+                    'team': pick_team,
                     'player_name': clean_name,
-                    'game': f"{away_team} @ {home_team}"
+                    'odds': float(odds),
+                    'game': f"{away_abbr} @ {home_abbr}"
                 })
-
-                # Odds & EV helper (optional inputs)
-                st.markdown("---")
-                st.caption("Odds & EV (optional)")
-                odds = st.number_input(
-                    "American Odds",
-                    value=250,
-                    step=25,
-                    key=f"odds_{away_team}_{home_team}",
-                    help="Enter bookmaker odds for the selected player"
-                )
-                est_prob = st.slider(
-                    "Estimated Win Probability",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=0.30,
-                    step=0.01,
-                    key=f"prob_{away_team}_{home_team}",
-                    help="Your belief the player scores first TD"
-                )
-
-                try:
-                    implied = american_to_probability(odds)
-                    ev = calculate_expected_value(odds, est_prob)
-                    positive = is_positive_ev(odds, est_prob)
-                    st.write(
-                        f"Implied Prob: {implied:.2%} · Your Prob: {est_prob:.2%} · EV: {ev:.2f} per $1"
-                    )
-                    if positive:
-                        st.success("✅ +EV pick (expected profit > 0)")
-                    else:
-                        st.info("ℹ️ EV ≤ 0 (consider adjusting odds/probability)")
-
-                    # Kelly suggested stake (quarter Kelly by default)
-                    bankroll = st.number_input(
-                        "Bankroll (for Kelly sizing)",
-                        value=100.0,
-                        step=10.0,
-                        key=f"bankroll_{away_team}_{home_team}"
-                    )
-                    suggested = kelly_criterion(odds, est_prob, bankroll, fraction=0.25)
-                    if suggested > 0:
-                        st.write(f"Suggested Stake (¼ Kelly): ${suggested:.2f}")
-                except Exception as e:
-                    st.warning(f"EV/Kelly calculation unavailable: {e}")
     
     # Save picks button
     if picks_to_add:
-        if st.button("💾 Save All Picks", key="save_picks_btn"):
+        st.markdown("---")
+        if st.button("💾 Save All Picks", key="save_picks_btn", type="primary"):
+            success_count = 0
             for pick in picks_to_add:
                 try:
-                    pick_id = add_pick(
+                    # Calculate theoretical return if needed
+                    theo_return = (pick['odds'] / 100.0) if pick['odds'] > 0 else (100.0 / abs(pick['odds']))
+                    
+                    add_pick(
                         user_id=selected_user['id'],
                         week_id=week_id,
                         team=pick['team'],
-                        player_name=pick['player_name']
+                        player_name=pick['player_name'],
+                        odds=pick['odds'],
+                        theoretical_return=theo_return
                     )
-                    st.success(f"✅ Saved: {pick['player_name']} - {pick['game']}")
+                    success_count += 1
                 except Exception as e:
                     st.error(f"❌ Error saving {pick['player_name']}: {str(e)}")
-            st.rerun()
+            
+            if success_count > 0:
+                st.toast(f"✅ Successfully saved {success_count} picks for {selected_user['name']}!", icon="🏈")
+                st.rerun()

@@ -1,6 +1,6 @@
 # 🏈 Fast6 - NFL First TD Prediction Tool
 
-A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds. **Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅**
+A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds. **Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅**
 
 ## Quick Start
 
@@ -24,6 +24,13 @@ streamlit run src/app.py
 
 The app will be available at **http://localhost:8501**
 
+
+## Analytics Documentation
+
+See [ANALYTICS_GUIDE.md](ANALYTICS_GUIDE.md) for a complete explanation of all analytics features, dashboard tabs, and how to interpret each metric and visualization.
+
+---
+
 ## Features
 
 ### Admin Interface
@@ -37,10 +44,14 @@ The app will be available at **http://localhost:8501**
 ### Public Dashboard
 - **🏆 Leaderboard**: Group standings with ROI, Avg Odds, Theo Return, ROI Efficiency
 - **📝 Weekly Picks**: Browse picks by week with Odds and Returns
-- **📋 All Touchdowns**: Database of all season TDs
+- **🌟 Player Performance**: Hot/cold player tracking, TD rates, position leaders (NEW)
+- **💰 ROI & Profitability**: Cumulative ROI trends, weekly performance, strategy analysis (NEW)
+- **⚡ Power Rankings**: ELO-based team ratings, matchup predictions, power rankings (NEW)
+- **🛡️ Defense Matchups**: Defensive weaknesses, position matchups, recommendations (NEW)
 - **📅 Weekly Schedule**: Game schedules and results
-- **📊 Analysis**: Team/player/position first TD statistics
-- **🚀 First TD per Game**: Game-by-game breakdown
+- **🏟️ League Analysis**: League-wide first TD statistics
+- **🧩 Team Analysis**: Team-specific TD analysis
+- **📊 Game Analysis**: Game-by-game TD breakdown
 
 ## Tech Stack
 
@@ -117,11 +128,13 @@ Fast6/
 - 78 unit/integration tests (100% pass rate)
 - Code optimization: batch DB ops, caching, SQL extraction
 
-### 📋 Phase 5: Advanced Analytics (Planned)
-- Player performance tracking & trends
-- Team ELO rating system
-- ROI & profitability analysis
-- Defensive matchup analysis
+### ✅ Phase 5: Advanced Analytics (Complete)
+- **Player Performance Tracking**: Hot/cold indicators, TD rates, position leaders
+- **ROI & Profitability Trends**: Cumulative ROI, weekly performance, strategy analysis
+- **Team ELO Rating System**: Power rankings, matchup predictions, rating trends
+- **Defensive Matchup Analysis**: Weak defenses, position matchups, recommendations
+- 4 new dashboard tabs with 12+ interactive visualizations
+- 3,300+ lines of new analytics code
 
 See [ROADMAP.md](ROADMAP.md) for planned enhancements.
 
