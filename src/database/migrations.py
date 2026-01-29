@@ -291,11 +291,11 @@ def migration_v7_add_team_ratings(conn: sqlite3.Connection) -> None:
     Enables power rankings and matchup difficulty assessment.
     """
     cursor = conn.cursor()
-    
+
     # Check if table already exists
     cursor.execute("PRAGMA table_info(team_ratings)")
     columns = [row[1] for row in cursor.fetchall()]
-    
+
     if not columns:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS team_ratings (
@@ -316,17 +316,83 @@ def migration_v7_add_team_ratings(conn: sqlite3.Connection) -> None:
                 UNIQUE(team, season, week)
             )
         """)
-        
+
         # Create indexes for efficient lookups
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_season ON team_ratings(season)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_week ON team_ratings(season, week)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_team ON team_ratings(team)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_team_ratings_elo ON team_ratings(elo_rating)")
-        
+
         conn.commit()
         logger.info("Applied migration v7: Added team_ratings table")
     else:
         logger.info("Migration v7: team_ratings table already exists, skipping")
+
+
+def migration_v8_add_prediction_market_odds(conn: sqlite3.Connection) -> None:
+    """
+    Version 8: Add tables for prediction market odds tracking.
+
+    Tables:
+    - market_odds: Historical odds snapshots from Polymarket and Kalshi
+    - market_outcomes: Resolved market outcomes for comparison analysis
+    """
+    cursor = conn.cursor()
+
+    # Check if market_odds table already exists
+    cursor.execute("PRAGMA table_info(market_odds)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if not columns:
+        # Main odds table - stores historical price snapshots
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS market_odds (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source TEXT NOT NULL CHECK(source IN ('polymarket', 'kalshi', 'odds_api')),
+                game_id TEXT NOT NULL,
+                season INTEGER NOT NULL,
+                week INTEGER NOT NULL,
+                player_name TEXT NOT NULL,
+                team TEXT,
+                implied_probability REAL NOT NULL,
+                american_odds INTEGER,
+                raw_price REAL,
+                volume REAL,
+                market_id TEXT,
+                snapshot_time TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(source, game_id, player_name, snapshot_time)
+            )
+        """)
+
+        # Market outcomes - tracks resolution for analysis
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS market_outcomes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source TEXT NOT NULL,
+                game_id TEXT NOT NULL,
+                market_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                resolved_outcome TEXT CHECK(resolved_outcome IN ('yes', 'no', 'void')),
+                actual_first_td_scorer TEXT,
+                resolution_time TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(source, market_id)
+            )
+        """)
+
+        # Indexes for efficient queries
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_market_odds_game ON market_odds(game_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_market_odds_player ON market_odds(player_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_market_odds_season_week ON market_odds(season, week)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_market_odds_source ON market_odds(source)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_market_odds_snapshot ON market_odds(snapshot_time)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_market_outcomes_game ON market_outcomes(game_id)")
+
+        conn.commit()
+        logger.info("Applied migration v8: Added prediction market tables")
+    else:
+        logger.info("Migration v8: market_odds table already exists, skipping")
 
 
 # ============= MIGRATION REGISTRY =============
@@ -339,6 +405,7 @@ MIGRATIONS: Dict[int, tuple[Callable[[sqlite3.Connection], None], str]] = {
     5: (migration_v5_add_kickoff_decisions_table, "Add kickoff_decisions table"),
     6: (migration_v6_add_player_stats, "Add player_stats table for performance tracking"),
     7: (migration_v7_add_team_ratings, "Add team_ratings table for ELO system"),
+    8: (migration_v8_add_prediction_market_odds, "Add prediction market odds tables"),
 }
 
 

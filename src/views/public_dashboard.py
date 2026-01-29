@@ -16,7 +16,8 @@ from views.tabs import (
     show_player_performance_tab,
     show_roi_trends_tab,
     show_power_rankings_tab,
-    show_defense_matchups_tab
+    show_defense_matchups_tab,
+    show_market_comparison_tab
 )
 
 
@@ -75,6 +76,7 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
         "📝 My Picks",
         "📅 Schedule",
         "📊 Analytics",
+        "📈 Markets",
         "🧩 Team Stats"
     ]
     
@@ -138,7 +140,10 @@ def show_public_dashboard(df: pd.DataFrame, season: int, schedule: pd.DataFrame)
             show_power_rankings_tab(season)
         else:  # Defense Matchups
             show_defense_matchups_tab(season)
-    
+
+    elif st.session_state.active_dashboard_tab == "📈 Markets":
+        show_market_comparison_tab(season, schedule)
+
     elif st.session_state.active_dashboard_tab == "🧩 Team Stats":
         try:
             show_team_analysis_tab(df, season)

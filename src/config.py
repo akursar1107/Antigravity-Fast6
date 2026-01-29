@@ -106,6 +106,40 @@ ODDS_API_REGIONS = _api_config.get("regions", "us")
 ODDS_API_FORMAT = _api_config.get("format", "american")
 ODDS_API_CACHE_TTL = _api_config.get("cache_ttl", 3600)
 
+# ===== POLYMARKET API CONFIGURATION =====
+_polymarket_config = _CONFIG.get("api", {}).get("polymarket", {})
+POLYMARKET_ENABLED = _polymarket_config.get("enabled", False)
+POLYMARKET_GAMMA_URL = _polymarket_config.get("gamma_base_url", "https://gamma-api.polymarket.com")
+POLYMARKET_CLOB_URL = _polymarket_config.get("clob_base_url", "https://clob.polymarket.com")
+POLYMARKET_DATA_URL = _polymarket_config.get("data_base_url", "https://data-api.polymarket.com")
+POLYMARKET_CACHE_TTL = _polymarket_config.get("cache_ttl", 3600)
+POLYMARKET_KEYWORDS = _polymarket_config.get("search_keywords", ["NFL", "first touchdown"])
+
+# ===== KALSHI API CONFIGURATION =====
+_kalshi_config = _CONFIG.get("api", {}).get("kalshi", {})
+KALSHI_ENABLED = _kalshi_config.get("enabled", False)
+KALSHI_BASE_URL = _kalshi_config.get("base_url", "https://trading-api.kalshi.com/trade-api/v2")
+KALSHI_CACHE_TTL = _kalshi_config.get("cache_ttl", 3600)
+KALSHI_EVENT_CATEGORIES = _kalshi_config.get("event_categories", ["NFL", "football"])
+
+# Kalshi API key (optional - public endpoints work without auth)
+KALSHI_API_KEY = ""
+try:
+    import streamlit as st
+    try:
+        KALSHI_API_KEY = st.secrets.get("KALSHI_API_KEY", "") if st.secrets else ""
+    except Exception:
+        pass
+except (ImportError, AttributeError, RuntimeError):
+    pass
+if not KALSHI_API_KEY:
+    KALSHI_API_KEY = os.getenv("KALSHI_API_KEY", "")
+
+# ===== PREDICTION MARKETS CONFIGURATION =====
+_pm_config = _CONFIG.get("api", {}).get("prediction_markets", {})
+PREDICTION_MARKETS_ENABLED_SOURCES = _pm_config.get("enabled_sources", [])
+PREDICTION_MARKETS_AUTO_LINK = _pm_config.get("auto_link_results", True)
+
 # ===== UI THEME CONFIGURATION =====
 _theme = _CONFIG.get("ui_theme", {})
 THEME = {

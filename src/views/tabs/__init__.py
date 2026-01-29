@@ -11,6 +11,7 @@ from .player_performance import show_player_performance_tab
 from .roi_trends import show_roi_trends_tab
 from .power_rankings import show_power_rankings_tab
 from .defense_matchups import show_defense_matchups_tab
+from .market_comparison import show_market_comparison_tab
 
 # Archived tabs (moved to archive/ folder - no longer used):
 # - game_analysis.py (placeholder with no content)
@@ -29,4 +30,5 @@ __all__ = [
     'show_roi_trends_tab',
     'show_power_rankings_tab',
     'show_defense_matchups_tab',
+    'show_market_comparison_tab',
 ]

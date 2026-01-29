@@ -231,11 +231,115 @@ def generate_theme_css(theme: Dict[str, str]) -> str:
         border-radius: {radius} !important;
         border: 1px solid #2D3748 !important;
     }}
-    
+
     div[data-baseweb="select"] * {{
         color: #F7FAFC !important;
     }}
-    
+
+    /* ============================================
+       DROPDOWN / SELECT BOX STYLING
+       Force dark theme on all dropdown elements
+       ============================================ */
+
+    /* Popover container (the dropdown popup) */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div {{
+        background-color: {secondary} !important;
+        border: 1px solid #2D3748 !important;
+        border-radius: {radius} !important;
+    }}
+
+    /* Menu container inside popover */
+    div[data-baseweb="menu"],
+    [data-baseweb="menu"] {{
+        background-color: {secondary} !important;
+        background: {secondary} !important;
+    }}
+
+    /* All text inside popover/menu */
+    div[data-baseweb="popover"] *,
+    div[data-baseweb="menu"] *,
+    [data-baseweb="popover"] span,
+    [data-baseweb="menu"] span {{
+        color: #F7FAFC !important;
+    }}
+
+    /* Listbox (the actual options list) */
+    ul[role="listbox"],
+    [role="listbox"] {{
+        background-color: {secondary} !important;
+        background: {secondary} !important;
+    }}
+
+    /* Individual list items / options */
+    ul[role="listbox"] li,
+    [role="listbox"] li,
+    [role="option"],
+    li[role="option"] {{
+        background-color: {secondary} !important;
+        background: {secondary} !important;
+        color: #F7FAFC !important;
+    }}
+
+    /* Hover state for options */
+    ul[role="listbox"] li:hover,
+    [role="listbox"] li:hover,
+    [role="option"]:hover,
+    li[role="option"]:hover {{
+        background-color: #2D3748 !important;
+        background: #2D3748 !important;
+    }}
+
+    /* Selected/highlighted option */
+    ul[role="listbox"] li[aria-selected="true"],
+    [role="option"][aria-selected="true"],
+    li[aria-selected="true"] {{
+        background-color: {primary} !important;
+        background: {primary} !important;
+        color: #ffffff !important;
+    }}
+
+    /* Streamlit specific - stSelectbox dropdown */
+    .stSelectbox div[data-baseweb="popover"] {{
+        background-color: {secondary} !important;
+    }}
+
+    .stSelectbox ul {{
+        background-color: {secondary} !important;
+        background: {secondary} !important;
+    }}
+
+    .stSelectbox li {{
+        background-color: {secondary} !important;
+        color: #F7FAFC !important;
+    }}
+
+    .stSelectbox li:hover {{
+        background-color: #2D3748 !important;
+    }}
+
+    /* Force override any inline styles on option text */
+    [data-baseweb="menu"] li div,
+    [data-baseweb="menu"] li span,
+    [role="option"] div,
+    [role="option"] span {{
+        color: #F7FAFC !important;
+    }}
+
+    /* Override Baseweb's light theme defaults */
+    [data-baseweb="list"] {{
+        background-color: {secondary} !important;
+    }}
+
+    [data-baseweb="list-item"] {{
+        background-color: {secondary} !important;
+        color: #F7FAFC !important;
+    }}
+
+    [data-baseweb="list-item"]:hover {{
+        background-color: #2D3748 !important;
+    }}
+
     .stTextInput input, .stNumberInput input {{
         background-color: {secondary} !important;
         border: 1px solid #2D3748 !important;
@@ -397,6 +501,52 @@ def generate_theme_css(theme: Dict[str, str]) -> str:
     /* Footer */
     footer {{
         visibility: hidden;
+    }}
+
+    /* ============================================
+       GLOBAL DROPDOWN OVERRIDE
+       Catch-all for any dropdown/select elements
+       ============================================ */
+
+    /* Target the actual dropdown overlay/portal */
+    [data-testid="stSelectboxVirtualDropdown"],
+    [data-testid="stSelectbox"] ul,
+    [data-testid="stSelectbox"] li {{
+        background-color: #1A2332 !important;
+        color: #F7FAFC !important;
+    }}
+
+    /* Very specific Streamlit selectbox targeting */
+    div[data-testid="stSelectbox"] > div > div > div[data-baseweb] ul {{
+        background: #1A2332 !important;
+    }}
+
+    div[data-testid="stSelectbox"] > div > div > div[data-baseweb] li {{
+        background: #1A2332 !important;
+        color: #F7FAFC !important;
+    }}
+
+    div[data-testid="stSelectbox"] > div > div > div[data-baseweb] li:hover {{
+        background: #2D3748 !important;
+    }}
+
+    /* Nuclear option - style ALL unordered lists in popovers */
+    body > div[data-baseweb="popover"] ul,
+    body > div[data-baseweb="popover"] li,
+    body > div > div[data-baseweb="popover"] ul,
+    body > div > div[data-baseweb="popover"] li {{
+        background-color: #1A2332 !important;
+        color: #F7FAFC !important;
+    }}
+
+    /* Ensure text visibility in ALL dropdown scenarios */
+    [class*="option"],
+    [class*="Option"],
+    [class*="menu-item"],
+    [class*="MenuItem"],
+    [class*="list-item"],
+    [class*="ListItem"] {{
+        color: #F7FAFC !important;
     }}
     
     /* Custom badge styles */

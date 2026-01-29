@@ -35,6 +35,108 @@ st.set_page_config(
 theme_css = generate_theme_css(config.THEME)
 st.markdown(theme_css, unsafe_allow_html=True)
 
+# Additional CSS fix for dropdown menus (Streamlit renders these outside main container)
+# This includes Chromium/Edge specific fixes
+dropdown_fix_css = """
+<style>
+/* Fix for Streamlit selectbox dropdown - targets the portal element */
+div[data-baseweb="popover"] {
+    background-color: #1A2332 !important;
+}
+div[data-baseweb="popover"] ul {
+    background-color: #1A2332 !important;
+}
+div[data-baseweb="popover"] li {
+    background-color: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+div[data-baseweb="popover"] li:hover {
+    background-color: #2D3748 !important;
+}
+div[data-baseweb="popover"] li[aria-selected="true"] {
+    background-color: #5B8FF9 !important;
+}
+/* Target the specific Streamlit virtual dropdown */
+[data-testid="stSelectboxVirtualDropdown"] {
+    background-color: #1A2332 !important;
+}
+[data-testid="stSelectboxVirtualDropdown"] * {
+    color: #F7FAFC !important;
+}
+
+/* ========================================
+   CHROMIUM/EDGE SPECIFIC FIXES
+   ======================================== */
+
+/* Chromium renders BaseWeb menus differently */
+div[data-baseweb="menu"] {
+    background-color: #1A2332 !important;
+    background: #1A2332 !important;
+}
+
+div[data-baseweb="menu"] ul {
+    background-color: #1A2332 !important;
+    background: #1A2332 !important;
+}
+
+div[data-baseweb="menu"] li {
+    background-color: #1A2332 !important;
+    background: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+
+div[data-baseweb="menu"] li:hover {
+    background-color: #2D3748 !important;
+    background: #2D3748 !important;
+}
+
+/* Target the inner content of list items */
+div[data-baseweb="menu"] li > div {
+    background-color: transparent !important;
+    color: #F7FAFC !important;
+}
+
+div[data-baseweb="menu"] li span {
+    color: #F7FAFC !important;
+}
+
+/* BaseWeb block-level overrides for Chromium */
+[data-baseweb="block"] {
+    background-color: #1A2332 !important;
+}
+
+/* Force color on any child elements */
+div[data-baseweb="popover"] div,
+div[data-baseweb="popover"] span,
+div[data-baseweb="menu"] div,
+div[data-baseweb="menu"] span {
+    color: #F7FAFC !important;
+}
+
+/* Target styled-components classes that Chromium uses */
+[class*="StyledList"] {
+    background-color: #1A2332 !important;
+}
+
+[class*="StyledListItem"] {
+    background-color: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+
+[class*="StyledListItem"]:hover {
+    background-color: #2D3748 !important;
+}
+
+/* Layer/overlay targeting for Edge */
+div[data-layer] ul,
+div[data-layer] li {
+    background-color: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+</style>
+"""
+st.markdown(dropdown_fix_css, unsafe_allow_html=True)
+
 # Sidebar Configuration
 with st.sidebar:
     st.header("Configuration")

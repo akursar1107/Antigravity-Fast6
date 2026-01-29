@@ -128,17 +128,22 @@ def show_settings_tab() -> None:
     
     # ========== SYSTEM CONFIGURATION ==========
     st.subheader("🔧 System Configuration")
-    
+
     st.markdown("""
     **Current Configuration:**
     - Database: `data/fast6.db`
     - Archive Location: `archive/`
     - Backup Naming: `fast6_YYYYMMDD_HHMMSS.db.bak`
-    
-    *Note: Configuration is currently read from `config.py`. Future versions will support 
+
+    *Note: Configuration is currently read from `config.py`. Future versions will support
     dynamic configuration management.*
     """)
-    
+
+    st.markdown("---")
+
+    # ========== PREDICTION MARKET APIS ==========
+    _show_prediction_market_settings()
+
     st.markdown("---")
     
     # ========== DANGER ZONE ==========
@@ -238,3 +243,139 @@ def show_settings_tab() -> None:
     # ========== AUDIT LOG (Future) ==========
     st.subheader("📜 Activity Log")
     st.info("🚧 Activity logging coming in future update. This will show recent admin actions.")
+
+
+def _show_prediction_market_settings():
+    """Show prediction market API configuration and controls."""
+    import config
+    from services.market_data_service import MarketDataService, get_week_dates
+    from utils.prediction_markets import test_connections, get_enabled_sources
+
+    st.subheader("🎲 Prediction Market APIs")
+    st.markdown("Configure and manage Polymarket and Kalshi integrations")
+
+    # Status display
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Polymarket**")
+        pm_status = "✅ Enabled" if config.POLYMARKET_ENABLED else "❌ Disabled"
+        st.write(f"Status: {pm_status}")
+        if config.POLYMARKET_ENABLED:
+            st.write(f"Cache TTL: {config.POLYMARKET_CACHE_TTL}s")
+
+    with col2:
+        st.markdown("**Kalshi**")
+        kalshi_status = "✅ Enabled" if config.KALSHI_ENABLED else "❌ Disabled"
+        st.write(f"Status: {kalshi_status}")
+        if config.KALSHI_ENABLED:
+            has_key = "✅ Configured" if config.KALSHI_API_KEY else "⚠️ Not configured (using public API)"
+            st.write(f"API Key: {has_key}")
+
+    # Test connections
+    st.markdown("---")
+    st.markdown("**Connection Test**")
+
+    if st.button("🔄 Test API Connections", key="test_pm_connections"):
+        with st.spinner("Testing connections..."):
+            results = test_connections()
+
+            for source, success in results.items():
+                if success:
+                    st.success(f"✅ {source.title()}: Connected successfully")
+                else:
+                    st.error(f"❌ {source.title()}: Connection failed")
+
+    # Manual data fetch
+    st.markdown("---")
+    st.markdown("**Manual Data Fetch**")
+    st.markdown("Fetch current odds from prediction markets for a specific week")
+
+    col_fetch1, col_fetch2 = st.columns(2)
+
+    with col_fetch1:
+        fetch_season = st.number_input(
+            "Season",
+            value=config.CURRENT_SEASON,
+            min_value=2020,
+            max_value=2030,
+            key="pm_fetch_season"
+        )
+
+    with col_fetch2:
+        fetch_week = st.number_input(
+            "Week",
+            value=1,
+            min_value=1,
+            max_value=22,
+            key="pm_fetch_week"
+        )
+
+    if st.button("📥 Fetch Market Odds", type="primary", key="fetch_pm_odds"):
+        enabled = get_enabled_sources()
+        if not enabled:
+            st.warning("No prediction market sources are enabled")
+        else:
+            with st.spinner(f"Fetching odds from {', '.join(enabled)}..."):
+                try:
+                    service = MarketDataService()
+                    start_date, end_date = get_week_dates(fetch_season, fetch_week)
+
+                    result = service.fetch_and_store_week_odds(
+                        fetch_season, fetch_week, start_date, end_date
+                    )
+
+                    total = sum(result.values())
+                    if total > 0:
+                        st.success(f"✅ Fetched and stored {total} odds records!")
+                        for source, count in result.items():
+                            st.info(f"  • {source.title()}: {count} records")
+                    else:
+                        st.warning("No NFL first TD markets found for this week")
+
+                except Exception as e:
+                    st.error(f"❌ Error fetching odds: {str(e)}")
+
+    # Link results
+    st.markdown("---")
+    st.markdown("**Link Results to Market Odds**")
+    st.markdown("After games are complete, link market odds to actual first TD results")
+
+    col_link1, col_link2 = st.columns(2)
+
+    with col_link1:
+        link_season = st.number_input(
+            "Season",
+            value=config.CURRENT_SEASON,
+            min_value=2020,
+            max_value=2030,
+            key="pm_link_season"
+        )
+
+    with col_link2:
+        link_week = st.number_input(
+            "Week",
+            value=1,
+            min_value=1,
+            max_value=22,
+            key="pm_link_week"
+        )
+
+    if st.button("🔗 Link Results", key="link_pm_results"):
+        with st.spinner("Linking results..."):
+            try:
+                service = MarketDataService()
+                stats = service.link_week_results(link_season, link_week)
+
+                st.success("✅ Results linked!")
+                st.info(f"""
+                **Linking Summary:**
+                - Games processed: {stats.get('games_processed', 0)}
+                - Odds linked: {stats.get('odds_linked', 0)}
+                - Matches found: {stats.get('matches_found', 0)}
+                - Favorites correct: {stats.get('favorites_correct', 0)}
+                - Accuracy rate: {stats.get('accuracy_rate', 0)*100:.1f}%
+                """)
+
+            except Exception as e:
+                st.error(f"❌ Error linking results: {str(e)}")

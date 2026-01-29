@@ -225,6 +225,25 @@
       "regions": "us",
       "format": "american",
       "cache_ttl": 3600
+    },
+    "polymarket": {
+      "enabled": true,
+      "gamma_base_url": "https://gamma-api.polymarket.com",
+      "clob_base_url": "https://clob.polymarket.com",
+      "data_base_url": "https://data-api.polymarket.com",
+      "cache_ttl": 3600,
+      "search_keywords": ["NFL", "first touchdown", "first TD", "1st TD"]
+    },
+    "kalshi": {
+      "enabled": true,
+      "base_url": "https://trading-api.kalshi.com/trade-api/v2",
+      "key_env_var": "KALSHI_API_KEY",
+      "cache_ttl": 3600,
+      "event_categories": ["NFL", "football"]
+    },
+    "prediction_markets": {
+      "enabled_sources": ["polymarket", "kalshi"],
+      "auto_link_results": true
     }
   },
   "ui_theme": {
