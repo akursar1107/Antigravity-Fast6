@@ -11,11 +11,15 @@ Public endpoints are available without authentication.
 import streamlit as st
 import requests
 import logging
+import time
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 
 import config
+from utils.error_handling import log_exception, APIError
+from utils.observability import log_event
+from utils.resilience import CircuitBreakerOpen, get_circuit_breaker, request_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -69,20 +73,53 @@ class KalshiClient:
         """Make a GET request to the Kalshi API."""
         url = f"{self.base_url}/{endpoint}"
         try:
-            response = self.session.get(url, params=params, timeout=timeout)
+            request_start = time.perf_counter()
+            log_event("api.kalshi.request", endpoint=endpoint)
+            breaker = get_circuit_breaker(
+                "kalshi",
+                config.API_BREAKER_FAILURE_THRESHOLD,
+                config.API_BREAKER_COOLDOWN_SECONDS,
+            )
+            response = request_with_retry(
+                lambda: self.session.get(url, params=params, timeout=timeout),
+                breaker=breaker,
+                retries=config.API_RETRY_RETRIES,
+                backoff_base=config.API_RETRY_BACKOFF_BASE,
+                backoff_factor=config.API_RETRY_BACKOFF_FACTOR,
+                jitter=config.API_RETRY_JITTER,
+                retry_on_statuses=(429, 500, 502, 503, 504),
+                get_status=lambda resp: getattr(resp, "status_code", None),
+            )
+            duration_ms = int((time.perf_counter() - request_start) * 1000)
             response.raise_for_status()
+            log_event("api.kalshi.response", endpoint=endpoint, status_code=response.status_code, duration_ms=duration_ms)
             return response.json()
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout fetching {endpoint}")
+        except CircuitBreakerOpen:
+            log_event("api.kalshi.error", endpoint=endpoint, error="circuit_open")
+            return None
+        except requests.exceptions.Timeout as e:
+            duration_ms = int((time.perf_counter() - request_start) * 1000)
+            log_event("api.kalshi.error", endpoint=endpoint, error=type(e).__name__, duration_ms=duration_ms)
+            context = {"endpoint": endpoint, "timeout": timeout}
+            log_exception(e, "kalshi_api_timeout", context, severity="warning")
             return None
         except requests.exceptions.HTTPError as e:
-            logger.error(f"HTTP error fetching {endpoint}: {e}")
+            duration_ms = int((time.perf_counter() - request_start) * 1000)
+            log_event("api.kalshi.response", endpoint=endpoint, status_code=getattr(e.response, 'status_code', 'unknown'), duration_ms=duration_ms)
+            context = {"endpoint": endpoint, "status_code": getattr(e.response, 'status_code', 'unknown')}
+            log_exception(e, "kalshi_api_http_error", context, severity="warning")
             return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request error fetching {endpoint}: {e}")
+            duration_ms = int((time.perf_counter() - request_start) * 1000)
+            log_event("api.kalshi.error", endpoint=endpoint, error=type(e).__name__, duration_ms=duration_ms)
+            context = {"endpoint": endpoint, "url": url}
+            log_exception(e, "kalshi_api_request_error", context, severity="warning")
             return None
         except ValueError as e:
-            logger.error(f"JSON decode error for {endpoint}: {e}")
+            duration_ms = int((time.perf_counter() - request_start) * 1000)
+            log_event("api.kalshi.error", endpoint=endpoint, error=type(e).__name__, duration_ms=duration_ms)
+            context = {"endpoint": endpoint}
+            log_exception(e, "kalshi_api_json_decode_error", context, severity="warning")
             return None
 
     def get_markets(
