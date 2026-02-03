@@ -5,6 +5,7 @@ Database operations for kickoff decisions table.
 import sqlite3
 from typing import Optional, List, Dict
 from .connection import get_db_connection, get_db_context
+from utils.types import KickoffDecision
 
 
 def add_kickoff_decision(game_id: str, team: str, decision: str, result: Optional[str] = None) -> int:
@@ -21,7 +22,7 @@ def add_kickoff_decision(game_id: str, team: str, decision: str, result: Optiona
         return cursor.lastrowid
 
 
-def get_kickoff_decisions(game_id: Optional[str] = None, team: Optional[str] = None) -> List[Dict]:
+def get_kickoff_decisions(game_id: Optional[str] = None, team: Optional[str] = None) -> List[KickoffDecision]:
     """Retrieve kickoff decisions, optionally filtered by game or team."""
     with get_db_context() as conn:
         cursor = conn.cursor()

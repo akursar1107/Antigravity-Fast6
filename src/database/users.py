@@ -8,6 +8,8 @@ import logging
 from typing import Optional, List, Dict
 
 from .connection import get_db_connection, get_db_context
+from utils.caching import invalidate_on_pick_change
+from utils.types import User
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ def add_user(name: str, email: Optional[str] = None, is_admin: bool = False) -> 
         raise ValueError(f"User '{name}' already exists") from e
 
 
-def get_user(user_id: int) -> Optional[Dict]:
+def get_user(user_id: int) -> Optional[User]:
     """Get user by ID."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -38,7 +40,7 @@ def get_user(user_id: int) -> Optional[Dict]:
         return dict(row) if row else None
 
 
-def get_user_by_name(name: str) -> Optional[Dict]:
+def get_user_by_name(name: str) -> Optional[User]:
     """Get user by name."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -47,7 +49,7 @@ def get_user_by_name(name: str) -> Optional[Dict]:
         return dict(row) if row else None
 
 
-def get_all_users() -> List[Dict]:
+def get_all_users() -> List[User]:
     """Get all users in the group."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -57,14 +59,13 @@ def get_all_users() -> List[Dict]:
 
 
 def delete_user(user_id: int) -> bool:
-    """Delete a user (cascades to picks and results). Clears leaderboard cache."""
+    """Delete a user (cascades to picks and results). Invalidates leaderboard cache."""
     with get_db_context() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
         success = cursor.rowcount > 0
         if success:
             logger.info(f"User deleted: ID {user_id}")
-            # Clear leaderboard cache since user was deleted
-            from .db_stats import clear_leaderboard_cache
-            clear_leaderboard_cache()
+            # Invalidate cache since user was deleted
+            invalidate_on_pick_change()
         return success

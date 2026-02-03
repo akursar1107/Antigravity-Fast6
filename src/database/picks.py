@@ -9,6 +9,8 @@ from typing import Optional, List, Dict, Tuple
 
 from .connection import get_db_connection, get_db_context
 from utils.type_utils import safe_int as _safe_int
+from utils.caching import invalidate_on_pick_change
+from utils.types import Pick, PickWithResult
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +72,7 @@ def add_picks_batch(picks: List[Dict]) -> int:
         return inserted
 
 
-def get_pick(pick_id: int) -> Optional[Dict]:
+def get_pick(pick_id: int) -> Optional[Pick]:
     """Get pick by ID."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -79,7 +81,7 @@ def get_pick(pick_id: int) -> Optional[Dict]:
         return dict(row) if row else None
 
 
-def get_user_week_picks(user_id: int, week_id: int) -> List[Dict]:
+def get_user_week_picks(user_id: int, week_id: int) -> List[Pick]:
     """Get all picks for a user in a specific week."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -92,7 +94,7 @@ def get_user_week_picks(user_id: int, week_id: int) -> List[Dict]:
         return [dict(row) for row in rows]
 
 
-def get_week_all_picks(week_id: int) -> List[Dict]:
+def get_week_all_picks(week_id: int) -> List[Pick]:
     """Get all picks for a week (all users)."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -107,7 +109,7 @@ def get_week_all_picks(week_id: int) -> List[Dict]:
         return [dict(row) for row in rows]
 
 
-def get_user_all_picks(user_id: int) -> List[Dict]:
+def get_user_all_picks(user_id: int) -> List[Pick]:
     """Get all picks for a user across all weeks."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -133,20 +135,19 @@ def get_user_all_picks(user_id: int) -> List[Dict]:
 
 
 def delete_pick(pick_id: int) -> bool:
-    """Delete a pick (cascades to results). Clears leaderboard cache."""
+    """Delete a pick (cascades to results). Invalidates leaderboard cache."""
     with get_db_context() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM picks WHERE id = ?", (pick_id,))
         success = cursor.rowcount > 0
         if success:
             logger.info(f"Pick deleted: ID {pick_id}")
-            # Clear leaderboard cache when a pick is deleted
-            from .db_stats import clear_leaderboard_cache
-            clear_leaderboard_cache()
+            # Invalidate cache when a pick is deleted
+            invalidate_on_pick_change()
         return success
 
 
-def get_ungraded_picks(season: int, week: Optional[int] = None, game_id: Optional[str] = None) -> List[Dict]:
+def get_ungraded_picks(season: int, week: Optional[int] = None, game_id: Optional[str] = None) -> List[Pick]:
     """
     Fetch picks that haven't been graded yet (no result or result is NULL).
     Filters by season and optionally by week and/or game_id.
@@ -291,9 +292,8 @@ def dedupe_all_picks() -> Dict[str, int]:
         if to_delete:
             cursor.executemany("DELETE FROM picks WHERE id = ?", [(pid,) for pid in to_delete])
             deleted = len(to_delete)
-            # Clear leaderboard cache since picks were modified
-            from .db_stats import clear_leaderboard_cache
-            clear_leaderboard_cache()
+            # Invalidate cache since picks were modified
+            invalidate_on_pick_change()
 
         return {"duplicates_removed": deleted, "unique_kept": len(seen)}
 

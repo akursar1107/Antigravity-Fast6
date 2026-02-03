@@ -10,6 +10,7 @@ from datetime import datetime
 
 from .connection import get_db_connection, get_db_context
 from utils.type_utils import safe_int as _safe_int
+from utils.types import Week
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def add_week(season: int, week: int, started_at: Optional[datetime] = None,
             return row[0] if row else -1
 
 
-def get_week(week_id: int) -> Optional[Dict]:
+def get_week(week_id: int) -> Optional[Week]:
     """Get week by ID."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -55,7 +56,7 @@ def get_week(week_id: int) -> Optional[Dict]:
         }
 
 
-def get_week_by_season_week(season: int, week: int) -> Optional[Dict]:
+def get_week_by_season_week(season: int, week: int) -> Optional[Week]:
     """Get week by season and week number."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -73,7 +74,7 @@ def get_week_by_season_week(season: int, week: int) -> Optional[Dict]:
         }
 
 
-def get_all_weeks(season: Optional[int] = None) -> List[Dict]:
+def get_all_weeks(season: Optional[int] = None) -> List[Week]:
     """Get all weeks, optionally filtered by season."""
     with get_db_context() as conn:
         cursor = conn.cursor()

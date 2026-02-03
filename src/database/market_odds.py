@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 from .connection import get_db_context
+from utils.types import MarketOdds
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ def add_market_odds(
 def get_market_odds_for_game(
     game_id: str,
     source: Optional[str] = None
-) -> List[Dict]:
+) -> List[MarketOdds]:
     """Get all market odds for a specific game."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -120,7 +121,7 @@ def get_market_odds_for_player(
     player_name: str,
     season: int,
     week: Optional[int] = None
-) -> List[Dict]:
+) -> List[MarketOdds]:
     """Get all market odds for a player across games."""
     with get_db_context() as conn:
         cursor = conn.cursor()
@@ -145,7 +146,7 @@ def get_market_odds_for_week(
     season: int,
     week: int,
     source: Optional[str] = None
-) -> List[Dict]:
+) -> List[MarketOdds]:
     """Get all market odds for a specific week."""
     with get_db_context() as conn:
         cursor = conn.cursor()

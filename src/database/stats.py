@@ -16,38 +16,21 @@ except ImportError:
 
 from .connection import get_db_connection, get_db_context
 from utils.type_utils import safe_int as _safe_int
+from utils.caching import cached, CacheTTL, invalidate_on_result_change
+from utils.types import Result, LeaderboardEntry, WeekSummary, PickWithResult, BatchOperationResult
 
 logger = logging.getLogger(__name__)
 
 
-def _cache_if_streamlit(func):
-    """
-    Decorator that applies st.cache_data if Streamlit is available.
-    Falls back to original function if not in Streamlit context.
-    """
-    if HAS_STREAMLIT:
-        try:
-            return st.cache_data(ttl=300)(func)  # Cache for 5 minutes
-        except RuntimeError:
-            # Not in Streamlit context
-            return func
-    return func
+# Remove old caching decorator - now using unified caching module
 
 
 def clear_leaderboard_cache() -> None:
     """
     Clear only the leaderboard-related caches when results are updated.
-    Uses selective cache clearing instead of clearing all Streamlit caches.
+    Now uses the unified caching layer invalidation.
     """
-    if HAS_STREAMLIT:
-        try:
-            # Clear only the specific cached functions that depend on results
-            get_leaderboard.clear()
-            get_user_stats.clear()
-            get_weekly_summary.clear()
-            logger.debug("Cleared leaderboard caches (get_leaderboard, get_user_stats, get_weekly_summary)")
-        except Exception as e:
-            logger.debug(f"Could not clear cache: {e}")
+    invalidate_on_result_change()
 
 
 # ============= RESULT OPERATIONS =============
@@ -85,7 +68,7 @@ def add_result(pick_id: int, actual_scorer: Optional[str] = None,
         return cursor.lastrowid
 
 
-def add_results_batch(results: List[Dict]) -> Dict[str, int]:
+def add_results_batch(results: List[Dict]) -> BatchOperationResult:
     """
     Add or update multiple results in a single transaction.
     Much more efficient than calling add_result() in a loop.
@@ -324,8 +307,8 @@ def _build_stats_select_clause() -> str:
     """
 
 
-@_cache_if_streamlit
-def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
+@cached(ttl=CacheTTL.LEADERBOARD, cache_name="leaderboard")
+def get_leaderboard(week_id: Optional[int] = None) -> List[LeaderboardEntry]:
     """
     Get leaderboard stats for all users.
     If week_id provided, returns stats only for that week.
@@ -360,8 +343,8 @@ def get_leaderboard(week_id: Optional[int] = None) -> List[Dict]:
         return [dict(row) for row in rows]
 
 
-@_cache_if_streamlit
-def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict]:
+@cached(ttl=CacheTTL.USER_STATS, cache_name="user_stats")
+def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[LeaderboardEntry]:
     """Get stats for a specific user. Includes First TD and Any Time TD stats. Points: 3 for First TD, 1 for Any Time TD."""
     select_clause = _build_stats_select_clause()
     
@@ -388,7 +371,7 @@ def get_user_stats(user_id: int, week_id: Optional[int] = None) -> Optional[Dict
         return dict(row) if row else None
 
 
-@_cache_if_streamlit
+@cached(ttl=CacheTTL.WEEKLY_SUMMARY, cache_name="weekly_summary")
 def get_weekly_summary(week_id: int) -> Dict:
     """Get summary stats for a week."""
     with get_db_context() as conn:
