@@ -11,6 +11,7 @@ from database import (
     dedupe_all_picks, clear_grading_results
 )
 from utils.common import decode_bytes_to_int
+from utils.observability import log_event
 
 
 def show_results_tab(season: int) -> None:
@@ -116,6 +117,15 @@ def show_results_tab(season: int) -> None:
                                 actual_return=actual_return if is_correct else 0.0,
                                 any_time_td=any_time_td
                             )
+                            log_event(
+                                "admin.result.save",
+                                pick_id=pick['id'],
+                                user_id=selected_result_user.get('id'),
+                                season=season,
+                                week=week_num,
+                                is_correct=is_correct,
+                                any_time_td=any_time_td,
+                            )
                             st.success(f"✅ Result saved for {pick['player_name']}")
                             st.rerun()
                         except Exception as e:
@@ -125,6 +135,13 @@ def show_results_tab(season: int) -> None:
                     if st.button("🗑️ Delete Pick", key=f"delete_pick_{pick['id']}"):
                         try:
                             if delete_pick(pick['id']):
+                                log_event(
+                                    "admin.pick.delete",
+                                    pick_id=pick['id'],
+                                    user_id=selected_result_user.get('id'),
+                                    season=season,
+                                    week=week_num,
+                                )
                                 st.success("Pick deleted.")
                                 st.rerun()
                             else:
@@ -142,6 +159,7 @@ def show_results_tab(season: int) -> None:
         if st.button("🔒 Enforce Unique Picks Constraint"):
             ok = create_unique_picks_index()
             if ok:
+                log_event("admin.picks.unique_index", result="created_or_exists")
                 st.success("Unique index created or already exists.")
             else:
                 st.warning("Could not create unique index. Remove duplicates first.")
@@ -149,6 +167,11 @@ def show_results_tab(season: int) -> None:
         if st.button("🧹 Full Database Dedupe"):
             try:
                 summary = dedupe_all_picks()
+                log_event(
+                    "admin.picks.dedupe",
+                    duplicates_removed=summary.get('duplicates_removed'),
+                    unique_kept=summary.get('unique_kept'),
+                )
                 st.success(f"Removed {summary['duplicates_removed']} duplicates globally. Kept {summary['unique_kept']} unique picks.")
                 st.rerun()
             except Exception as e:
@@ -191,6 +214,13 @@ def show_results_tab(season: int) -> None:
                     try:
                         if selected_override_scope == "All Weeks":
                             result = clear_grading_results(override_season)
+                            log_event(
+                                "admin.grading.clear",
+                                season=override_season,
+                                scope="all_weeks",
+                                results_cleared=result.get('results_cleared'),
+                                picks_remaining=result.get('picks_remaining'),
+                            )
                             st.success(
                                 f"✅ Cleared {result['results_cleared']} grading results for Season {override_season}. "
                                 f"{result['picks_remaining']} picks remain for re-grading."
@@ -198,6 +228,14 @@ def show_results_tab(season: int) -> None:
                         else:
                             week_num = int(selected_override_scope.split()[1])
                             result = clear_grading_results(override_season, week_num)
+                            log_event(
+                                "admin.grading.clear",
+                                season=override_season,
+                                week=week_num,
+                                scope="week",
+                                results_cleared=result.get('results_cleared'),
+                                picks_remaining=result.get('picks_remaining'),
+                            )
                             st.success(
                                 f"✅ Cleared {result['results_cleared']} grading results for Season {override_season} Week {week_num}. "
                                 f"{result['picks_remaining']} picks remain for re-grading."

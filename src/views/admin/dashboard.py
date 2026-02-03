@@ -169,6 +169,7 @@ def show_dashboard_tab(season: int, schedule: pd.DataFrame) -> None:
     # Check for games starting soon
     if not games_this_week.empty:
         try:
+            games_this_week = games_this_week.copy()
             games_this_week['game_datetime'] = pd.to_datetime(games_this_week['game_date'])
             now = datetime.now()
             upcoming_games = games_this_week[games_this_week['game_datetime'] > now]

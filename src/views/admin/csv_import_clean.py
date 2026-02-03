@@ -16,6 +16,7 @@ from utils.exceptions import ImportError, NFLDataError, ValidationError
 import tempfile
 import os
 import logging
+from utils.observability import log_event
 
 logger = logging.getLogger(__name__)
 
@@ -292,6 +293,12 @@ def show_clean_csv_import(season: int):
                 tmp_path = tmp.name
             
             try:
+                log_event(
+                    "admin.csv_import.clean.start",
+                    season=season,
+                    corrections=len(corrections),
+                    auto_create_users=auto_create_users,
+                )
                 with st.spinner("Importing picks..."):
                     result = import_picks_from_csv(
                         csv_path=tmp_path,
@@ -327,10 +334,18 @@ def show_clean_csv_import(season: int):
                     with st.expander("⚠️ Warnings"):
                         for warn in result.warnings:
                             st.warning(f"Row {warn['row']}: {warn['message']}")
+                log_event(
+                    "admin.csv_import.clean.end",
+                    season=season,
+                    success_count=result.success_count,
+                    error_count=result.error_count,
+                    warning_count=result.warning_count,
+                )
                 
             except Exception as e:
                 st.error(f"Import failed: {e}")
                 logger.error(f"Import error: {e}", exc_info=True)
+                log_event("admin.csv_import.clean.error", season=season, error=type(e).__name__)
             finally:
                 try:
                     os.unlink(tmp_path)

@@ -10,6 +10,7 @@ from database import get_all_weeks, get_ungraded_picks, add_result
 from utils.nfl_data import load_rosters
 from utils.csv_import import get_first_td_map
 from utils.name_matching import names_match
+from utils.observability import log_event
 
 
 def show_grading_tab(season: int, schedule: pd.DataFrame) -> None:
@@ -232,6 +233,15 @@ def _show_auto_grade_button(ungraded, grade_season, grade_week):
                     if 'error' in result:
                         st.error(f"❌ {result['error']}")
                     else:
+                        log_event(
+                            "admin.grading.auto_grade",
+                            season=grade_season,
+                            week=grade_week,
+                            graded_picks=result.get('graded_picks'),
+                            correct_first_td=result.get('correct_first_td'),
+                            any_time_td=result.get('any_time_td'),
+                            failed_to_match=result.get('failed_to_match'),
+                        )
                         st.success(
                             f"✅ Auto-graded {result['graded_picks']} picks\n\n"
                             f"📊 **Results:**\n"
@@ -271,6 +281,14 @@ def _show_auto_grade_button(ungraded, grade_season, grade_week):
                     if 'error' in result:
                         st.error(f"❌ {result['error']}")
                     else:
+                        log_event(
+                            "admin.grading.any_time_only",
+                            season=grade_season,
+                            week=grade_week,
+                            graded_picks=result.get('graded_picks'),
+                            any_time_td_wins=result.get('any_time_td_wins'),
+                            failed_to_match=result.get('failed_to_match'),
+                        )
                         st.success(
                             f"✅ Graded {result['graded_picks']} picks for any-time TD\n\n"
                             f"📊 **Results:**\n"
@@ -486,6 +504,7 @@ def _save_edits_and_recalculate(edited_df, preview_df, preview_data, grade_sched
                     break
     
     st.success(f"✅ Saved {changes_saved} change(s) and recalculated matches.")
+    log_event("admin.grading.edits_saved", changes_saved=changes_saved)
     st.rerun()
 
 
@@ -507,6 +526,7 @@ def _show_grading_actions(preview_data):
                     except Exception as e:
                         st.warning(f"Failed to grade pick {row['Pick ID']}: {e}")
             st.success(f"Graded {graded_correct} pick(s) as correct.")
+            log_event("admin.grading.grade_all_matches", graded_correct=graded_correct)
             st.rerun()
     
     with col2:
@@ -519,6 +539,7 @@ def _show_grading_actions(preview_data):
                 except Exception as e:
                     st.warning(f"Failed to grade pick {row['Pick ID']}: {e}")
             st.success(f"Graded {graded} pick(s) as incorrect.")
+            log_event("admin.grading.grade_all_incorrect", graded=graded)
             st.rerun()
     
     with col3:
@@ -543,6 +564,11 @@ def _show_grading_actions(preview_data):
                         st.warning(f"Failed to grade pick {row['Pick ID']}: {e}")
             
             st.success(f"Auto-graded {graded_correct} correct, {graded_incorrect} incorrect.")
+            log_event(
+                "admin.grading.grade_all_auto",
+                graded_correct=graded_correct,
+                graded_incorrect=graded_incorrect,
+            )
             st.rerun()
 
 

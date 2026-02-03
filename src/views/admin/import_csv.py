@@ -7,6 +7,7 @@ import tempfile
 import os
 from utils.csv_import import ingest_picks_from_csv
 from views.admin.csv_import_clean import show_clean_csv_import
+from utils.observability import log_event
 
 
 def show_import_csv_tab(season: int) -> None:
@@ -65,6 +66,7 @@ def show_legacy_import(season: int) -> None:
             tmp.write(uploaded.getbuffer())
             tmp_path = tmp.name
         try:
+            log_event("admin.csv_import.legacy.start", season=int(sel_season), filename=uploaded.name)
             with st.spinner("Importing picks..."):
                 summary = ingest_picks_from_csv(tmp_path, int(sel_season))
             # Confirmation toast; no auto-rerun to avoid duplicate imports
@@ -84,6 +86,14 @@ def show_legacy_import(season: int) -> None:
                 )
             st.toast(msg)
             st.write(summary)
+            log_event(
+                "admin.csv_import.legacy.end",
+                season=int(sel_season),
+                picks_imported=summary.get('picks_imported', 0),
+                results_imported=summary.get('results_imported', 0),
+                picks_deleted=picks_deleted,
+                results_deleted=results_deleted,
+            )
             if st.button("Refresh Admin View", type="secondary"):
                 st.rerun()
         except Exception as e:
@@ -93,6 +103,7 @@ def show_legacy_import(season: int) -> None:
                 st.toast(f"Import failed: {e}")
             except Exception:
                 pass
+            log_event("admin.csv_import.legacy.error", season=int(sel_season), error=type(e).__name__)
         finally:
             try:
                 os.unlink(tmp_path)

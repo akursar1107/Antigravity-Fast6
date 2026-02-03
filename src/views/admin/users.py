@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from database import get_all_users, add_user, delete_user
+from utils.observability import log_event
 
 
 def show_users_tab() -> None:
@@ -26,6 +27,7 @@ def show_users_tab() -> None:
             if new_name.strip():
                 try:
                     user_id = add_user(new_name.strip(), new_email if new_email else None)
+                    log_event("admin.user.add", user_id=user_id, name=new_name.strip())
                     st.success(f"✅ Added {new_name} (ID: {user_id})")
                     st.rerun()
                 except ValueError as e:
@@ -56,6 +58,7 @@ def show_users_tab() -> None:
             
             if st.button("Delete Member", key="delete_user_btn", type="secondary"):
                 if delete_user(user_to_remove['id']):
+                    log_event("admin.user.delete", user_id=user_to_remove['id'], name=user_to_remove.get('name'))
                     st.success(f"✅ Removed {user_to_remove['name']}")
                     st.rerun()
         else:
@@ -86,6 +89,7 @@ def show_users_tab() -> None:
                 
                 # Copy database to archive
                 shutil.copy2(db_path, archive_path)
+                log_event("admin.database.archive", file=archive_path.name)
                 
                 # Get file size for display
                 file_size = archive_path.stat().st_size / 1024  # KB

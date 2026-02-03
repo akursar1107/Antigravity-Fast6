@@ -15,6 +15,7 @@ from database import (
     add_week, get_week_by_season_week, get_all_users, get_user_week_picks,
     add_pick
 )
+from utils.observability import log_event
 
 
 def show_picks_tab(season: int, schedule: pd.DataFrame) -> None:
@@ -156,5 +157,12 @@ def show_picks_tab(season: int, schedule: pd.DataFrame) -> None:
                     st.error(f"❌ Error saving {pick['player_name']}: {str(e)}")
             
             if success_count > 0:
+                log_event(
+                    "admin.picks.save",
+                    user_id=selected_user['id'],
+                    user_name=selected_user.get('name'),
+                    week=selected_week,
+                    count=success_count,
+                )
                 st.toast(f"✅ Successfully saved {success_count} picks for {selected_user['name']}!", icon="🏈")
                 st.rerun()
