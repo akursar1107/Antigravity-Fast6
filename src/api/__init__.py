@@ -1,22 +1,23 @@
-"""API layer - orchestrates core logic with data layer"""
+"""
+FastAPI Layer - REST API endpoints for Fast6
 
-from src.api.picks_api import (
-    api_create_pick,
-    api_list_user_picks,
-    api_validate_pick,
-    api_cancel_pick,
-)
+This module provides the FastAPI REST API that runs on port 8000.
+The FastAPI server is completely separate from the Streamlit UI (port 8501)
+and can be developed/deployed independently.
 
-from src.api.grading_api import (
-    api_grade_season,
-    api_grade_pick,
-)
+Main Application:
+    src.api.fastapi_app: FastAPI application entry point
 
-__all__ = [
-    "api_create_pick",
-    "api_list_user_picks",
-    "api_validate_pick",
-    "api_cancel_pick",
-    "api_grade_season",
-    "api_grade_pick",
-]
+Configuration:
+    src.api.fastapi_config: Settings and environment management
+    src.api.fastapi_security: JWT and password utilities
+    src.api.fastapi_models: Pydantic request/response schemas
+    src.api.fastapi_dependencies: Dependency injection for auth/db
+
+Routers:
+    src.api.routers.fastapi_auth: Authentication endpoints
+    src.api.routers.fastapi_users: User management endpoints
+
+To run the API:
+    uvicorn src.api.fastapi_app:app --reload
+"""
