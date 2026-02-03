@@ -1,10 +1,10 @@
 # 🏈 Fast6 - NFL First TD Prediction Tool
 
-A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds. 
+A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds.
 
-**Status:** Phase 1-5 Complete ✅ | UI/UX Refactored ✅ | Architecture Modernized ✅
+**Status:** v2.0.0 ✅ Clean Architecture Implemented | Production Ready
 
-> **Latest Update (Jan 27, 2026):** Complete UI/UX overhaul with high-contrast colors, tab navigation, simplified layouts, and mobile-responsive design. See [CHANGELOG_UI_UX.md](CHANGELOG_UI_UX.md) for details.
+> **Latest Update (Feb 3, 2026):** Complete architectural restructuring with clean architecture principles. Core business logic now independent of Streamlit/database, improved testability and maintainability. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ## Quick Start
 
@@ -22,40 +22,44 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the app
+# Run the app (legacy architecture)
 streamlit run src/app.py
+
+# Or run with new clean architecture (v2.0.0)
+streamlit run src/app_v2.py
 ```
 
 The app will be available at **http://localhost:8501**
 
+## Documentation
 
-## Analytics Documentation
+**Architecture & Development**:
+- [Architecture Reference](docs/ARCHITECTURE.md) - Clean architecture design and principles
+- [Configuration Guide](docs/guides/CONFIG_GUIDE.md) - Settings and customization
+- [Deployment Guide](docs/deployment/DEPLOYMENT.md) - Production deployment
 
-See [ANALYTICS_GUIDE.md](ANALYTICS_GUIDE.md) for a complete explanation of all analytics features, dashboard tabs, and how to interpret each metric and visualization.
-
----
+**Project Status**:
+- [Changelog](docs/CHANGELOG.md) - Version history and updates
+- [Phase Completions](archive/completed-phases/) - Historical phase documentation
 
 ## Features
 
 ### Admin Interface
 - **👥 User Management**: Add/remove group members
 - **📝 Pick Input**: Select week and first TD scorer for each game
-- **✅ Update Results**: Mark picks correct/incorrect, manual grade with ROI
-- **📊 View Stats**: Member records with quick-edit data editor
-- **📥 Import CSV**: Bulk import picks with Home/Visitor team matching to game_id
-- **🎯 Grade Picks (NEW)**: Auto-grade ungraded picks using PBP data, edit picks before grading
+- **✅ Update Results**: Mark picks correct/incorrect with ROI calculation
+- **🎯 Auto-Grade**: Grade picks using play-by-play data with fuzzy matching
+- **📥 CSV Import**: Bulk import picks with automatic game ID matching
+- **📊 Analytics**: ELO ratings, player performance, ROI trends
 
 ### Public Dashboard
-- **🏆 Leaderboard**: Group standings with ROI, Avg Odds, Theo Return, ROI Efficiency
-- **📝 Weekly Picks**: Browse picks by week with Odds and Returns
-- **🌟 Player Performance**: Hot/cold player tracking, TD rates, position leaders (NEW)
-- **💰 ROI & Profitability**: Cumulative ROI trends, weekly performance, strategy analysis (NEW)
-- **⚡ Power Rankings**: ELO-based team ratings, matchup predictions, power rankings (NEW)
-- **🛡️ Defense Matchups**: Defensive weaknesses, position matchups, recommendations (NEW)
-- **📅 Weekly Schedule**: Game schedules and results
-- **🏟️ League Analysis**: League-wide first TD statistics
-- **🧩 Team Analysis**: Team-specific TD analysis
-- **📊 Game Analysis**: Game-by-game TD breakdown
+- **🏆 Leaderboard**: Group standings, ROI, efficiency metrics
+- **📝 Weekly Picks**: Browse picks with odds and actual returns
+- **🌟 Player Performance**: Hot/cold tracker, TD rates, position leaders
+- **💰 ROI Trends**: Profitability analysis, cumulative returns
+- **⚡ Power Rankings**: ELO-based team ratings and matchup analysis
+- **🛡️ Defense Matchups**: Defensive weakness analysis
+- **📅 Schedule**: Game schedules and results
 
 ## Tech Stack
 

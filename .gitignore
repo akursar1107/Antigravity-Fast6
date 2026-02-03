@@ -51,3 +51,4 @@ id_rsa.pub
 *.pem
 *.key
 .worktrees/
+id_rsa*
