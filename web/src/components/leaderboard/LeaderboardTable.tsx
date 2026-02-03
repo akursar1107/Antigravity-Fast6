@@ -4,7 +4,7 @@ interface LeaderboardTableProps {
   data: LeaderboardEntry[];
 }
 
-export default function LeaderboardTable({ data }: LeaderboardTableProps): JSX.Element {
+export default function LeaderboardTable({ data }: LeaderboardTableProps) {
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 py-16 text-center">
