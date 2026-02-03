@@ -11,8 +11,12 @@ All database repositories can inherit from BaseRepository to get:
 
 from typing import Optional, List, Dict, Any, Tuple
 import sqlite3
+import logging
 from contextlib import contextmanager
 from .connection import get_db_connection, get_db_context
+from utils.error_handling import log_exception, DatabaseError
+
+logger = logging.getLogger(__name__)
 
 
 class BaseRepository:
@@ -238,8 +242,17 @@ class BaseRepository:
         try:
             yield conn
             conn.commit()
-        except Exception:
+        except sqlite3.IntegrityError as e:
             conn.rollback()
+            log_exception(e, f"{self.table_name}_transaction", context={"operation": "commit"}, severity="warning")
+            raise DatabaseError(f"Integrity constraint violation in {self.table_name}", context={"error": str(e)})
+        except sqlite3.OperationalError as e:
+            conn.rollback()
+            log_exception(e, f"{self.table_name}_transaction", context={"operation": "commit"}, severity="error")
+            raise DatabaseError(f"Database operational error in {self.table_name}", context={"error": str(e)})
+        except Exception as e:
+            conn.rollback()
+            log_exception(e, f"{self.table_name}_transaction", context={"operation": "commit"}, severity="error")
             raise
         finally:
             conn.close()

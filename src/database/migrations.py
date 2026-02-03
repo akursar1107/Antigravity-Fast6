@@ -11,6 +11,7 @@ import sqlite3
 import logging
 from typing import Callable, Dict
 from pathlib import Path
+from utils.error_handling import log_exception, DatabaseError
 
 logger = logging.getLogger(__name__)
 
@@ -439,8 +440,14 @@ def run_migrations() -> Dict[str, int]:
                     set_version(conn, version, description)
                     applied_count += 1
                     logger.info(f"✓ Migration v{version} applied successfully")
+                except sqlite3.IntegrityError as e:
+                    log_exception(e, f"migration_v{version}", context={"description": description}, severity="error")
+                    raise DatabaseError(f"Migration v{version} failed due to integrity constraint: {description}", context={"version": version})
+                except sqlite3.OperationalError as e:
+                    log_exception(e, f"migration_v{version}", context={"description": description}, severity="error")
+                    raise DatabaseError(f"Migration v{version} failed due to operational error: {description}", context={"version": version})
                 except Exception as e:
-                    logger.error(f"✗ Migration v{version} failed: {e}")
+                    log_exception(e, f"migration_v{version}", context={"description": description}, severity="error")
                     raise
         
         if applied_count == 0:

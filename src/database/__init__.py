@@ -26,6 +26,22 @@ from .connection import (
 # Base Repository Pattern
 from .base_repository import BaseRepository
 
+# Specialized Repositories
+from .repositories import (
+    UserRepository,
+    WeekRepository,
+    PickRepository,
+    ResultRepository,
+    KickoffRepository,
+    MarketOddsRepository,
+    user_repo,
+    week_repo,
+    pick_repo,
+    result_repo,
+    kickoff_repo,
+    market_odds_repo,
+)
+
 # Migrations
 from .migrations import (
     run_migrations,
@@ -93,6 +109,19 @@ __all__ = [
     'DB_PATH',
     # Base Repository
     'BaseRepository',
+    # Specialized Repositories
+    'UserRepository',
+    'WeekRepository',
+    'PickRepository',
+    'ResultRepository',
+    'KickoffRepository',
+    'MarketOddsRepository',
+    'user_repo',
+    'week_repo',
+    'pick_repo',
+    'result_repo',
+    'kickoff_repo',
+    'market_odds_repo',
     # Migrations
     'run_migrations',
     'get_current_version',
