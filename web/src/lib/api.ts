@@ -159,6 +159,23 @@ export type MatchupResponse = {
   teams: MatchupTeamStat[];
 };
 
+export type WeekPick = {
+  id: number;
+  user_id: number;
+  user_name: string;
+  team: string;
+  player_name: string;
+  odds: number;
+  graded: boolean;
+  is_correct: boolean | null;
+  actual_scorer: string | null;
+};
+
+export type WeekPicksResponse = {
+  week_id: number;
+  picks: WeekPick[];
+};
+
 export async function getLeaderboard(
   season: number
 ): Promise<ApiResponse<LeaderboardEntry[]>> {
@@ -209,6 +226,17 @@ export async function getGradingStatus(
 }
 
 export async function getMatchup(
+  gameId: string
+): Promise<ApiResponse<MatchupResponse>> {
+  return request(`/api/analytics/matchup/${gameId}`);
+}
+export async function getWeekPicks(
+  weekId: number
+): Promise<ApiResponse<WeekPicksResponse>> {
+  return request(`/api/weeks/${weekId}/picks`);
+}
+
+export async function getMatchupAnalysis(
   gameId: string
 ): Promise<ApiResponse<MatchupResponse>> {
   return request(`/api/analytics/matchup/${gameId}`);
