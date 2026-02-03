@@ -18,7 +18,10 @@ from typing import Optional, Callable, Any, Dict, TypeVar, Tuple
 from functools import wraps
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-import config
+from typing import Optional
+
+# Note: Config should be imported by caller if needed for TTL values
+# This module is config-agnostic
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +46,29 @@ class CacheTTL:
     PLAYER_STATS = 1800  # 30 minutes
     TEAM_RATINGS = 1800  # 30 minutes
     
-    # API caches
-    ODDS_API = config.ODDS_API_CACHE_TTL if hasattr(config, 'ODDS_API_CACHE_TTL') else 3600
-    POLYMARKET = config.POLYMARKET_CACHE_TTL if hasattr(config, 'POLYMARKET_CACHE_TTL') else 3600
-    KALSHI = config.KALSHI_CACHE_TTL if hasattr(config, 'KALSHI_CACHE_TTL') else 3600
+    # API caches (defaults, can be overridden by config)
+    ODDS_API = 3600  # 1 hour
+    POLYMARKET = 3600  # 1 hour
+    KALSHI = 3600  # 1 hour
     
     # NFL data caches
     NFL_PBP = 3600  # 1 hour - play-by-play data (stable)
     NFL_SCHEDULE = 3600  # 1 hour
     NFL_ROSTERS = 3600  # 1 hour
+    
+    @classmethod
+    def load_from_config(cls):
+        """Load TTL values from config if available"""
+        try:
+            from src import config
+            if hasattr(config, 'ODDS_API_CACHE_TTL'):
+                cls.ODDS_API = config.ODDS_API_CACHE_TTL
+            if hasattr(config, 'POLYMARKET_CACHE_TTL'):
+                cls.POLYMARKET = config.POLYMARKET_CACHE_TTL
+            if hasattr(config, 'KALSHI_CACHE_TTL'):
+                cls.KALSHI = config.KALSHI_CACHE_TTL
+        except ImportError:
+            pass  # Config not available, use defaults
 
 
 @dataclass

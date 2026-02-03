@@ -1,6 +1,7 @@
 """Picks use cases - orchestrates business logic"""
 
 from datetime import datetime
+from typing import Optional
 from src.core.picks.entities import Pick, PickStatus, GameInfo
 from src.core.picks.ports import PickRepository, GameRepository
 from src.core.picks.errors import (
