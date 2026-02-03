@@ -3,7 +3,8 @@ Theme generation utility for dynamic Streamlit UI styling.
 Generates CSS from configuration values for consistent theming.
 """
 
-from typing import Dict
+from functools import lru_cache
+from typing import Dict, Tuple
 
 
 def generate_theme_css(theme: Dict[str, str]) -> str:
@@ -577,3 +578,125 @@ def generate_theme_css(theme: Dict[str, str]) -> str:
 </style>
 """
     return css
+
+
+def generate_dropdown_fix_css() -> str:
+    """Generate CSS fixes for dropdown menus rendered in portals."""
+    return """
+<style>
+/* Fix for Streamlit selectbox dropdown - targets the portal element */
+div[data-baseweb="popover"] {
+    background-color: #1A2332 !important;
+}
+div[data-baseweb="popover"] ul {
+    background-color: #1A2332 !important;
+}
+div[data-baseweb="popover"] li {
+    background-color: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+div[data-baseweb="popover"] li:hover {
+    background-color: #2D3748 !important;
+}
+div[data-baseweb="popover"] li[aria-selected="true"] {
+    background-color: #5B8FF9 !important;
+}
+/* Target the specific Streamlit virtual dropdown */
+[data-testid="stSelectboxVirtualDropdown"] {
+    background-color: #1A2332 !important;
+}
+[data-testid="stSelectboxVirtualDropdown"] * {
+    color: #F7FAFC !important;
+}
+
+/* Chromium/Edge specific fixes */
+div[data-baseweb="menu"] {
+    background-color: #1A2332 !important;
+    background: #1A2332 !important;
+}
+
+div[data-baseweb="menu"] ul {
+    background-color: #1A2332 !important;
+    background: #1A2332 !important;
+}
+
+div[data-baseweb="menu"] li {
+    background-color: #1A2332 !important;
+    background: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+
+div[data-baseweb="menu"] li:hover {
+    background-color: #2D3748 !important;
+    background: #2D3748 !important;
+}
+
+/* Target the inner content of list items */
+div[data-baseweb="menu"] li > div {
+    background-color: transparent !important;
+    color: #F7FAFC !important;
+}
+
+div[data-baseweb="menu"] li span {
+    color: #F7FAFC !important;
+}
+
+/* BaseWeb block-level overrides for Chromium */
+[data-baseweb="block"] {
+    background-color: #1A2332 !important;
+}
+
+/* Force color on any child elements */
+div[data-baseweb="popover"] div,
+div[data-baseweb="popover"] span,
+div[data-baseweb="menu"] div,
+div[data-baseweb="menu"] span {
+    color: #F7FAFC !important;
+}
+
+/* Target styled-components classes that Chromium uses */
+[class*="StyledList"] {
+    background-color: #1A2332 !important;
+}
+
+[class*="StyledListItem"] {
+    background-color: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+
+[class*="StyledListItem"]:hover {
+    background-color: #2D3748 !important;
+}
+
+/* Layer/overlay targeting for Edge */
+div[data-layer] ul,
+div[data-layer] li {
+    background-color: #1A2332 !important;
+    color: #F7FAFC !important;
+}
+</style>
+"""
+
+
+def _theme_items(theme: Dict[str, str]) -> Tuple[Tuple[str, str], ...]:
+    return tuple(sorted(theme.items()))
+
+
+@lru_cache(maxsize=8)
+def _build_global_css(theme_items: Tuple[Tuple[str, str], ...]) -> str:
+    theme = dict(theme_items)
+    return f"{generate_theme_css(theme)}\n{generate_dropdown_fix_css()}"
+
+
+def build_global_css(theme: Dict[str, str]) -> str:
+    """Return the full global CSS bundle for the app."""
+    return _build_global_css(_theme_items(theme))
+
+
+def apply_global_theme(theme: Dict[str, str]) -> None:
+    """Apply global theme CSS to Streamlit app."""
+    try:
+        import streamlit as st
+    except Exception:
+        return
+    st.markdown(build_global_css(theme), unsafe_allow_html=True)
