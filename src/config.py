@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import logging
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,84 @@ try:
 except Exception as e:
     logger.error(f"Failed to load configuration from {_config_path}: {e}")
     _CONFIG = {}
+
+
+def _validate_config(config: dict) -> List[str]:
+    """Validate configuration structure and values. Returns list of warnings."""
+    warnings: List[str] = []
+
+    app = config.get("app", {})
+    seasons = config.get("seasons", [])
+    scoring = config.get("scoring", {})
+    analytics = config.get("analytics", {})
+    teams = config.get("teams", {})
+    api = config.get("api", {})
+    theme = config.get("ui_theme", {})
+
+    # App config validation
+    if not app.get("name"):
+        warnings.append("app.name is missing or empty")
+    if not isinstance(app.get("current_season", None), int):
+        warnings.append("app.current_season should be an integer")
+
+    # Seasons validation
+    if not isinstance(seasons, list) or not seasons:
+        warnings.append("seasons should be a non-empty list")
+    else:
+        if not all(isinstance(s, int) for s in seasons):
+            warnings.append("seasons should contain only integers")
+        if seasons != sorted(seasons, reverse=True):
+            warnings.append("seasons should be in descending order (newest first)")
+        if isinstance(app.get("current_season", None), int) and app.get("current_season") not in seasons:
+            warnings.append("app.current_season is not present in seasons list")
+
+    # Scoring validation
+    first_td = scoring.get("first_td_win", None)
+    any_time = scoring.get("any_time_td", None)
+    threshold = scoring.get("name_match_threshold", None)
+
+    if not isinstance(first_td, int) or first_td < 0:
+        warnings.append("scoring.first_td_win should be a non-negative integer")
+    if not isinstance(any_time, int) or any_time < 0:
+        warnings.append("scoring.any_time_td should be a non-negative integer")
+    if isinstance(first_td, int) and isinstance(any_time, int) and first_td < any_time:
+        warnings.append("scoring.first_td_win should be >= scoring.any_time_td")
+    if not isinstance(threshold, (int, float)) or not (0 <= threshold <= 1):
+        warnings.append("scoring.name_match_threshold should be between 0 and 1")
+
+    # Analytics validation
+    buckets = analytics.get("odds_buckets", [])
+    if buckets:
+        for bucket in buckets:
+            if not isinstance(bucket, dict):
+                warnings.append("analytics.odds_buckets should contain dict items")
+                break
+            if "min" not in bucket or "max" not in bucket or "label" not in bucket:
+                warnings.append("analytics.odds_buckets items must include min, max, label")
+                break
+            if not isinstance(bucket.get("min"), int) or not isinstance(bucket.get("max"), int):
+                warnings.append("analytics.odds_buckets min/max should be integers")
+                break
+            if bucket.get("min") >= bucket.get("max"):
+                warnings.append("analytics.odds_buckets min must be < max")
+                break
+
+    # Teams validation
+    if not isinstance(teams, dict) or not teams:
+        warnings.append("teams should be a non-empty dictionary")
+
+    # API validation
+    odds_api = api.get("odds_api", {})
+    if odds_api.get("enabled", True) and not odds_api.get("base_url"):
+        warnings.append("api.odds_api.base_url is missing while odds_api is enabled")
+    if not isinstance(odds_api.get("cache_ttl", 0), int) or odds_api.get("cache_ttl", 0) <= 0:
+        warnings.append("api.odds_api.cache_ttl should be a positive integer")
+
+    # Theme validation (basic)
+    if theme and not theme.get("primary_color"):
+        warnings.append("ui_theme.primary_color is missing")
+
+    return warnings
 
 # ===== APP CONFIGURATION =====
 APP_NAME = _CONFIG.get("app", {}).get("name", "Fast6")
@@ -74,7 +153,8 @@ _short_names = {
 TEAM_ABBR_MAP.update(_short_names)
 
 # ===== API CONFIGURATION =====
-_api_config = _CONFIG.get("api", {}).get("odds_api", {})
+_api_root = _CONFIG.get("api", {})
+_api_config = _api_root.get("odds_api", {})
 
 # For API key: check st.secrets first, then environment variables, then fallback
 ODDS_API_KEY = ""
@@ -105,6 +185,17 @@ ODDS_API_MARKET = _api_config.get("market", "player_anytime_td")
 ODDS_API_REGIONS = _api_config.get("regions", "us")
 ODDS_API_FORMAT = _api_config.get("format", "american")
 ODDS_API_CACHE_TTL = _api_config.get("cache_ttl", 3600)
+
+# ===== API RESILIENCE CONFIGURATION =====
+_retry_config = _api_root.get("retry", {})
+API_RETRY_RETRIES = _retry_config.get("retries", 3)
+API_RETRY_BACKOFF_BASE = _retry_config.get("backoff_base_seconds", 0.5)
+API_RETRY_BACKOFF_FACTOR = _retry_config.get("backoff_factor", 2.0)
+API_RETRY_JITTER = _retry_config.get("jitter_seconds", 0.1)
+
+_breaker_config = _api_root.get("circuit_breaker", {})
+API_BREAKER_FAILURE_THRESHOLD = _breaker_config.get("failure_threshold", 5)
+API_BREAKER_COOLDOWN_SECONDS = _breaker_config.get("cooldown_seconds", 60)
 
 # ===== POLYMARKET API CONFIGURATION =====
 _polymarket_config = _CONFIG.get("api", {}).get("polymarket", {})
@@ -166,3 +257,9 @@ FEATURES = {
     "multi_group_support": _features.get("multi_group_support", False),
     "user_self_management": _features.get("user_self_management", False)
 }
+
+# ===== CONFIG VALIDATION =====
+_config_warnings = _validate_config(_CONFIG)
+if _config_warnings:
+    for warning in _config_warnings:
+        logger.warning(f"Config validation warning: {warning}")

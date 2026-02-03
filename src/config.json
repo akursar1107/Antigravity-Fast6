@@ -244,6 +244,16 @@
     "prediction_markets": {
       "enabled_sources": ["polymarket", "kalshi"],
       "auto_link_results": true
+    },
+    "retry": {
+      "retries": 3,
+      "backoff_base_seconds": 0.5,
+      "backoff_factor": 2.0,
+      "jitter_seconds": 0.1
+    },
+    "circuit_breaker": {
+      "failure_threshold": 5,
+      "cooldown_seconds": 60
     }
   },
   "ui_theme": {
