@@ -7,14 +7,14 @@ All data persisted to SQLite database.
 import streamlit as st
 import pandas as pd
 import time
-from utils.nfl_data import (
+from src.utils.nfl_data import (
     load_rosters, get_game_schedule
 )
-from utils.name_matching import names_match
-from utils.odds_api import get_first_td_odds
-from utils.team_utils import get_team_full_name
-import config
-from utils import init_db
+from src.utils.name_matching import names_match
+from src.utils.odds_api import get_first_td_odds
+from src.utils.team_utils import get_team_full_name
+from src import config
+from src.utils import init_db
 from views.admin import (
     show_dashboard_tab,
     show_users_tab,

@@ -11,7 +11,7 @@ from src.core.picks.use_cases import (
 from src.core.picks.entities import Pick
 from src.data.repositories.picks_repository import SQLitePickRepository
 from src.lib.observability import log_event
-import config
+from src import config
 
 
 def get_connection() -> sqlite3.Connection:

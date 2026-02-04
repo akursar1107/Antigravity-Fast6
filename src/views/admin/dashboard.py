@@ -6,11 +6,11 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 from pathlib import Path
-from database import (
+from src.database import (
     get_all_users, get_all_weeks, get_week_all_picks,
     get_ungraded_picks, get_leaderboard
 )
-import config
+from src import config
 
 
 def show_dashboard_tab(season: int, schedule: pd.DataFrame) -> None:

@@ -4,7 +4,7 @@ Displays team-specific touchdown analysis with logo, total touchdowns, and posit
 """
 import streamlit as st
 import pandas as pd
-from utils.nfl_data import get_touchdowns, load_rosters
+from src.utils.nfl_data import get_touchdowns, load_rosters
 
 
 def get_team_logo_url(team_abbr: str) -> str:
@@ -69,13 +69,13 @@ def show_team_analysis_tab(df: pd.DataFrame, season: int) -> None:
         team_tds = tds[tds['posteam'] == team]
         st.metric("Total Touchdowns", len(team_tds))
     else:
-        from utils.nfl_data import get_first_tds
+        from src.utils.nfl_data import get_first_tds
         tds = get_first_tds(df)
         team_tds = tds[tds['posteam'] == team]
         st.metric("First TDs of Game", len(team_tds))
 
     # Use the same roster-based position join logic as League Analysis
-    from utils.analytics import get_position_first_td_counts
+    from src.utils.analytics import get_position_first_td_counts
     roster = load_rosters(season)
     pos_counts_df = None
     if not roster.empty and not team_tds.empty:

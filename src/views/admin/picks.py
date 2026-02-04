@@ -4,18 +4,18 @@ Admin Picks Tab - Input and manage user picks for the week.
 
 import streamlit as st
 import pandas as pd
-from utils.nfl_data import load_rosters
-from utils.odds_utils import (
+from src.utils.nfl_data import load_rosters
+from src.utils.odds_utils import (
     american_to_probability,
     calculate_expected_value,
     is_positive_ev,
     kelly_criterion,
 )
-from database import (
+from src.database import (
     add_week, get_week_by_season_week, get_all_users, get_user_week_picks,
     add_pick
 )
-from utils.observability import log_event
+from src.utils.observability import log_event
 
 
 def show_picks_tab(season: int, schedule: pd.DataFrame) -> None:

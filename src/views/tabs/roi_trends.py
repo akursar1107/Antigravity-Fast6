@@ -23,7 +23,7 @@ from services.analytics import (
     get_profitability_summary,
     get_user_rank_by_roi
 )
-from database import get_all_users
+from src.database import get_all_users
 
 
 def show_roi_trends_tab(season: int):

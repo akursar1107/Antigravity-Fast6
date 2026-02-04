@@ -9,7 +9,7 @@ from src.core.grading.entities import GradingResult
 from src.data.repositories.results_repository import SQLiteResultRepository
 from src.lib.observability import log_event
 from typing import Optional
-import config
+from src import config
 
 
 def get_connection() -> sqlite3.Connection:

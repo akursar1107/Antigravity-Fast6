@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "Fast6"))
 
 from src.lib.theming import apply_global_theme
-import config
+from src import config
 
 
 def main():

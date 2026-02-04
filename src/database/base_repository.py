@@ -14,7 +14,7 @@ import sqlite3
 import logging
 from contextlib import contextmanager
 from .connection import get_db_connection, get_db_context
-from utils.error_handling import log_exception, DatabaseError
+from src.utils.error_handling import log_exception, DatabaseError
 
 logger = logging.getLogger(__name__)
 

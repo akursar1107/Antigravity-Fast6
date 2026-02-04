@@ -5,12 +5,12 @@ Grading Tab - Auto-grade picks against play-by-play data
 import streamlit as st
 import pandas as pd
 from typing import Optional
-import config
-from database import get_all_weeks, get_ungraded_picks, add_result
-from utils.nfl_data import load_rosters
-from utils.csv_import import get_first_td_map
-from utils.name_matching import names_match
-from utils.observability import log_event
+from src import config
+from src.database import get_all_weeks, get_ungraded_picks, add_result
+from src.utils.nfl_data import load_rosters
+from src.utils.csv_import import get_first_td_map
+from src.utils.name_matching import names_match
+from src.utils.observability import log_event
 
 
 def show_grading_tab(season: int, schedule: pd.DataFrame) -> None:
@@ -220,14 +220,14 @@ def _get_filtered_ungraded_picks(grade_season, grade_week, selected_game, select
 
 def _show_auto_grade_button(ungraded, grade_season, grade_week):
     """Show auto-grade button and handle grading."""
-    from utils.exceptions import GradingError, NFLDataError
+    from src.utils.exceptions import GradingError, NFLDataError
     
     col_auto_grade = st.columns(2)
     with col_auto_grade[0]:
         if st.button("⚡ Auto-Grade All Against Database", type="primary", key="auto_grade_btn"):
             with st.spinner(f"Auto-grading {len(ungraded)} pick(s)..."):
                 try:
-                    from utils.grading_logic import auto_grade_season
+                    from src.utils.grading_logic import auto_grade_season
                     result = auto_grade_season(grade_season, grade_week)
                     
                     if 'error' in result:
@@ -275,7 +275,7 @@ def _show_auto_grade_button(ungraded, grade_season, grade_week):
         if st.button("📺 Grade Any Time TD Only", type="secondary", key="any_time_td_btn"):
             with st.spinner(f"Grading {len(ungraded)} pick(s) for any-time TD..."):
                 try:
-                    from utils.grading_logic import grade_any_time_td_only
+                    from src.utils.grading_logic import grade_any_time_td_only
                     result = grade_any_time_td_only(grade_season, grade_week)
                     
                     if 'error' in result:
@@ -318,7 +318,7 @@ def _show_unknown_teams_fix(ungraded, grade_season):
         st.warning(f"⚠️ {len(unknown_teams)} pick(s) have team='Unknown' and cannot be graded.")
         if st.button("🔧 Auto-Fix Unknown Teams", type="secondary"):
             with st.spinner("Looking up player teams from roster..."):
-                from utils.team_utils import backfill_team_for_picks
+                from src.utils.team_utils import backfill_team_for_picks
                 result = backfill_team_for_picks(grade_season)
                 if 'error' in result:
                     st.error(result['error'])

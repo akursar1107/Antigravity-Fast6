@@ -15,17 +15,17 @@ import plotly.graph_objects as go
 import plotly.express as px
 from typing import Optional, Dict, List
 
-import config
-from database.market_odds import (
+from src import config
+from src.database.market_odds import (
     get_market_odds_for_week,
     get_market_odds_for_player,
     get_latest_odds_snapshot,
     get_market_accuracy_stats,
     get_odds_comparison
 )
-from database import get_all_weeks
+from src.database import get_all_weeks
 from services.market_data_service import MarketDataService, get_week_dates
-from utils.prediction_markets import get_enabled_sources, test_connections
+from src.utils.prediction_markets import get_enabled_sources, test_connections
 
 
 def show_market_comparison_tab(season: int, schedule: Optional[pd.DataFrame] = None):

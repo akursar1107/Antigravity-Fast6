@@ -1,0 +1,177 @@
+"""
+Pydantic Models for FastAPI Request/Response Validation
+
+Base schemas for common operations.
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+
+# ============ Auth Models ============
+
+class LoginRequest(BaseModel):
+    """User login request"""
+    username: str = Field(..., description="Username")
+    password: Optional[str] = Field(default=None, description="Password (optional for friend group)")
+
+
+class TokenResponse(BaseModel):
+    """JWT token response"""
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(default="bearer", description="Token type")
+    user_id: int = Field(..., description="User ID")
+    username: str = Field(..., description="Username")
+    role: str = Field(..., description="User role (admin/user)")
+
+
+# ============ User Models ============
+
+class UserBase(BaseModel):
+    """Base user data"""
+    name: str = Field(..., min_length=1, max_length=100, description="User name")
+    email: Optional[str] = Field(default=None, description="Email address")
+
+
+class UserCreate(UserBase):
+    """User creation request"""
+    is_admin: bool = Field(default=False, description="Admin flag")
+
+
+class UserUpdate(BaseModel):
+    """User update request"""
+    name: Optional[str] = Field(default=None, description="User name")
+    email: Optional[str] = Field(default=None, description="Email address")
+    is_admin: Optional[bool] = Field(default=None, description="Admin flag")
+
+
+class UserResponse(UserBase):
+    """User response"""
+    id: int
+    is_admin: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Week Models ============
+
+class WeekCreate(BaseModel):
+    """Week creation request"""
+    season: int = Field(..., description="NFL season year")
+    week: int = Field(..., ge=1, le=18, description="Week number 1-18")
+    started_at: Optional[datetime] = Field(default=None, description="Week start time")
+    ended_at: Optional[datetime] = Field(default=None, description="Week end time")
+
+
+class WeekUpdate(BaseModel):
+    """Week update request"""
+    started_at: Optional[datetime] = Field(default=None)
+    ended_at: Optional[datetime] = Field(default=None)
+
+
+class WeekResponse(BaseModel):
+    """Week response"""
+    id: int
+    season: int
+    week: int
+    started_at: Optional[datetime]
+    ended_at: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Pick Models ============
+
+class PickCreate(BaseModel):
+    """Pick creation request"""
+    week_id: int = Field(..., description="Week ID")
+    team: str = Field(..., min_length=2, max_length=3, description="Team code (e.g., KC)")
+    player_name: str = Field(..., min_length=1, max_length=100, description="Player name")
+    odds: Optional[float] = Field(default=None, description="Betting odds")
+    theoretical_return: Optional[float] = Field(default=None, description="Theoretical return")
+    game_id: Optional[str] = Field(default=None, description="NFL game ID")
+
+
+class PickUpdate(BaseModel):
+    """Pick update request"""
+    team: Optional[str] = Field(default=None)
+    player_name: Optional[str] = Field(default=None)
+    odds: Optional[float] = Field(default=None)
+    theoretical_return: Optional[float] = Field(default=None)
+
+
+class PickResponse(BaseModel):
+    """Pick response"""
+    id: int
+    user_id: int
+    week_id: int
+    team: str
+    player_name: str
+    odds: Optional[float]
+    theoretical_return: Optional[float]
+    game_id: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Result Models ============
+
+class ResultCreate(BaseModel):
+    """Result creation request"""
+    pick_id: int = Field(..., description="Pick ID")
+    actual_scorer: Optional[str] = Field(default=None, description="Actual scorer name")
+    is_correct: Optional[bool] = Field(default=None, description="Is pick correct?")
+    actual_return: Optional[float] = Field(default=None, description="Actual return amount")
+    any_time_td: Optional[bool] = Field(default=None, description="Any time TD flag")
+
+
+class ResultUpdate(BaseModel):
+    """Result update request"""
+    actual_scorer: Optional[str] = Field(default=None)
+    is_correct: Optional[bool] = Field(default=None)
+    actual_return: Optional[float] = Field(default=None)
+    any_time_td: Optional[bool] = Field(default=None)
+
+
+class ResultResponse(BaseModel):
+    """Result response"""
+    id: int
+    pick_id: int
+    actual_scorer: Optional[str]
+    is_correct: Optional[bool]
+    actual_return: Optional[float]
+    any_time_td: Optional[bool]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Leaderboard Models ============
+
+class LeaderboardEntryResponse(BaseModel):
+    """Leaderboard entry response"""
+    user_id: int
+    username: str
+    points: int
+    total_return: float
+    first_td_wins: int
+    any_time_tds: int
+    pick_count: int
+    accuracy: float = Field(..., description="Win percentage 0-100")
+
+
+# ============ Error Models ============
+
+class ErrorResponse(BaseModel):
+    """Standard error response"""
+    detail: str = Field(..., description="Error message")
+    error_code: Optional[str] = Field(default=None, description="Machine-readable error code")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)

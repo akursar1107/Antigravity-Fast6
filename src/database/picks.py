@@ -8,9 +8,9 @@ import logging
 from typing import Optional, List, Dict, Tuple
 
 from .connection import get_db_connection, get_db_context
-from utils.type_utils import safe_int as _safe_int
-from utils.caching import invalidate_on_pick_change
-from utils.types import Pick, PickWithResult
+from src.utils.type_utils import safe_int as _safe_int
+from src.utils.caching import invalidate_on_pick_change
+from src.utils.types import Pick, PickWithResult
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +18,76 @@ logger = logging.getLogger(__name__)
 def add_pick(user_id: int, week_id: int, team: str, player_name: str,
              odds: Optional[float] = None, theoretical_return: Optional[float] = None,
              game_id: Optional[str] = None) -> int:
-    """Add a user's pick for a week."""
+    """
+    Add a user's pick for a week.
+    
+    NEW: Automatically looks up player position from rosters table
+    NEW: Creates player_stats entry if doesn't exist
+    """
     with get_db_context() as conn:
         cursor = conn.cursor()
+        
+        try:
+            # Get season from week_id
+            cursor.execute("SELECT season FROM weeks WHERE id = ?", (week_id,))
+            season_row = cursor.fetchone()
+            season = int(season_row[0]) if season_row else None
+            
+            if not season:
+                logger.warning(f"Could not determine season for week_id {week_id}")
+                season = 2025  # Fallback to current season
+            
+            # Insert pick
+            cursor.execute("""
+                INSERT INTO picks (user_id, week_id, team, player_name, odds, theoretical_return, game_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, week_id, team, player_name, odds, theoretical_return, game_id))
+            pick_id = cursor.lastrowid
+            
+            # NEW: Look up position from rosters table
+            try:
+                from services.data_sync import get_player_position
+                position = get_player_position(player_name, team, season)
+            except Exception as e:
+                logger.warning(f"Could not look up position for {player_name}: {e}")
+                position = 'Unknown'
+            
+            # NEW: Ensure player_stats entry exists with position
+            try:
+                _ensure_player_stats_entry(cursor, player_name, season, team, position)
+            except Exception as e:
+                logger.warning(f"Could not create player_stats for {player_name}: {e}")
+            
+            logger.info(f"Pick added: User {user_id}, Week {week_id}, {team} {player_name} ({position}), game_id={game_id}")
+            return pick_id
+        
+        except sqlite3.IntegrityError as e:
+            if 'UNIQUE constraint failed' in str(e):
+                logger.warning(f"Duplicate pick for user {user_id}, week {week_id}, player {player_name}")
+                raise ValueError("Pick already exists for this player this week")
+            raise
+
+
+def _ensure_player_stats_entry(cursor: sqlite3.Cursor, player_name: str, 
+                                season: int, team: str, position: str) -> None:
+    """
+    Helper function to ensure player_stats entry exists.
+    Creates entry if missing, updates position if found.
+    """
+    cursor.execute("""
+        INSERT OR IGNORE INTO player_stats 
+        (player_name, season, team, position, first_td_count, any_time_td_count)
+        VALUES (?, ?, ?, ?, 0, 0)
+    """, (player_name, season, team, position))
+    
+    # Update position if entry already exists and position is not Unknown
+    if position != 'Unknown':
         cursor.execute("""
-            INSERT INTO picks (user_id, week_id, team, player_name, odds, theoretical_return, game_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, week_id, team, player_name, odds, theoretical_return, game_id))
-        pick_id = cursor.lastrowid
-        logger.info(f"Pick added: User {user_id}, Week {week_id}, {team} {player_name}, game_id={game_id}")
-        return pick_id
+            UPDATE player_stats 
+            SET position = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE player_name = ? AND season = ? AND team = ?
+              AND position = 'Unknown'
+        """, (position, player_name, season, team))
 
 
 def add_picks_batch(picks: List[Dict]) -> int:

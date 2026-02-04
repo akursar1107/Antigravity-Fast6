@@ -4,7 +4,7 @@ Admin Exports Tab - Generate and download data snapshots for external analysis.
 
 import streamlit as st
 import pandas as pd
-from utils.exports import (
+from src.utils.exports import (
     export_weekly_picks_snapshot,
     export_leaderboard_history,
     export_player_stats,
@@ -13,7 +13,7 @@ from utils.exports import (
     list_exported_files,
     DEFAULT_EXPORT_DIR
 )
-from database import get_all_users
+from src.database import get_all_users
 from services.performance_service import PickerPerformanceService
 import os
 
@@ -86,8 +86,8 @@ def show_exports_tab(season: int, df: pd.DataFrame = None) -> None:
             if st.button("Export Player Stats", key="export_players"):
                 try:
                     if df is not None and not df.empty:
-                        from utils.nfl_data import get_first_tds, load_rosters
-                        from utils.analytics import get_player_first_td_counts, get_position_first_td_counts
+                        from src.utils.nfl_data import get_first_tds, load_rosters
+                        from src.utils.analytics import get_player_first_td_counts, get_position_first_td_counts
                         
                         first_tds = get_first_tds(df)
                         roster_df = load_rosters(season)
@@ -116,7 +116,7 @@ def show_exports_tab(season: int, df: pd.DataFrame = None) -> None:
         if st.button("📦 Export Complete Season", type="primary"):
             try:
                 if df is not None and not df.empty:
-                    from utils.nfl_data import get_first_tds
+                    from src.utils.nfl_data import get_first_tds
                     
                     first_tds = get_first_tds(df)
                     

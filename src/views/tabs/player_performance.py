@@ -19,7 +19,7 @@ from services.analytics import (
     get_player_summary_text,
     update_player_stats
 )
-import config
+from src import config
 
 
 def show_player_performance_tab(season: int):

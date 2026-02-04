@@ -3,8 +3,8 @@ Leaderboard Tab - Display player standings and statistics.
 """
 
 import streamlit as st
-from database import get_leaderboard
-from utils import format_odds, format_implied_probability
+from src.database import get_leaderboard
+from src.utils import format_odds, format_implied_probability
 
 
 def show_leaderboard_tab() -> None:

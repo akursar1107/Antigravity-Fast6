@@ -12,7 +12,7 @@ To run this version instead of the legacy app:
 
 import streamlit as st
 from src.lib.theming import apply_global_theme
-import config
+from src import config
 
 
 def initialize_session():

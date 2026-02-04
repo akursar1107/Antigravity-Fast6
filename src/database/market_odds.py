@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 from .connection import get_db_context
-from utils.types import MarketOdds
+from src.utils.types import MarketOdds
 
 logger = logging.getLogger(__name__)
 

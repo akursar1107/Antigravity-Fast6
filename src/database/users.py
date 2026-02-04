@@ -8,8 +8,8 @@ import logging
 from typing import Optional, List, Dict
 
 from .connection import get_db_connection, get_db_context
-from utils.caching import invalidate_on_pick_change
-from utils.types import User
+from src.utils.caching import invalidate_on_pick_change
+from src.utils.types import User
 
 logger = logging.getLogger(__name__)
 

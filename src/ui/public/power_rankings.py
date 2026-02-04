@@ -22,7 +22,7 @@ from services.analytics import (
     update_team_ratings,
     initialize_team_ratings
 )
-import config
+from src import config
 
 
 def show_power_rankings_tab(season: int):
