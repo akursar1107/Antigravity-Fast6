@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass
 
-import config
+from src import config
 from .polymarket_api import (
     PolymarketClient,
     get_polymarket_first_td_odds,
@@ -230,14 +230,14 @@ def link_odds_to_first_td_results(
             accuracy_rate: float
         }
     """
-    from database.market_odds import (
+    from src.database.market_odds import (
         get_market_odds_for_week,
         add_market_outcome,
         get_latest_odds_snapshot
     )
 
     try:
-        from utils.name_matching import names_match
+        from src.utils.name_matching import names_match
     except ImportError:
         # Fallback to simple matching
         def names_match(name1: str, name2: str, threshold: float = 0.75) -> bool:
@@ -245,7 +245,7 @@ def link_odds_to_first_td_results(
 
     # Try to get first TD data from the grading module
     try:
-        from utils.grading_logic import get_first_td_scorers
+        from src.utils.grading_logic import get_first_td_scorers
         first_td_map = get_first_td_scorers(season, week)
     except ImportError:
         logger.warning("grading_logic not available, skipping result linking")

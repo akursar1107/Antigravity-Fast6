@@ -5,7 +5,7 @@ Provides TypedDict definitions and generic types for better type safety across t
 This enables IDE autocomplete, better type checking with mypy, and clearer API contracts.
 
 Usage:
-    from utils.types import Pick, User, Result, Leaderboard
+    from src.utils.types import Pick, User, Result, Leaderboard
     
     def get_picks(user_id: int) -> List[Pick]:
         return database.get_user_picks(user_id)

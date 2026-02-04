@@ -3,7 +3,7 @@ Team Utilities
 Helper functions for team name and abbreviation mapping
 """
 
-import config
+from src import config
 
 
 def get_team_abbr(full_name: str) -> str:

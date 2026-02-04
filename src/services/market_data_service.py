@@ -13,18 +13,18 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 
-import config
-from utils.polymarket_api import (
+from src import config
+from src.utils.polymarket_api import (
     get_polymarket_first_td_odds,
     get_polymarket_odds_by_slug
 )
-from utils.kalshi_api import get_kalshi_first_td_odds
-from utils.prediction_markets import (
+from src.utils.kalshi_api import get_kalshi_first_td_odds
+from src.utils.prediction_markets import (
     PredictionMarketAggregator,
     link_odds_to_first_td_results,
     get_enabled_sources
 )
-from database.market_odds import (
+from src.database.market_odds import (
     add_market_odds_batch,
     get_market_odds_for_game,
     get_market_odds_for_week,

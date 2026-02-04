@@ -9,13 +9,13 @@ from typing import Dict, Optional, List
 from dataclasses import dataclass
 from datetime import datetime
 import pandas as pd
-from utils.nfl_data import load_data, get_game_schedule, get_first_tds, get_touchdowns, load_rosters
-from utils.name_matching import names_match
-from utils.caching import cached, CacheTTL, invalidate_on_grading_complete
-from utils.types import Result, GradingResult
-from utils.observability import track_operation, log_event
-from database import get_db_connection, get_db_context, add_results_batch
-import config
+from src.utils.nfl_data import load_data, get_game_schedule, get_first_tds, get_touchdowns, load_rosters
+from src.utils.name_matching import names_match
+from src.utils.caching import cached, CacheTTL, invalidate_on_grading_complete
+from src.utils.types import Result, GradingResult
+from src.utils.observability import track_operation, log_event
+from src.database import get_db_connection, get_db_context, add_results_batch
+from src import config
 
 try:
     import streamlit as st

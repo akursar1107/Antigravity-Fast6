@@ -7,7 +7,7 @@ accuracy by position and game type.
 
 from typing import Dict, List, Optional, Callable, Any
 import pandas as pd
-import config
+from src import config
 
 
 # Default repository function (can be overridden for testing)
@@ -19,7 +19,7 @@ def _default_picks_repo(user_id: int, season: int) -> List[Dict]:
 
 def _default_rosters_repo(season: int) -> Optional[pd.DataFrame]:
     """Default implementation for loading rosters."""
-    from utils.nfl_data import load_rosters
+    from src.utils.nfl_data import load_rosters
     return load_rosters(season)
 
 
@@ -67,7 +67,7 @@ class PickerPerformanceService:
         if not picks:
             return 0.0
         
-        from utils.odds_utils import american_to_probability
+        from src.utils.odds_utils import american_to_probability
         
         squared_errors = []
         

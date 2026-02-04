@@ -22,8 +22,8 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple
-from database import get_db_context
-from utils.nfl_data import load_data
+from src.database import get_db_context
+from src.utils.nfl_data import load_data
 import logging
 
 logger = logging.getLogger(__name__)
@@ -104,27 +104,23 @@ def update_player_stats(season: int, week: Optional[int] = None) -> Dict[str, in
         with get_db_context() as conn:
             cursor = conn.cursor()
             
-            # Get first TD counts from actual results
+            # Get last TD week data from database
+            # Note: first_td_count is maintained automatically by triggers (migration v13)
             cursor.execute("""
                 SELECT 
                     p.player_name,
                     p.team,
-                    COUNT(DISTINCT CASE WHEN r.is_correct = 1 THEN p.id END) as first_td_count,
                     MAX(w.week) as last_td_week
                 FROM picks p
                 JOIN weeks w ON p.week_id = w.id
-                LEFT JOIN results r ON r.pick_id = p.id
-                WHERE w.season = ?
+                JOIN results r ON r.pick_id = p.id
+                WHERE w.season = ? AND r.is_correct = 1
                 GROUP BY p.player_name, p.team
             """, (season,))
             
-            first_td_data = cursor.fetchall()
-            first_td_dict = {
-                (row['player_name'], row['team']): {
-                    'first_td_count': row['first_td_count'],
-                    'last_td_week': row['last_td_week']
-                }
-                for row in first_td_data
+            last_td_dict = {
+                (row['player_name'], row['team']): row['last_td_week']
+                for row in cursor.fetchall()
             }
             
             # Update or insert player stats
@@ -135,11 +131,8 @@ def update_player_stats(season: int, week: Optional[int] = None) -> Dict[str, in
                 if pd.isna(player_name) or not player_name:
                     continue
                 
-                # Get first TD data if available
-                first_td_info = first_td_dict.get((player_name, team), {
-                    'first_td_count': 0,
-                    'last_td_week': None
-                })
+                # Get last TD week if available
+                last_td_week = last_td_dict.get((player_name, team), None)
                 
                 # Calculate recent form (based on last 5 weeks)
                 recent_form = _calculate_player_form(
@@ -150,10 +143,10 @@ def update_player_stats(season: int, week: Optional[int] = None) -> Dict[str, in
                 position = row.get('position', None)
                 
                 # Try to update existing record
+                # Note: first_td_count is maintained by triggers, not updated here
                 cursor.execute("""
                     UPDATE player_stats
                     SET games_played = ?,
-                        first_td_count = ?,
                         any_time_td_count = ?,
                         last_td_week = ?,
                         recent_form = ?,
@@ -162,9 +155,8 @@ def update_player_stats(season: int, week: Optional[int] = None) -> Dict[str, in
                     WHERE player_name = ? AND season = ? AND team = ?
                 """, (
                     int(row['games_played']),
-                    first_td_info['first_td_count'],
                     int(row['any_time_td_count']),
-                    first_td_info['last_td_week'],
+                    last_td_week,
                     recent_form,
                     position,
                     player_name,
@@ -174,20 +166,20 @@ def update_player_stats(season: int, week: Optional[int] = None) -> Dict[str, in
                 
                 if cursor.rowcount == 0:
                     # Insert new record
+                    # Note: first_td_count defaults to 0, triggers will maintain it
                     cursor.execute("""
                         INSERT INTO player_stats (
                             player_name, season, team, position, games_played,
-                            first_td_count, any_time_td_count, last_td_week, recent_form
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            any_time_td_count, last_td_week, recent_form
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         player_name,
                         season,
                         team,
                         position,
                         int(row['games_played']),
-                        first_td_info['first_td_count'],
                         int(row['any_time_td_count']),
-                        first_td_info['last_td_week'],
+                        last_td_week,
                         recent_form
                     ))
                     stats['new_players'] += 1
