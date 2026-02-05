@@ -40,7 +40,7 @@ export default function LeaderboardTable({ data }: LeaderboardTableProps) {
               Win %
             </th>
             <th scope="col" className="px-4 py-3 text-right font-semibold uppercase tracking-[0.15em] text-slate-400">
-              Recent Form
+              Correct
             </th>
           </tr>
         </thead>
@@ -94,12 +94,9 @@ export default function LeaderboardTable({ data }: LeaderboardTableProps) {
                   </span>
                 </td>
                 <td className="px-4 py-4 text-right">
-                  <span
-                    className={`font-medium ${
-                      entry.win_percentage >= 50 ? "text-emerald-400" : "text-slate-400"
-                    }`}
-                  >
-                    {entry.win_percentage.toFixed(0)}%
+                  <span className="font-medium text-slate-300">
+                    {entry.correct_picks}
+                    <span className="text-slate-500">/{entry.total_picks}</span>
                   </span>
                 </td>
               </tr>

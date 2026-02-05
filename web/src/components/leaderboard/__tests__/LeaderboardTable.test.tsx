@@ -46,19 +46,19 @@ describe("LeaderboardTable", () => {
     expect(screen.getByText("Points")).toBeInTheDocument();
     expect(screen.getByText("ROI")).toBeInTheDocument();
     expect(screen.getByText("Win %")).toBeInTheDocument();
-    expect(screen.getByText("Recent Form")).toBeInTheDocument();
+    expect(screen.getByText("Correct")).toBeInTheDocument();
 
     // Check first row data
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("21")).toBeInTheDocument();
     expect(screen.getByText("$150.5")).toBeInTheDocument();
-    expect(screen.getAllByText("70%")).toHaveLength(2); // Win % and Recent Form
+    expect(screen.getByText("70%")).toBeInTheDocument();
 
     // Check second row data
     expect(screen.getByText("Bob")).toBeInTheDocument();
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(screen.getByText("$-25.3")).toBeInTheDocument();
-    expect(screen.getAllByText("50%")).toHaveLength(2); // Win % and Recent Form
+    expect(screen.getByText("50%")).toBeInTheDocument();
 
     // Check medals for top 3
     expect(screen.getByText("🥇")).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe("LeaderboardTable", () => {
     ];
 
     render(<LeaderboardTable data={mockData} />);
-    expect(screen.getAllByText("76%")).toHaveLength(2); // Win % and Recent Form
+    expect(screen.getByText("76%")).toBeInTheDocument();
   });
 
   it("displays medals for top 3 ranks", () => {
@@ -162,8 +162,9 @@ describe("LeaderboardTable", () => {
 
     render(<LeaderboardTable data={mockData} />);
     expect(screen.getByText("NoPicks")).toBeInTheDocument();
-    expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getAllByText("0%")).toHaveLength(2); // Win % and Recent Form
+    // Points column shows "0" and Correct column shows "0/0", so multiple matches
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("0%")).toBeInTheDocument();
   });
 
   it("applies text-red-400 color for negative ROI", () => {
@@ -186,7 +187,7 @@ describe("LeaderboardTable", () => {
     expect(roiElement).toHaveClass("text-red-400");
   });
 
-  it("applies correct color classes for recent form based on threshold", () => {
+  it("displays correct picks ratio in the Correct column", () => {
     const mockData: LeaderboardEntry[] = [
       {
         rank: 1,
@@ -213,12 +214,13 @@ describe("LeaderboardTable", () => {
     ];
 
     const { container } = render(<LeaderboardTable data={mockData} />);
-    
-    // Find all elements with recent form percentages
-    const highFormElement = screen.getAllByText("75%")[1]; // Second occurrence is Recent Form
-    const lowFormElement = screen.getAllByText("25%")[1]; // Second occurrence is Recent Form
-    
-    expect(highFormElement).toHaveClass("text-emerald-400");
-    expect(lowFormElement).toHaveClass("text-slate-400");
+
+    // Correct column renders "correct/total" ratio — verify via the table rows
+    const rows = container.querySelectorAll("tbody tr");
+    // First row: 3/4, second row: 1/4
+    expect(rows[0]?.textContent).toContain("3");
+    expect(rows[0]?.textContent).toContain("/4");
+    expect(rows[1]?.textContent).toContain("1");
+    expect(rows[1]?.textContent).toContain("/4");
   });
 });
