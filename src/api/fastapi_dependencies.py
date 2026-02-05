@@ -86,6 +86,7 @@ def get_db() -> sqlite3.Connection:
         Database connection
     """
     conn = get_db_connection()
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn
     finally:
@@ -95,6 +96,7 @@ def get_db() -> sqlite3.Connection:
 async def get_db_async() -> sqlite3.Connection:
     """Async version of get_db for FastAPI async endpoints"""
     conn = get_db_connection()
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn
     finally:
