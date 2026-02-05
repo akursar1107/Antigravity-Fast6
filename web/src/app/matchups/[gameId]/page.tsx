@@ -2,17 +2,20 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import MatchupCard from "@/components/matchups/MatchupCard";
 import ErrorBanner from "@/components/ui/ErrorBanner";
 import Skeleton from "@/components/ui/Skeleton";
-import { getMatchupAnalysis } from "@/lib/api";
+import { getMatchupAnalysisServer } from "@/lib/api";
+import { getServerToken } from "@/lib/server-token";
 import { Suspense } from "react";
 
+const TEST_USERNAME = process.env.NEXT_PUBLIC_TEST_USERNAME ?? "Phil";
+
 interface PageProps {
-  params: {
+  params: Promise<{
     gameId: string;
-  };
+  }>;
 }
 
-async function MatchupData({ gameId }: { gameId: string }) {
-  const response = await getMatchupAnalysis(gameId);
+async function MatchupData({ gameId, token }: { gameId: string; token: string }) {
+  const response = await getMatchupAnalysisServer(gameId, token);
 
   if (!response.ok) {
     return (
@@ -38,13 +41,24 @@ function MatchupSkeleton() {
   );
 }
 
-export default function MatchupPage({ params }: PageProps) {
+export default async function MatchupPage(props: PageProps) {
+  const params = await props.params;
   const gameId = params.gameId;
 
   if (!gameId || gameId.trim() === "") {
     return (
       <DashboardLayout>
         <ErrorBanner message="Invalid game ID. Please provide a valid game ID." />
+      </DashboardLayout>
+    );
+  }
+
+  // Get server-side token
+  const token = await getServerToken(TEST_USERNAME);
+  if (!token) {
+    return (
+      <DashboardLayout>
+        <ErrorBanner message="Failed to authenticate with backend" />
       </DashboardLayout>
     );
   }
@@ -62,7 +76,7 @@ export default function MatchupPage({ params }: PageProps) {
         </div>
 
         <Suspense fallback={<MatchupSkeleton />}>
-          <MatchupData gameId={gameId} />
+          <MatchupData gameId={gameId} token={token} />
         </Suspense>
       </div>
     </DashboardLayout>

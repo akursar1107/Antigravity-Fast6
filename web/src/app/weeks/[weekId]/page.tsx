@@ -2,19 +2,21 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import WeekPicksTable from "@/components/weeks/WeekPicksTable";
 import ErrorBanner from "@/components/ui/ErrorBanner";
 import Skeleton from "@/components/ui/Skeleton";
-import { getWeekPicks, getWeekLeaderboard } from "@/lib/api";
+import { getWeekPicksServer, getWeekLeaderboardServer } from "@/lib/api";
+import { getServerToken } from "@/lib/server-token";
 import { Suspense } from "react";
 
 const CURRENT_SEASON = parseInt(process.env.NEXT_PUBLIC_CURRENT_SEASON ?? '2025', 10);
+const TEST_USERNAME = process.env.NEXT_PUBLIC_TEST_USERNAME ?? "Phil";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     weekId: string;
-  };
+  }>;
 }
 
-async function WeekPicksData({ weekId }: { weekId: number }) {
-  const response = await getWeekPicks(weekId);
+async function WeekPicksData({ weekId, token }: { weekId: number; token: string }) {
+  const response = await getWeekPicksServer(weekId, token);
 
   if (!response.ok) {
     return (
@@ -27,8 +29,8 @@ async function WeekPicksData({ weekId }: { weekId: number }) {
   return <WeekPicksTable picks={response.data.picks} />;
 }
 
-async function WeekLeaderboardData({ weekId }: { weekId: number }) {
-  const response = await getWeekLeaderboard(weekId);
+async function WeekLeaderboardData({ weekId, token }: { weekId: number; token: string }) {
+  const response = await getWeekLeaderboardServer(weekId, token);
 
   if (!response.ok) {
     return null;
@@ -136,13 +138,24 @@ function WeekPicksSkeleton() {
   );
 }
 
-export default function WeekPage({ params }: PageProps) {
+export default async function WeekPage(props: PageProps) {
+  const params = await props.params;
   const weekId = parseInt(params.weekId, 10);
 
   if (Number.isNaN(weekId)) {
     return (
       <DashboardLayout>
         <ErrorBanner message="Invalid week ID. Please provide a valid numeric week ID." />
+      </DashboardLayout>
+    );
+  }
+
+  // Get server-side token
+  const token = await getServerToken(TEST_USERNAME);
+  if (!token) {
+    return (
+      <DashboardLayout>
+        <ErrorBanner message="Failed to authenticate with backend" />
       </DashboardLayout>
     );
   }
@@ -166,7 +179,7 @@ export default function WeekPage({ params }: PageProps) {
               All Picks
             </h2>
             <Suspense fallback={<WeekPicksSkeleton />}>
-              <WeekPicksData weekId={weekId} />
+              <WeekPicksData weekId={weekId} token={token} />
             </Suspense>
           </div>
 
@@ -176,7 +189,7 @@ export default function WeekPage({ params }: PageProps) {
               Week Leaderboard
             </h2>
             <Suspense fallback={<WeekPicksSkeleton />}>
-              <WeekLeaderboardData weekId={weekId} />
+              <WeekLeaderboardData weekId={weekId} token={token} />
             </Suspense>
           </div>
         </div>

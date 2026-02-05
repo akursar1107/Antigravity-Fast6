@@ -1,17 +1,28 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ErrorBanner from "@/components/ui/ErrorBanner";
-import Skeleton from "@/components/ui/Skeleton";
 import Badge from "@/components/ui/Badge";
 import RoiChart from "@/components/analytics/RoiChart";
 import PlayerStatsTable from "@/components/analytics/PlayerStatsTable";
-import { getRoiTrends, getPlayerStats } from "@/lib/api";
+import { getRoiTrendsServer, getPlayerStatsServer } from "@/lib/api";
+import { getServerToken } from "@/lib/server-token";
 
 export default async function AnalyticsPage() {
   const season = parseInt(process.env.NEXT_PUBLIC_CURRENT_SEASON ?? "2025", 10);
+  const testUsername = process.env.NEXT_PUBLIC_TEST_USERNAME ?? "Phil";
+
+  // Get server-side token
+  const token = await getServerToken(testUsername);
+  if (!token) {
+    return (
+      <DashboardLayout>
+        <ErrorBanner message="Failed to authenticate with backend" />
+      </DashboardLayout>
+    );
+  }
 
   const [roiTrendsResponse, playerStatsResponse] = await Promise.all([
-    getRoiTrends(season),
-    getPlayerStats(season),
+    getRoiTrendsServer(season, token),
+    getPlayerStatsServer(season, token),
   ]);
 
   return (

@@ -2,13 +2,22 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import LeaderboardTable from "@/components/leaderboard/LeaderboardTable";
 import ErrorBanner from "@/components/ui/ErrorBanner";
 import Skeleton from "@/components/ui/Skeleton";
-import { getLeaderboard } from "@/lib/api";
+import { getLeaderboardServer } from "@/lib/api";
+import { getServerToken } from "@/lib/server-token";
 import { Suspense } from "react";
 
 const CURRENT_SEASON = parseInt(process.env.NEXT_PUBLIC_CURRENT_SEASON ?? '2025', 10);
 
 async function LeaderboardData() {
-  const response = await getLeaderboard(CURRENT_SEASON);
+  const testUsername = process.env.NEXT_PUBLIC_TEST_USERNAME ?? "Phil";
+  
+  // Get server-side token (cached per username)
+  const token = await getServerToken(testUsername);
+  if (!token) {
+    return <ErrorBanner message="Failed to authenticate with backend" />;
+  }
+
+  const response = await getLeaderboardServer(CURRENT_SEASON, token);
 
   if (!response.ok) {
     return (
