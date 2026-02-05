@@ -1,8 +1,7 @@
 import unittest
 import pandas as pd
 from utils.first_drive_success import get_first_drive_success_rates
-from utils.first_drive_analytics import get_first_drive_scoring_rates
-from utils.kickoff_analytics import get_team_kickoff_tendencies
+
 
 class TestAnalyticsFunctions(unittest.TestCase):
     def setUp(self):
@@ -25,15 +24,6 @@ class TestAnalyticsFunctions(unittest.TestCase):
         self.assertTrue((df['rush_success_rate'] <= 1).all())
         self.assertTrue((df['pass_success_rate'] <= 1).all())
 
-    def test_first_drive_scoring_rates(self):
-        df = get_first_drive_scoring_rates(self.pbp)
-        self.assertIn('first_drive_score_rate', df.columns)
-        self.assertTrue((df['first_drive_score_rate'] <= 1).all())
-
-    def test_kickoff_tendencies(self):
-        # This function expects DB data, so just check it runs and returns a DataFrame
-        df = get_team_kickoff_tendencies()
-        self.assertIsInstance(df, pd.DataFrame)
 
 if __name__ == '__main__':
     unittest.main()

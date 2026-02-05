@@ -13,7 +13,6 @@ APIs:
 Public endpoints don't require authentication.
 """
 
-import streamlit as st
 import requests
 import logging
 import time
@@ -23,6 +22,7 @@ from dataclasses import dataclass
 import json
 
 from src import config
+from src.utils.caching import cached, CacheTTL
 from src.utils.error_handling import log_exception, APIError
 from src.utils.observability import log_event
 from src.utils.resilience import CircuitBreakerOpen, get_circuit_breaker, request_with_retry
@@ -447,7 +447,7 @@ def extract_teams_from_question(question: str) -> Tuple[Optional[str], Optional[
     return None, None
 
 
-@st.cache_data(ttl=3600)
+@cached(ttl=CacheTTL.POLYMARKET, cache_name="polymarket")
 def get_polymarket_first_td_odds(
     week_start_date: str,
     week_end_date: str
@@ -525,7 +525,7 @@ def get_polymarket_first_td_odds(
     return odds_data
 
 
-@st.cache_data(ttl=3600)
+@cached(ttl=CacheTTL.POLYMARKET, cache_name="polymarket")
 def get_polymarket_historical_odds(
     condition_id: str,
     token_id: str,

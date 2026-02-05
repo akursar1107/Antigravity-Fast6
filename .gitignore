@@ -1,9 +1,16 @@
-# Ignore Python caches and virtual envs
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
 .pytest_cache/
-.venv/
 
-# Local data files (SQLite DBs and backups)
+# Environments
+.env
+.venv/
+env/
+venv/
+
+# Data (SQLite DBs and backups)
 data/**/*.db
 data/**/*.db-wal
 data/**/*.db-shm
@@ -11,32 +18,18 @@ data/**/*.sqlite
 data/**/*.sqlite3
 data/**/*.bak
 
-# Root-level CSVs used for local imports
-/*.csv
-
-# Archive and resource folders
+# Archive & resources
 archive/
 resources/
 
-# OS files
-.DS_Store
-Thumbs.db# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Build artifacts
+.next/
+web/node_modules/
+web/.next/
+*.bak
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Streamlit
-.streamlit/secrets.toml
-#.streamlit/config.toml (usually safe to commit config, but secrets must be ignored)
+# Root CSVs
+/*.csv
 
 # IDEs
 .vscode/
@@ -44,11 +37,13 @@ venv.bak/
 
 # OS
 .DS_Store
+Thumbs.db
 
-# SSH Keys (should never be committed)
-id_rsa
-id_rsa.pub
+# Secrets & keys
+.streamlit/secrets.toml
 *.pem
 *.key
-.worktrees/
 id_rsa*
+
+# Git worktrees
+.worktrees/

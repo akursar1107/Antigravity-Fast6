@@ -9,7 +9,7 @@ from src.core.picks.errors import (
     GameAlreadyStartedError,
     DuplicatePickError,
 )
-from src.lib.observability import track_operation, log_event
+from src.utils.observability import track_operation, log_event
 
 
 def create_pick(

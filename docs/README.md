@@ -1,53 +1,28 @@
 # Fast6 Documentation
 
-Welcome to the Fast6 documentation! All guides and technical documentation are organized here.
+Documentation for the Fast6 NFL First TD Prediction Tracker.
+
+**Stack:** Next.js (frontend) · FastAPI (backend) · SQLite (database)
 
 ---
 
-## 📚 User Guides
+## Guides
 
-Guides for users and administrators:
-
-- **[Quick Start - UI](guides/QUICK_START_UI.md)** - ✨ NEW! User-friendly guide to the new UI
-- **[Analytics Guide](guides/ANALYTICS_GUIDE.md)** - How to use Phase 5 analytics features (Player Performance, ROI Trends, Power Rankings, Defense Matchups)
-- **[Configuration Guide](guides/CONFIG_GUIDE.md)** - Complete configuration reference for Fast6
-- **[Theming Guide](guides/THEMING_GUIDE.md)** - Customize the UI theme and appearance
+- **[Analytics Guide](guides/ANALYTICS_GUIDE.md)** — Player performance, ROI trends, power rankings, defense matchups
+- **[Repository Pattern](guides/REPOSITORY_PATTERN_GUIDE.md)** — Database access patterns
+- **[Integration Tests](guides/INTEGRATION_TESTS.md)** — End-to-end testing guide
 
 ---
 
-## 📋 Project Information
+## Design
 
-- **[Changelog](CHANGELOG.md)** - ✨ NEW! UI/UX updates and feature changes
-- **[UI Design Principles](UI_DESIGN_PRINCIPLES.md)** - Design system and guidelines
-
----
-
-## 🚀 Deployment
-
-Production deployment instructions:
-
-- **[Deployment Guide](deployment/DEPLOYMENT.md)** - Deploy Fast6 to production servers
-- **[Docker Setup](deployment/DOCKER.md)** - Run Fast6 with Docker containers
+- **[Next.js Frontend Design](plans/2026-02-03-nextjs-frontend-design.md)** — UI architecture and component design
+- **[Implementation Plan](plans/2026-02-03-nextjs-frontend-implementation-plan.md)** — Next.js build plan
+- **[Deployment](plans/NEXTJS_DEPLOYMENT.md)** — Production deployment guide
 
 ---
 
-## 🔧 Technical Documentation
-
-For developers and system administrators:
-
-- **[Cache Strategy](technical/CACHE_STRATEGY.md)** - Caching implementation and management
-
----
-
-## 📋 Planning
-
-Future development and roadmap:
-
-- **[Project Roadmap](planning/ROADMAP.md)** - Planned features and future phases
-
----
-
-## 🗂️ Archive
+## Archive
 
 Historical documentation is preserved in the [`../archive/`](../archive/) folder:
 

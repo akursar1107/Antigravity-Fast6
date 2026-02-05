@@ -16,13 +16,6 @@ except ImportError:
     HAS_NFLREADPY = False
     logger.warning("nflreadpy not available, roster sync disabled")
 
-# Import streamlit for caching
-try:
-    import streamlit as st
-    HAS_STREAMLIT = True
-except ImportError:
-    HAS_STREAMLIT = False
-
 
 def sync_rosters(season: int) -> Dict[str, int]:
     """
@@ -133,8 +126,3 @@ def get_player_position(player_name: str, team: str, season: int) -> str:
     except Exception as e:
         logger.error(f"Error looking up position for {player_name}: {e}")
         return 'Unknown'
-
-
-# Streamlit cached version if available
-if HAS_STREAMLIT:
-    sync_rosters = st.cache_data(ttl=86400)(sync_rosters)

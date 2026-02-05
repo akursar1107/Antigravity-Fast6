@@ -96,17 +96,6 @@ except ImportError:
     # Will be available after database package is fully initialized
     pass
 
-# Common utilities
-from src.utils.common import (
-    normalize_week_record,
-    ensure_session_state,
-    format_odds,
-    format_currency,
-    format_implied_probability,
-    format_pick_for_display,
-    format_pick_for_display_compact
-)
-
 # Type utilities
 from src.utils.type_utils import (
     safe_int,
@@ -177,14 +166,6 @@ __all__ = [
     'get_user_stats',
     'get_weekly_summary',
     'get_user_picks_with_results',
-    # Common utilities
-    'normalize_week_record',
-    'ensure_session_state',
-    'format_odds',
-    'format_currency',
-    'format_implied_probability',
-    'format_pick_for_display',
-    'format_pick_for_display_compact',
     # Type utilities
     'safe_int',
     'safe_str',

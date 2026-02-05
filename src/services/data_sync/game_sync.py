@@ -17,13 +17,6 @@ except ImportError:
     HAS_NFLREADPY = False
     logger.warning("nflreadpy not available, game sync disabled")
 
-# Import streamlit for caching
-try:
-    import streamlit as st
-    HAS_STREAMLIT = True
-except ImportError:
-    HAS_STREAMLIT = False
-
 
 def sync_games_for_season(season: int) -> Dict[str, int]:
     """
@@ -147,8 +140,3 @@ def get_game_id(season: int, week: int, home_team: str, away_team: str) -> Optio
     except Exception as e:
         logger.error(f"Error looking up game: {e}")
         return None
-
-
-# Streamlit cached version if available
-if HAS_STREAMLIT:
-    sync_games_for_season = st.cache_data(ttl=3600)(sync_games_for_season)

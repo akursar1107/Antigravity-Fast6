@@ -5,9 +5,9 @@ Handles loading and processing play-by-play data from nflreadpy.
 
 import nflreadpy as nfl
 import pandas as pd
-import streamlit as st
 import logging
 from typing import Optional
+from src.utils.caching import cached, CacheTTL
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +36,11 @@ def _classify_game_type(start_time_dt: pd.Timestamp) -> str:
     return "Standalone"
 
 
-@st.cache_data(ttl=300)
+@cached(ttl=300)
 def load_data(season: int) -> pd.DataFrame:
     """
     Loads NFL play-by-play data for a specific season.
-    Uses streamlit caching to avoid reloading on every interaction.
+    Uses TTL-based caching to avoid reloading on every request.
     Refreshes every 5 minutes for database sync compatibility.
     """
     try:
@@ -79,7 +79,7 @@ def process_game_type(df: pd.DataFrame) -> pd.DataFrame:
         return df
 
 
-@st.cache_data(ttl=300)
+@cached(ttl=300)
 def get_game_schedule(df: pd.DataFrame, season: int) -> pd.DataFrame:
     """
     Load season schedule from nflreadpy (more reliable than PBP-derived),
@@ -100,7 +100,7 @@ def get_game_schedule(df: pd.DataFrame, season: int) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+@cached(ttl=300)
 def get_touchdowns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Extract all touchdown plays from play-by-play data.
@@ -136,7 +136,7 @@ def get_touchdowns(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+@cached(ttl=300)
 def get_first_tds(df: pd.DataFrame) -> pd.DataFrame:
     """
     Extract first touchdown per game from play-by-play data.
@@ -159,7 +159,7 @@ def get_first_tds(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+@cached(ttl=300)
 def load_rosters(season: int) -> pd.DataFrame:
     """
     Load NFL player rosters for a season.

@@ -33,7 +33,6 @@ from config import (
     ODDS_API_SPORT,
     ODDS_API_MARKET,
 )
-from utils.theming import generate_theme_css
 
 
 class TestConfigurationLoading(unittest.TestCase):
@@ -332,123 +331,6 @@ class TestThemeConfiguration(unittest.TestCase):
         self.assertTrue(
             any(unit in THEME['border_radius'] for unit in ['px', 'rem', 'em', '%']),
             "Border radius should have CSS units"
-        )
-
-
-class TestThemeCSSGeneration(unittest.TestCase):
-    """Test dynamic CSS generation from theme."""
-
-    def test_css_generation_returns_string(self):
-        """CSS generation should return a string."""
-        css = generate_theme_css(THEME)
-        self.assertIsInstance(css, str)
-
-    def test_css_generation_not_empty(self):
-        """Generated CSS should not be empty."""
-        css = generate_theme_css(THEME)
-        self.assertGreater(len(css), 0)
-
-    def test_css_contains_primary_color(self):
-        """Generated CSS should include primary color."""
-        css = generate_theme_css(THEME)
-        primary = THEME['primary_color']
-        self.assertIn(
-            primary,
-            css,
-            f"CSS should contain primary color {primary}"
-        )
-
-    def test_css_contains_secondary_color(self):
-        """Generated CSS should include secondary color."""
-        css = generate_theme_css(THEME)
-        secondary = THEME['secondary_color']
-        self.assertIn(
-            secondary,
-            css,
-            f"CSS should contain secondary color {secondary}"
-        )
-
-    def test_css_contains_font_family(self):
-        """Generated CSS should include font family."""
-        css = generate_theme_css(THEME)
-        font_family = THEME['font_family']
-        self.assertIn(
-            font_family,
-            css,
-            f"CSS should contain font family {font_family}"
-        )
-
-    def test_css_is_valid_css(self):
-        """Generated CSS should have valid CSS structure."""
-        css = generate_theme_css(THEME)
-        
-        # Should contain opening and closing braces
-        self.assertIn('{', css)
-        self.assertIn('}', css)
-        
-        # Should contain valid CSS properties (colon and semicolon)
-        self.assertIn(':', css)
-        self.assertIn(';', css)
-
-    def test_css_different_themes(self):
-        """Different themes should generate different CSS."""
-        theme1 = {
-            'primary_color': '#667eea',
-            'secondary_color': '#764ba2',
-            'accent_color': '#f093fb',
-            'success_color': '#48bb78',
-            'error_color': '#f56565',
-            'warning_color': '#ed8936',
-            'info_color': '#4299e1',
-            'font_family': 'Inter, sans-serif',
-            'border_radius': '20px'
-        }
-        
-        theme2 = {
-            'primary_color': '#FF006E',
-            'secondary_color': '#8338EC',
-            'accent_color': '#FFBE0B',
-            'success_color': '#00F5FF',
-            'error_color': '#FF006E',
-            'warning_color': '#FFBE0B',
-            'info_color': '#00F5FF',
-            'font_family': 'Georgia, serif',
-            'border_radius': '10px'
-        }
-        
-        css1 = generate_theme_css(theme1)
-        css2 = generate_theme_css(theme2)
-        
-        # CSS should be different for different themes
-        self.assertNotEqual(
-            css1,
-            css2,
-            "Different themes should generate different CSS"
-        )
-        
-        # Each CSS should contain its theme colors
-        self.assertIn(theme1['primary_color'], css1)
-        self.assertIn(theme2['primary_color'], css2)
-
-    def test_css_gradient_generation(self):
-        """Generated CSS should include gradients with both colors."""
-        css = generate_theme_css(THEME)
-        
-        # Should contain gradient syntax with primary and secondary colors
-        self.assertIn(
-            'linear-gradient',
-            css,
-            "CSS should include linear gradients"
-        )
-        self.assertIn(
-            THEME['primary_color'],
-            css,
-            "Gradient should use primary color"
-        )
-        self.assertIn(
-            THEME['secondary_color'],
-            css,
-            "Gradient should use secondary color"
         )
 
 

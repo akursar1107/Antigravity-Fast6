@@ -17,12 +17,6 @@ from src.utils.observability import track_operation, log_event
 from src.database import get_db_connection, get_db_context, add_results_batch
 from src import config
 
-try:
-    import streamlit as st
-    HAS_STREAMLIT = True
-except ImportError:
-    HAS_STREAMLIT = False
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,7 +43,7 @@ class TDLookupCache:
 def _build_td_lookup_cache(season: int) -> TDLookupCache:
     """
     Build TD lookup cache for fast game-specific TD lookups.
-    This function is called internally and should be decorated with @st.cache_data in Streamlit context.
+    This function is called internally for building TD lookup caches.
     
     Args:
         season: NFL season year

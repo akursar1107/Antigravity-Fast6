@@ -2,7 +2,7 @@
 Configuration and Constants
 
 Loads settings from config.json with support for environment variable overrides.
-For sensitive values like API keys, st.secrets is checked first, then environment variables.
+For sensitive values like API keys, environment variables are used.
 """
 
 import json
@@ -156,23 +156,8 @@ TEAM_ABBR_MAP.update(_short_names)
 _api_root = _CONFIG.get("api", {})
 _api_config = _api_root.get("odds_api", {})
 
-# For API key: check st.secrets first, then environment variables, then fallback
-ODDS_API_KEY = ""
-try:
-    import streamlit as st
-    try:
-        # Try to access secrets - will fail if no secrets file exists
-        ODDS_API_KEY = st.secrets.get("odds_api_key", "") if st.secrets else ""
-    except Exception:
-        # Secrets file doesn't exist or can't be parsed
-        pass
-except (ImportError, AttributeError, RuntimeError):
-    # st module not available (e.g., in tests or non-streamlit context)
-    pass
-
-# Fallback to environment variable if not found in secrets
-if not ODDS_API_KEY:
-    ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
+# For API key: check environment variables
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
 
 # Only warn if odds features are explicitly enabled and key is missing
 # This allows graceful degradation when odds API is not configured
@@ -214,17 +199,7 @@ KALSHI_CACHE_TTL = _kalshi_config.get("cache_ttl", 3600)
 KALSHI_EVENT_CATEGORIES = _kalshi_config.get("event_categories", ["NFL", "football"])
 
 # Kalshi API key (optional - public endpoints work without auth)
-KALSHI_API_KEY = ""
-try:
-    import streamlit as st
-    try:
-        KALSHI_API_KEY = st.secrets.get("KALSHI_API_KEY", "") if st.secrets else ""
-    except Exception:
-        pass
-except (ImportError, AttributeError, RuntimeError):
-    pass
-if not KALSHI_API_KEY:
-    KALSHI_API_KEY = os.getenv("KALSHI_API_KEY", "")
+KALSHI_API_KEY = os.getenv("KALSHI_API_KEY", "")
 
 # ===== PREDICTION MARKETS CONFIGURATION =====
 _pm_config = _CONFIG.get("api", {}).get("prediction_markets", {})

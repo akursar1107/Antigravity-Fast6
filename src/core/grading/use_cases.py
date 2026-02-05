@@ -3,7 +3,7 @@
 from src.core.grading.entities import Result, GradingResult
 from src.core.grading.ports import ResultRepository, PlayByPlayRepository
 from src.core.grading.errors import NoPlayByPlayDataError, NameMatchError
-from src.lib.observability import track_operation, log_event
+from src.utils.observability import track_operation, log_event
 from typing import Optional
 
 

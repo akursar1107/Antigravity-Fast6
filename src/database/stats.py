@@ -8,12 +8,6 @@ import logging
 from typing import Optional, List, Dict
 from src import config
 
-try:
-    import streamlit as st
-    HAS_STREAMLIT = True
-except ImportError:
-    HAS_STREAMLIT = False
-
 from .connection import get_db_connection, get_db_context
 from src.utils.type_utils import safe_int as _safe_int
 from src.utils.caching import cached, CacheTTL, invalidate_on_result_change

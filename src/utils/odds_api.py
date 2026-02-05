@@ -3,13 +3,13 @@ Odds API Integration
 Fetch First TD odds from The Odds API service
 """
 
-import streamlit as st
 import requests
 import logging
 import os
 import time
 from typing import Dict, Tuple, Optional
 from src import config
+from src.utils.caching import cached, CacheTTL
 from src.utils.error_handling import log_exception, APIError, handle_exception
 from src.utils.observability import log_event
 from src.utils.resilience import CircuitBreakerOpen, get_circuit_breaker, request_with_retry
@@ -20,16 +20,13 @@ logger = logging.getLogger(__name__)
 
 def get_odds_api_key() -> Optional[str]:
     """
-    Safely retrieve ODDS_API_KEY from st.secrets or environment.
+    Retrieve ODDS_API_KEY from environment.
     Returns None if not found (graceful degradation).
     """
-    try:
-        return st.secrets.get("ODDS_API_KEY") or os.getenv("ODDS_API_KEY")
-    except (AttributeError, FileNotFoundError):
-        return os.getenv("ODDS_API_KEY")
+    return os.getenv("ODDS_API_KEY") or None
 
 
-@st.cache_data(ttl=3600)
+@cached(ttl=CacheTTL.ODDS_API, cache_name="odds_api")
 def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) -> Dict[Tuple[str, str], Dict[str, float]]:
     """
     Fetches First TD odds from The Odds API.
@@ -75,31 +72,31 @@ def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) ->
             log_event("api.odds.events.response", endpoint="events", status_code=r.status_code, duration_ms=events_duration)
             context = {"endpoint": "events", "status_code": r.status_code}
             log_exception(Exception(r.text), "odds_api_events_fetch", context, severity="warning")
-            st.error(f"❌ Error fetching events from Odds API. Please try again.")
+            logger.error("Error fetching events from Odds API")
             return {}
         events = r.json()
         log_event("api.odds.events.response", endpoint="events", status_code=r.status_code, duration_ms=events_duration, event_count=len(events))
     except CircuitBreakerOpen:
         log_event("api.odds.events.error", endpoint="events", error="circuit_open")
-        st.error("⚠️ Odds API temporarily unavailable. Please try again shortly.")
+        logger.error("Odds API temporarily unavailable (circuit breaker open)")
         return {}
     except requests.exceptions.Timeout as e:
         events_duration = int((time.perf_counter() - events_start) * 1000)
         log_event("api.odds.events.error", endpoint="events", error=type(e).__name__, duration_ms=events_duration)
         log_exception(e, "odds_api_events_timeout", {"endpoint": "events"}, severity="warning")
-        st.error("⏱️ Odds API request timed out. Please try again.")
+        logger.error("Odds API request timed out")
         return {}
     except requests.exceptions.RequestException as e:
         events_duration = int((time.perf_counter() - events_start) * 1000)
         log_event("api.odds.events.error", endpoint="events", error=type(e).__name__, duration_ms=events_duration)
         log_exception(e, "odds_api_events_request_error", {"endpoint": "events"}, severity="warning")
-        st.error("🔗 Network error connecting to Odds API. Please check your connection.")
+        logger.error("Network error connecting to Odds API")
         return {}
     except (ValueError, KeyError) as e:
         events_duration = int((time.perf_counter() - events_start) * 1000)
         log_event("api.odds.events.error", endpoint="events", error=type(e).__name__, duration_ms=events_duration)
         log_exception(e, "odds_api_events_parse_error", {"endpoint": "events"}, severity="warning")
-        st.error("📋 Error parsing Odds API response. Please try again.")
+        logger.error("Error parsing Odds API response")
         return {}
 
     # Filter events for the relevant week

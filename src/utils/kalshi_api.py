@@ -8,7 +8,6 @@ API Documentation: https://docs.kalshi.com
 Public endpoints are available without authentication.
 """
 
-import streamlit as st
 import requests
 import logging
 import time
@@ -17,6 +16,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 
 from src import config
+from src.utils.caching import cached, CacheTTL
 from src.utils.error_handling import log_exception, APIError
 from src.utils.observability import log_event
 from src.utils.resilience import CircuitBreakerOpen, get_circuit_breaker, request_with_retry
@@ -440,7 +440,7 @@ def parse_event_subtitle(subtitle: str) -> Tuple[Optional[str], Optional[str]]:
     return None, None
 
 
-@st.cache_data(ttl=3600)
+@cached(ttl=CacheTTL.KALSHI, cache_name="kalshi")
 def get_kalshi_first_td_odds(
     week_start_date: str,
     week_end_date: str
@@ -539,7 +539,7 @@ def get_kalshi_first_td_odds(
     return odds_data
 
 
-@st.cache_data(ttl=3600)
+@cached(ttl=CacheTTL.KALSHI, cache_name="kalshi")
 def get_kalshi_historical_odds(
     ticker: str,
     lookback_days: int = 7

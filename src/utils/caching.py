@@ -2,7 +2,7 @@
 Unified Caching Layer
 
 Provides consistent caching patterns across the application with clear TTL configuration.
-Supports both Streamlit caching (production) and manual caching (testing/offline).
+Uses manual in-memory TTL-based caching.
 
 Features:
 - Centralized TTL configuration
@@ -21,12 +21,6 @@ from datetime import datetime, timedelta
 from src import config
 
 logger = logging.getLogger(__name__)
-
-try:
-    import streamlit as st
-    HAS_STREAMLIT = True
-except ImportError:
-    HAS_STREAMLIT = False
 
 T = TypeVar('T')
 
@@ -88,15 +82,10 @@ def get_cache_stats(cache_name: str) -> CacheStats:
 
 def clear_all_caches() -> None:
     """Clear all caches (for testing/refresh)."""
-    if HAS_STREAMLIT:
-        try:
-            st.cache_data.clear()
-            logger.info("Cleared all Streamlit data caches")
-            for stats in _cache_stats.values():
-                stats.clears += 1
-                stats.last_cleared = datetime.now()
-        except Exception as e:
-            logger.warning(f"Could not clear Streamlit cache: {e}")
+    for stats in _cache_stats.values():
+        stats.clears += 1
+        stats.last_cleared = datetime.now()
+    logger.info("Cleared all caches")
 
 
 def invalidate_cache(cache_name: str) -> None:
@@ -114,16 +103,7 @@ def invalidate_on_pick_change() -> None:
     invalidate_cache("leaderboard")
     invalidate_cache("user_stats")
     invalidate_cache("weekly_summary")
-    if HAS_STREAMLIT:
-        try:
-            # Clear specific cached functions
-            from src.database.stats import get_leaderboard, get_user_stats, get_weekly_summary
-            get_leaderboard.clear()
-            get_user_stats.clear()
-            get_weekly_summary.clear()
-            logger.debug("Invalidated pick-related caches")
-        except Exception as e:
-            logger.debug(f"Could not clear specific caches: {e}")
+    logger.debug("Invalidated pick-related caches")
 
 
 def invalidate_on_result_change() -> None:
@@ -131,15 +111,7 @@ def invalidate_on_result_change() -> None:
     invalidate_cache("leaderboard")
     invalidate_cache("user_stats")
     invalidate_cache("weekly_summary")
-    if HAS_STREAMLIT:
-        try:
-            from src.database.stats import get_leaderboard, get_user_stats, get_weekly_summary
-            get_leaderboard.clear()
-            get_user_stats.clear()
-            get_weekly_summary.clear()
-            logger.debug("Invalidated result-related caches")
-        except Exception as e:
-            logger.debug(f"Could not clear specific caches: {e}")
+    logger.debug("Invalidated result-related caches")
 
 
 def invalidate_on_grading_complete() -> None:
@@ -180,42 +152,31 @@ def cached(ttl: int, cache_name: Optional[str] = None):
         cache_key = cache_name or func.__name__
         stats = get_cache_stats(cache_key)
         
-        if HAS_STREAMLIT:
-            # Use Streamlit's caching in production
-            try:
-                cached_func = st.cache_data(ttl=ttl, show_spinner=False)(func)
-                
-                @wraps(func)
-                def wrapper(*args, **kwargs) -> T:
-                    stats.hits += 1
-                    return cached_func(*args, **kwargs)
-                
-                return wrapper
-            except RuntimeError:
-                # Not in Streamlit context, fall back to manual caching
-                pass
-        
-        # Manual caching for non-Streamlit contexts
-        _manual_cache: Dict[Tuple, Tuple[datetime, Any]] = {}
+        # In-memory TTL-based cache
+        _manual_cache: Dict[str, Tuple[datetime, Any]] = {}
         
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
-            # Create cache key from args/kwargs
-            cache_key_tuple = (func.__name__, args, tuple(sorted(kwargs.items())))
+            # Create cache key from args/kwargs (handle unhashable types)
+            try:
+                cache_key_str = str((func.__name__, args, tuple(sorted(kwargs.items()))))
+            except Exception:
+                # If we can't create a key, skip caching
+                return func(*args, **kwargs)
             
-            if cache_key_tuple in _manual_cache:
-                cached_time, cached_result = _manual_cache[cache_key_tuple]
+            if cache_key_str in _manual_cache:
+                cached_time, cached_result = _manual_cache[cache_key_str]
                 if (datetime.now() - cached_time).total_seconds() < ttl:
                     stats.hits += 1
                     return cached_result
                 else:
                     # Expired
-                    del _manual_cache[cache_key_tuple]
+                    del _manual_cache[cache_key_str]
             
             # Cache miss
             stats.misses += 1
             result = func(*args, **kwargs)
-            _manual_cache[cache_key_tuple] = (datetime.now(), result)
+            _manual_cache[cache_key_str] = (datetime.now(), result)
             
             return result
         
@@ -224,53 +185,8 @@ def cached(ttl: int, cache_name: Optional[str] = None):
     return decorator
 
 
-def cache_if_streamlit(func: Callable[..., T], ttl: int = 3600) -> Callable[..., T]:
-    """
-    Decorator that applies caching if Streamlit is available.
-    Falls back to original function if not in Streamlit context.
-    
-    Args:
-        func: Function to potentially cache
-        ttl: Time to live in seconds
-        
-    Example:
-        @cache_if_streamlit
-        def expensive_operation():
-            return compute_something()
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs) -> T:
-        if HAS_STREAMLIT:
-            try:
-                cached_func = st.cache_data(ttl=ttl, show_spinner=False)(func)
-                return cached_func(*args, **kwargs)
-            except RuntimeError:
-                # Not in Streamlit context
-                return func(*args, **kwargs)
-        else:
-            return func(*args, **kwargs)
-    
-    return wrapper
-
-
-# ============= LEGACY COMPATIBILITY =============
-
-def _cache_if_streamlit(func):
-    """
-    Legacy decorator for backward compatibility.
-    Deprecated - use @cached() or @cache_if_streamlit instead.
-    """
-    logger.warning(f"Using deprecated _cache_if_streamlit for {func.__name__}. Use @cached() instead.")
-    return cache_if_streamlit(func, ttl=300)
-
-
 def clear_leaderboard_cache() -> None:
-    """
-    Clear only the leaderboard-related caches when results are updated.
-    
-    Deprecated - use invalidate_on_result_change() instead.
-    This function is kept for backward compatibility.
-    """
+    """Clear leaderboard caches. Alias for invalidate_on_result_change()."""
     invalidate_on_result_change()
 
 
