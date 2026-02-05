@@ -120,22 +120,11 @@ async def import_picks_csv(
                     errors.append(f"Row {row_idx}: Duplicate pick for {user_name}/{player_name}")
                     continue
                 
-                # Look up position from rosters
-                position = None
-                if team:
-                    cursor.execute(
-                        "SELECT position FROM rosters WHERE player_name = ? AND team = ?",
-                        (player_name, team)
-                    )
-                    pos_row = cursor.fetchone()
-                    if pos_row:
-                        position = pos_row[0]
-                
                 # Insert pick
                 cursor.execute(
-                    """INSERT INTO picks (user_id, week_id, team, player_name, odds, position, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    (user_id, week_id, team or "Unknown", player_name, odds or None, position, datetime.now().isoformat())
+                    """INSERT INTO picks (user_id, week_id, team, player_name, odds)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (user_id, week_id, team or "Unknown", player_name, odds or None)
                 )
                 imported_count += 1
                 
@@ -159,66 +148,22 @@ async def import_picks_csv(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"CSV import failed: {str(e)}")
 
 
-@router.post("/sync-rosters")
-async def manual_sync_rosters(
-    season: int,
-    current_user: Dict[str, Any] = Depends(get_current_admin_user),
-    conn: sqlite3.Connection = Depends(get_db_async)
-) -> Dict[str, Any]:
-    """Manually trigger roster sync from NFL data"""
-    try:
-        from src.utils.nfl_data import sync_rosters
-        
-        cursor = conn.cursor()
-        sync_rosters(conn, season)
-        
-        cursor.execute("SELECT COUNT(*) FROM rosters WHERE season = ?", (season,))
-        roster_count = cursor.fetchone()[0]
-        
-        logger.info(f"Admin {current_user['name']} synced rosters for season {season}")
-        
-        return {
-            "success": True,
-            "season": season,
-            "roster_count": roster_count,
-            "message": f"Synced {roster_count} roster entries"
-        }
-        
-    except Exception as e:
-        logger.error(f"Roster sync error: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Roster sync failed: {str(e)}")
-
-
 @router.get("/logs")
 async def get_admin_logs(
     limit: int = 100,
     current_user: Dict[str, Any] = Depends(get_current_admin_user),
-    conn: sqlite3.Connection = Depends(get_db_async)
 ) -> Dict[str, Any]:
-    """Get admin activity and error logs"""
-    cursor = conn.cursor()
-    
-    # Activity summary
-    cursor.execute(
-        """SELECT 
-                COALESCE(SUM(CASE WHEN action = 'grade' THEN 1 ELSE 0 END), 0) as grades,
-                COALESCE(SUM(CASE WHEN action = 'import' THEN 1 ELSE 0 END), 0) as imports,
-                COALESCE(SUM(CASE WHEN action = 'user_create' THEN 1 ELSE 0 END), 0) as users_created,
-                COALESCE(SUM(CASE WHEN action = 'user_delete' THEN 1 ELSE 0 END), 0) as users_deleted
-           FROM admin_logs LIMIT 1"""
-    )
-    
-    summary = cursor.fetchone() or (0, 0, 0, 0)
-    
+    """Get admin activity and error logs (stub - no admin_logs table)"""
     return {
         "status": "operational",
         "activity_summary": {
-            "total_grades": summary[0],
-            "total_imports": summary[1],
-            "users_created": summary[2],
-            "users_deleted": summary[3]
+            "total_grades": 0,
+            "total_imports": 0,
+            "users_created": 0,
+            "users_deleted": 0
         },
-        "message": "Admin logs retrieved successfully"
+        "logs": [],
+        "message": "Admin logs not yet implemented"
     }
 
 
@@ -240,10 +185,18 @@ async def reset_user_picks(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
         if week_id:
-            # Reset single week
+            # Delete results first (foreign key on picks), then picks
+            cursor.execute(
+                "DELETE FROM results WHERE pick_id IN (SELECT id FROM picks WHERE user_id = ? AND week_id = ?)",
+                (user_id, week_id)
+            )
             cursor.execute("DELETE FROM picks WHERE user_id = ? AND week_id = ?", (user_id, week_id))
         else:
-            # Reset all picks for user
+            # Delete results first, then all picks for user
+            cursor.execute(
+                "DELETE FROM results WHERE pick_id IN (SELECT id FROM picks WHERE user_id = ?)",
+                (user_id,)
+            )
             cursor.execute("DELETE FROM picks WHERE user_id = ?", (user_id,))
         
         deleted_count = cursor.rowcount

@@ -28,7 +28,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",      # Next.js dev
         "http://localhost:8501",       # Streamlit (parallel development)
         "http://localhost:8000",       # FastAPI itself
-        "https://*.vercel.app",        # Vercel deployments
+        "https://fast6.vercel.app",    # Vercel deployment
     ]
     
     # NFL Configuration

@@ -1,4 +1,13 @@
 """FastAPI Application Entry Point - Main Server"""
+import sys
+from pathlib import Path
+
+# Ensure the src/ directory is on sys.path so that both `from src.X` and bare
+# `from database.X` / `from utils.X` imports resolve correctly.
+_SRC_DIR = str(Path(__file__).resolve().parent.parent)
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -15,8 +24,6 @@ from src.api.routers.fastapi_leaderboard import router as leaderboard_router
 from src.api.routers.fastapi_analytics import router as analytics_router
 from src.api.routers.fastapi_admin import router as admin_router
 from src.database.migrations import run_migrations
-from src.services.data_sync.roster_ingestion import sync_rosters
-from src.services.data_sync.game_sync import sync_games_for_season
 
 # Configure logging
 logging.basicConfig(
@@ -38,16 +45,6 @@ async def lifespan(app: FastAPI):
         logger.info("Running database migrations...")
         run_migrations()
         logger.info("Migrations completed")
-        
-        # Sync roster data
-        logger.info(f"Syncing roster data for season {settings.current_season}...")
-        sync_rosters(settings.current_season)
-        logger.info("Roster sync completed")
-        
-        # Sync game data
-        logger.info(f"Syncing games for season {settings.current_season}...")
-        sync_games_for_season(settings.current_season)
-        logger.info("Game sync completed")
         
         logger.info("FastAPI application startup completed successfully")
     except Exception as e:

@@ -30,25 +30,25 @@ async def list_picks(
     if current_user["role"] == "admin":
         if week_id:
             cursor.execute(
-                "SELECT id, user_id, week_id, team, player_name, position, odds, game_id, created_at "
+                "SELECT id, user_id, week_id, team, player_name, odds, game_id, created_at "
                 "FROM picks WHERE week_id = ? ORDER BY created_at DESC",
                 (week_id,)
             )
         else:
             cursor.execute(
-                "SELECT id, user_id, week_id, team, player_name, position, odds, game_id, created_at "
+                "SELECT id, user_id, week_id, team, player_name, odds, game_id, created_at "
                 "FROM picks ORDER BY created_at DESC"
             )
     else:
         if week_id:
             cursor.execute(
-                "SELECT id, user_id, week_id, team, player_name, position, odds, game_id, created_at "
+                "SELECT id, user_id, week_id, team, player_name, odds, game_id, created_at "
                 "FROM picks WHERE user_id = ? AND week_id = ? ORDER BY created_at DESC",
                 (current_user["id"], week_id)
             )
         else:
             cursor.execute(
-                "SELECT id, user_id, week_id, team, player_name, position, odds, game_id, created_at "
+                "SELECT id, user_id, week_id, team, player_name, odds, game_id, created_at "
                 "FROM picks WHERE user_id = ? ORDER BY created_at DESC",
                 (current_user["id"],)
             )
@@ -57,7 +57,7 @@ async def list_picks(
     return [
         PickResponse(
             id=p[0], user_id=p[1], week_id=p[2], team=p[3], player_name=p[4],
-            position=p[5], odds=p[6], game_id=p[7], created_at=p[8]
+            odds=p[5], game_id=p[6], created_at=p[7]
         )
         for p in picks
     ]
@@ -72,7 +72,7 @@ async def get_pick(
     """Get specific pick (own pick or admin can view any)"""
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, user_id, week_id, team, player_name, position, odds, game_id, created_at FROM picks WHERE id = ?",
+        "SELECT id, user_id, week_id, team, player_name, odds, game_id, created_at FROM picks WHERE id = ?",
         (pick_id,)
     )
     pick = cursor.fetchone()
@@ -86,7 +86,7 @@ async def get_pick(
     
     return PickResponse(
         id=pick[0], user_id=pick[1], week_id=pick[2], team=pick[3], player_name=pick[4],
-        position=pick[5], odds=pick[6], game_id=pick[7], created_at=pick[8]
+        odds=pick[5], game_id=pick[6], created_at=pick[7]
     )
 
 
@@ -115,20 +115,10 @@ async def create_pick(
             detail="You already have a pick for this player in this week"
         )
     
-    # Get player position if not provided (auto-assignment from rosters table)
-    position = pick.position
-    if not position:
-        cursor.execute(
-            "SELECT position FROM rosters WHERE LOWER(player_name) = LOWER(?) AND team = ?",
-            (pick.player_name, pick.team)
-        )
-        result = cursor.fetchone()
-        position = result[0] if result else None
-    
     # Insert pick
     cursor.execute(
-        "INSERT INTO picks (user_id, week_id, team, player_name, position, odds, game_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (current_user["id"], pick.week_id, pick.team, pick.player_name, position, pick.odds, pick.game_id)
+        "INSERT INTO picks (user_id, week_id, team, player_name, odds, game_id) VALUES (?, ?, ?, ?, ?, ?)",
+        (current_user["id"], pick.week_id, pick.team, pick.player_name, pick.odds, pick.game_id)
     )
     conn.commit()
     
@@ -137,7 +127,7 @@ async def create_pick(
     
     return PickResponse(
         id=pick_id, user_id=current_user["id"], week_id=pick.week_id, team=pick.team,
-        player_name=pick.player_name, position=position, odds=pick.odds, game_id=pick.game_id,
+        player_name=pick.player_name, odds=pick.odds, game_id=pick.game_id,
         created_at=__import__('datetime').datetime.utcnow()
     )
 
@@ -154,7 +144,7 @@ async def update_pick(
     
     # Get existing pick
     cursor.execute(
-        "SELECT id, user_id, week_id, team, player_name, position, odds, game_id FROM picks WHERE id = ?",
+        "SELECT id, user_id, week_id, team, player_name, odds, game_id FROM picks WHERE id = ?",
         (pick_id,)
     )
     pick = cursor.fetchone()
@@ -182,15 +172,6 @@ async def update_pick(
     if updates.player_name is not None:
         update_fields.append("player_name = ?")
         update_values.append(updates.player_name)
-        # Auto-update position when player changes
-        cursor.execute(
-            "SELECT position FROM rosters WHERE LOWER(player_name) = LOWER(?) AND team = ?",
-            (updates.player_name, updates.team or pick[3])
-        )
-        result = cursor.fetchone()
-        if result:
-            update_fields.append("position = ?")
-            update_values.append(result[0])
     
     if updates.odds is not None:
         update_fields.append("odds = ?")
@@ -200,7 +181,7 @@ async def update_pick(
         # No updates, return current pick
         return PickResponse(
             id=pick[0], user_id=pick[1], week_id=pick[2], team=pick[3],
-            player_name=pick[4], position=pick[5], odds=pick[6], game_id=pick[7],
+            player_name=pick[4], odds=pick[5], game_id=pick[6],
             created_at=__import__('datetime').datetime.utcnow()
         )
     
@@ -214,15 +195,15 @@ async def update_pick(
     
     # Return updated pick
     cursor.execute(
-        "SELECT id, user_id, week_id, team, player_name, position, odds, game_id, created_at FROM picks WHERE id = ?",
+        "SELECT id, user_id, week_id, team, player_name, odds, game_id, created_at FROM picks WHERE id = ?",
         (pick_id,)
     )
     updated = cursor.fetchone()
     
     return PickResponse(
         id=updated[0], user_id=updated[1], week_id=updated[2], team=updated[3],
-        player_name=updated[4], position=updated[5], odds=updated[6], game_id=updated[7],
-        created_at=updated[8]
+        player_name=updated[4], odds=updated[5], game_id=updated[6],
+        created_at=updated[7]
     )
 
 

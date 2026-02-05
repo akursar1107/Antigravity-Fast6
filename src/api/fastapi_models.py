@@ -87,7 +87,6 @@ class PickCreate(BaseModel):
     team: str = Field(..., min_length=1, max_length=50, description="Team abbreviation")
     player_name: str = Field(..., min_length=1, max_length=100, description="Player name")
     odds: Optional[float] = Field(None, description="Betting odds")
-    position: Optional[str] = Field(None, description="Player position (auto-assigned)")
     game_id: Optional[str] = Field(None, description="NFL game ID")
 
 
@@ -98,7 +97,6 @@ class PickResponse(BaseModel):
     week_id: int
     team: str
     player_name: str
-    position: Optional[str] = None
     odds: Optional[float] = None
     game_id: Optional[str] = None
     created_at: datetime
@@ -124,7 +122,7 @@ class ResultCreate(BaseModel):
     actual_scorer: Optional[str] = Field(None, description="Actual scorer name")
     is_correct: bool = Field(..., description="Whether pick was correct")
     any_time_td: Optional[bool] = Field(None, description="Any-time TD occurred")
-    actual_return: Optional[float] = Field(None, description="Actual return value")
+    payout: Optional[float] = Field(None, description="Payout value")
 
 
 class ResultResponse(BaseModel):
@@ -134,7 +132,7 @@ class ResultResponse(BaseModel):
     actual_scorer: Optional[str] = None
     is_correct: bool
     any_time_td: Optional[bool] = None
-    actual_return: Optional[float] = None
+    payout: Optional[float] = None
     graded_at: datetime
     
     class Config:

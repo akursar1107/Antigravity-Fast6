@@ -47,7 +47,7 @@ def generate_theme_css(theme: Dict[str, str]) -> str:
     }}
     
     .main {{
-        background: transparent !important;
+        background: linear-gradient(135deg, {primary}, {secondary}) !important;
     }}
     
     .block-container {{
