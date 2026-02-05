@@ -32,7 +32,7 @@ async def list_results(
     if pick_id:
         cursor.execute(
             """SELECT r.id, r.pick_id, r.actual_scorer, r.is_correct, r.any_time_td, 
-                      r.actual_return, r.graded_at
+                      r.payout, r.created_at
                FROM results r
                JOIN picks p ON r.pick_id = p.id
                WHERE r.pick_id = ?""",
@@ -43,32 +43,32 @@ async def list_results(
         if current_user["role"] == "admin":
             cursor.execute(
                 """SELECT r.id, r.pick_id, r.actual_scorer, r.is_correct, r.any_time_td, 
-                          r.actual_return, r.graded_at
+                          r.payout, r.created_at
                    FROM results r
                    JOIN picks p ON r.pick_id = p.id
                    WHERE p.week_id = ?
-                   ORDER BY r.graded_at DESC""",
+                   ORDER BY r.created_at DESC""",
                 (week_id,)
             )
         else:
             cursor.execute(
                 """SELECT r.id, r.pick_id, r.actual_scorer, r.is_correct, r.any_time_td, 
-                          r.actual_return, r.graded_at
+                          r.payout, r.created_at
                    FROM results r
                    JOIN picks p ON r.pick_id = p.id
                    WHERE p.week_id = ? AND p.user_id = ?
-                   ORDER BY r.graded_at DESC""",
+                   ORDER BY r.created_at DESC""",
                 (week_id, current_user["id"])
             )
     else:
         # Default: show user's own results
         cursor.execute(
             """SELECT r.id, r.pick_id, r.actual_scorer, r.is_correct, r.any_time_td, 
-                      r.actual_return, r.graded_at
+                      r.payout, r.created_at
                FROM results r
                JOIN picks p ON r.pick_id = p.id
                WHERE p.user_id = ?
-               ORDER BY r.graded_at DESC""",
+               ORDER BY r.created_at DESC""",
             (current_user["id"],)
         )
     
@@ -76,9 +76,51 @@ async def list_results(
     return [
         ResultResponse(
             id=r[0], pick_id=r[1], actual_scorer=r[2], is_correct=r[3],
-            any_time_td=r[4], actual_return=r[5], graded_at=r[6]
+            any_time_td=r[4], payout=r[5], graded_at=r[6]
         )
         for r in results
+    ]
+
+
+@router.get("/ungraded/list")
+async def list_ungraded_picks(
+    week_id: Optional[int] = None,
+    current_user: Dict[str, Any] = Depends(get_current_admin_user),
+    conn: sqlite3.Connection = Depends(get_db_async)
+) -> List[Dict[str, Any]]:
+    """Get list of ungraded picks (admin only)"""
+    cursor = conn.cursor()
+    
+    if week_id:
+        cursor.execute(
+            """SELECT p.id, p.user_id, u.name, p.week_id, p.team, p.player_name, p.odds
+               FROM picks p
+               JOIN users u ON p.user_id = u.id
+               WHERE p.week_id = ? AND p.id NOT IN (SELECT pick_id FROM results)
+               ORDER BY p.created_at""",
+            (week_id,)
+        )
+    else:
+        cursor.execute(
+            """SELECT p.id, p.user_id, u.name, p.week_id, p.team, p.player_name, p.odds
+               FROM picks p
+               JOIN users u ON p.user_id = u.id
+               WHERE p.id NOT IN (SELECT pick_id FROM results)
+               ORDER BY p.created_at DESC"""
+        )
+    
+    picks = cursor.fetchall()
+    return [
+        {
+            "pick_id": p[0],
+            "user_id": p[1],
+            "user_name": p[2],
+            "week_id": p[3],
+            "team": p[4],
+            "player_name": p[5],
+            "odds": p[6]
+        }
+        for p in picks
     ]
 
 
@@ -92,7 +134,7 @@ async def get_result(
     cursor = conn.cursor()
     cursor.execute(
         """SELECT r.id, r.pick_id, r.actual_scorer, r.is_correct, r.any_time_td, 
-                  r.actual_return, r.graded_at
+                  r.payout, r.created_at
            FROM results r
            JOIN picks p ON r.pick_id = p.id
            WHERE r.id = ?""",
@@ -112,7 +154,7 @@ async def get_result(
     
     return ResultResponse(
         id=result[0], pick_id=result[1], actual_scorer=result[2], is_correct=result[3],
-        any_time_td=result[4], actual_return=result[5], graded_at=result[6]
+        any_time_td=result[4], payout=result[5], graded_at=result[6]
     )
 
 
@@ -137,10 +179,10 @@ async def create_result(
     
     # Insert result
     cursor.execute(
-        """INSERT INTO results (pick_id, actual_scorer, is_correct, any_time_td, actual_return, graded_at)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO results (pick_id, actual_scorer, is_correct, any_time_td, payout)
+           VALUES (?, ?, ?, ?, ?)""",
         (result.pick_id, result.actual_scorer, result.is_correct, result.any_time_td, 
-         result.actual_return, datetime.utcnow())
+         result.payout)
     )
     conn.commit()
     
@@ -150,48 +192,5 @@ async def create_result(
     return ResultResponse(
         id=result_id, pick_id=result.pick_id, actual_scorer=result.actual_scorer,
         is_correct=result.is_correct, any_time_td=result.any_time_td,
-        actual_return=result.actual_return, graded_at=datetime.utcnow()
+        payout=result.payout, graded_at=datetime.utcnow()
     )
-
-
-@router.get("/ungraded/list")
-async def list_ungraded_picks(
-    week_id: Optional[int] = None,
-    current_user: Dict[str, Any] = Depends(get_current_admin_user),
-    conn: sqlite3.Connection = Depends(get_db_async)
-) -> List[Dict[str, Any]]:
-    """Get list of ungraded picks (admin only)"""
-    cursor = conn.cursor()
-    
-    if week_id:
-        cursor.execute(
-            """SELECT p.id, p.user_id, u.name, p.week_id, p.team, p.player_name, p.position, p.odds
-               FROM picks p
-               JOIN users u ON p.user_id = u.id
-               WHERE p.week_id = ? AND p.id NOT IN (SELECT pick_id FROM results)
-               ORDER BY p.created_at""",
-            (week_id,)
-        )
-    else:
-        cursor.execute(
-            """SELECT p.id, p.user_id, u.name, p.week_id, p.team, p.player_name, p.position, p.odds
-               FROM picks p
-               JOIN users u ON p.user_id = u.id
-               WHERE p.id NOT IN (SELECT pick_id FROM results)
-               ORDER BY p.created_at DESC"""
-        )
-    
-    picks = cursor.fetchall()
-    return [
-        {
-            "pick_id": p[0],
-            "user_id": p[1],
-            "user_name": p[2],
-            "week_id": p[3],
-            "team": p[4],
-            "player_name": p[5],
-            "position": p[6],
-            "odds": p[7]
-        }
-        for p in picks
-    ]
