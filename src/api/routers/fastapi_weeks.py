@@ -204,3 +204,65 @@ async def get_week_stats(
         "correct_picks": stats[2] or 0,
         "pending_picks": (stats[0] or 0) - (stats[1] or 0)
     }
+
+
+@router.get("/{week_id}/picks")
+async def get_week_picks(
+    week_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_db_async)
+) -> Dict[str, Any]:
+    """Get all picks for a week with grading status"""
+    cursor = conn.cursor()
+    
+    # Verify week exists
+    cursor.execute("SELECT id FROM weeks WHERE id = ?", (week_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Week not found")
+    
+    # Get all picks for the week with results
+    cursor.execute(
+        """SELECT 
+                p.id,
+                u.id,
+                u.name,
+                p.team,
+                p.player_name,
+                p.odds,
+                CASE 
+                    WHEN r.id IS NULL THEN 0
+                    ELSE 1
+                END as graded,
+                CASE 
+                    WHEN r.is_correct = 1 THEN 1
+                    WHEN r.is_correct = 0 THEN 0
+                    ELSE NULL
+                END as is_correct,
+                r.actual_scorer
+           FROM picks p
+           JOIN users u ON p.user_id = u.id
+           LEFT JOIN results r ON p.id = r.pick_id
+           WHERE p.week_id = ?
+           ORDER BY u.name, p.player_name""",
+        (week_id,)
+    )
+    
+    picks = cursor.fetchall()
+    
+    return {
+        "week_id": week_id,
+        "picks": [
+            {
+                "id": p[0],
+                "user_id": p[1],
+                "user_name": p[2],
+                "team": p[3],
+                "player_name": p[4],
+                "odds": p[5],
+                "graded": bool(p[6]),
+                "is_correct": p[7],
+                "actual_scorer": p[8]
+            }
+            for p in picks
+        ]
+    }

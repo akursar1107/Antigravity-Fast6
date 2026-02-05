@@ -22,7 +22,7 @@ import sqlite3
 import pandas as pd
 import numpy as np
 from typing import Optional, Dict, List, Tuple
-from database import get_db_context
+from src.database import get_db_context
 from datetime import datetime
 import logging
 

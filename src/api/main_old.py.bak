@@ -1,0 +1,131 @@
+"""
+FastAPI Application Entry Point
+
+Main application initialization with routes, middleware, and error handling.
+This runs alongside Streamlit during development phase.
+
+To run:
+    uvicorn src.api.main:app --reload --port 8000
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
+import logging
+
+from src.api.config import get_settings
+from src.api.routers import auth, users, picks, results, weeks, leaderboard, analytics
+from src.database import run_migrations
+
+logger = logging.getLogger(__name__)
+
+settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan context manager.
+    Runs migrations and data sync on startup.
+    """
+    # Startup
+    logger.info("🚀 Starting Fast6 API...")
+    try:
+        run_migrations()
+        logger.info("✅ Database migrations completed")
+        
+        # Sync reference data on startup
+        from src.services.data_sync import sync_rosters, sync_games_for_season
+        import src.config as config
+        
+        roster_stats = sync_rosters(config.CURRENT_SEASON)
+        logger.info(f"✅ Rosters synced: {roster_stats}")
+        
+        game_stats = sync_games_for_season(config.CURRENT_SEASON)
+        logger.info(f"✅ Games synced: {game_stats}")
+        
+    except Exception as e:
+        logger.error(f"❌ Startup error: {e}")
+        raise
+    
+    yield
+    
+    # Shutdown
+    logger.info("🛑 Shutting down Fast6 API...")
+
+
+# Create FastAPI app with lifespan
+app = FastAPI(
+    title="Fast6 API",
+    description="NFL First TD Prediction API",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS Middleware - Allow Streamlit + React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",      # React dev
+        "http://localhost:8501",      # Streamlit dev
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8501",
+        "https://*.vercel.app",       # Vercel deployment
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Exception handlers
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    """Catch-all exception handler"""
+    logger.exception(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+
+
+# Health check endpoint
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "environment": settings.environment
+    }
+
+
+# Include routers
+app.include_router(auth.router, prefix="/api", tags=["Authentication"])
+app.include_router(users.router, prefix="/api", tags=["Users"])
+app.include_router(picks.router, prefix="/api", tags=["Picks"])
+app.include_router(results.router, prefix="/api", tags=["Results"])
+app.include_router(weeks.router, prefix="/api", tags=["Weeks"])
+app.include_router(leaderboard.router, prefix="/api", tags=["Leaderboard"])
+app.include_router(analytics.router, prefix="/api", tags=["Analytics"])
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    """Root endpoint with API documentation link"""
+    return {
+        "message": "Fast6 API",
+        "docs": "/docs",
+        "openapi": "/openapi.json"
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "src.api.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    )

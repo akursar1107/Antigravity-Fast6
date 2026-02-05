@@ -6,7 +6,7 @@ import streamlit as st
 import shutil
 from pathlib import Path
 from datetime import datetime
-from database import get_db_connection
+from src.database import get_db_connection
 
 
 def show_settings_tab() -> None:
@@ -249,7 +249,7 @@ def _show_prediction_market_settings():
     """Show prediction market API configuration and controls."""
     import config
     from services.market_data_service import MarketDataService, get_week_dates
-    from utils.prediction_markets import test_connections, get_enabled_sources
+    from src.utils.prediction_markets import test_connections, get_enabled_sources
 
     st.subheader("🎲 Prediction Market APIs")
     st.markdown("Configure and manage Polymarket and Kalshi integrations")

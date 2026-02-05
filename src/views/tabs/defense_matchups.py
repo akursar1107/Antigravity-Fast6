@@ -23,7 +23,7 @@ from services.analytics import (
     get_defense_vs_position_matrix,
     analyze_defensive_performance
 )
-import config
+from src import config
 
 
 def show_defense_matchups_tab(season: int):

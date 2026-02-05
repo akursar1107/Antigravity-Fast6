@@ -3,7 +3,7 @@ Database migrations system for Fast6.
 Provides versioned schema evolution with rollback capability.
 
 Usage:
-    from utils.migrations import run_migrations
+    from src.utils.migrations import run_migrations
     run_migrations()  # Apply all pending migrations
 """
 
@@ -11,7 +11,7 @@ import sqlite3
 import logging
 from typing import Callable, Dict
 from pathlib import Path
-from utils.error_handling import log_exception, DatabaseError
+from src.utils.error_handling import log_exception, DatabaseError
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def _ensure_schema_version_table(conn: sqlite3.Connection) -> None:
 
 def get_current_version(conn: sqlite3.Connection) -> int:
     """
-    Get the current schema version from database.
+    Get the current schema version from src.database.
     Returns 0 if no version is recorded (new database).
     """
     _ensure_schema_version_table(conn)
@@ -398,6 +398,382 @@ def migration_v8_add_prediction_market_odds(conn: sqlite3.Connection) -> None:
 
 # ============= MIGRATION REGISTRY =============
 
+def migration_v9_create_games_table(conn: sqlite3.Connection) -> None:
+    """
+    Version 9: Create games table to track NFL schedule.
+    
+    Columns:
+    - id: Unique game identifier from nflreadpy (e.g., "2025_01_KC_LV")
+    - season: NFL season year (e.g., 2025)
+    - week: NFL week number (1-18)
+    - game_date: Date of game
+    - home_team: Home team abbreviation (e.g., "KC")
+    - away_team: Away team abbreviation (e.g., "LV")
+    - home_score, away_score: Final scores (nullable until game ends)
+    - status: "scheduled", "in_progress", or "final"
+    """
+    cursor = conn.cursor()
+    
+    # Check if table already exists
+    cursor.execute("PRAGMA table_info(games)")
+    if cursor.fetchall():
+        logger.info("Migration v9: games table already exists, skipping")
+        return
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS games (
+            id TEXT PRIMARY KEY,
+            season INTEGER NOT NULL,
+            week INTEGER NOT NULL,
+            game_date DATE NOT NULL,
+            home_team TEXT NOT NULL,
+            away_team TEXT NOT NULL,
+            home_score INTEGER,
+            away_score INTEGER,
+            status TEXT DEFAULT 'scheduled' 
+                CHECK(status IN ('scheduled', 'in_progress', 'final')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(season, week, home_team, away_team)
+        )
+    ''')
+    
+    # Create indexes for common queries
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_games_season_week 
+        ON games(season, week)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_games_teams 
+        ON games(home_team, away_team)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_games_status 
+        ON games(status)
+    ''')
+    
+    conn.commit()
+    logger.info("Applied migration v9: Created games table")
+
+
+def migration_v10_create_rosters_table(conn: sqlite3.Connection) -> None:
+    """
+    Version 10: Create rosters table for player position normalization.
+    
+    This table is the source of truth for player positions.
+    It's populated from nflreadpy on app startup and synced nightly.
+    """
+    cursor = conn.cursor()
+    
+    # Check if table already exists
+    cursor.execute("PRAGMA table_info(rosters)")
+    if cursor.fetchall():
+        logger.info("Migration v10: rosters table already exists, skipping")
+        return
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rosters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            season INTEGER NOT NULL,
+            player_name TEXT NOT NULL,
+            team TEXT NOT NULL,
+            position TEXT NOT NULL,
+            jersey_number INTEGER,
+            nflreadpy_id TEXT UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(season, player_name, team)
+        )
+    ''')
+    
+    # Create indexes for common queries
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_rosters_season_player 
+        ON rosters(season, player_name)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_rosters_team_position 
+        ON rosters(team, position)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_rosters_position 
+        ON rosters(position)
+    ''')
+    
+    conn.commit()
+    logger.info("Applied migration v10: Created rosters table")
+
+
+def migration_v11_add_picks_unique_constraint(conn: sqlite3.Connection) -> None:
+    """
+    Version 11: Add UNIQUE constraint to prevent duplicate picks.
+    
+    Constraint: UNIQUE(user_id, week_id, player_name)
+    
+    This prevents:
+    - User can't pick same player twice in same week
+    - Accidental duplicate imports from CSV
+    - UI bugs causing multiple submissions
+    """
+    cursor = conn.cursor()
+    
+    # Check if constraint already exists
+    cursor.execute("PRAGMA index_list(picks)")
+    indexes = cursor.fetchall()
+    constraint_exists = any('unique_user_week_player' in str(idx) for idx in indexes)
+    
+    if constraint_exists:
+        logger.info("Migration v11: unique constraint already exists, skipping")
+        return
+    
+    # Before applying unique constraint, remove duplicates
+    logger.info("Removing duplicate picks before applying constraint...")
+    
+    # Keep only the most recent pick for each (user_id, week_id, player_name)
+    cursor.execute('''
+        DELETE FROM picks WHERE id NOT IN (
+            SELECT MAX(id) FROM picks 
+            GROUP BY user_id, week_id, player_name
+        )
+    ''')
+    duplicates_removed = cursor.rowcount
+    conn.commit()
+    if duplicates_removed > 0:
+        logger.info(f"Removed {duplicates_removed} duplicate picks")
+    
+    # Get current schema
+    cursor.execute("PRAGMA table_info(picks)")
+    columns = cursor.fetchall()
+    
+    # Create new table with constraint
+    cursor.execute('''
+        CREATE TABLE picks_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            week_id INTEGER NOT NULL,
+            team TEXT NOT NULL,
+            player_name TEXT NOT NULL,
+            odds REAL,
+            theoretical_return REAL,
+            game_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, week_id, player_name),
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (week_id) REFERENCES weeks(id)
+        )
+    ''')
+    
+    # Copy existing data
+    cursor.execute('''
+        INSERT INTO picks_new 
+        SELECT * FROM picks
+    ''')
+    
+    # Recreate indexes
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_picks_user_week ON picks_new(user_id, week_id)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_picks_week_id ON picks_new(week_id)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_picks_game_id ON picks_new(game_id)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_picks_player_name ON picks_new(player_name)
+    ''')
+    
+    # Drop old table and rename
+    cursor.execute('DROP TABLE picks')
+    cursor.execute('ALTER TABLE picks_new RENAME TO picks')
+    
+    conn.commit()
+    logger.info("Applied migration v11: Added UNIQUE constraint to picks")
+
+
+def migration_v12_add_performance_indexes(conn: sqlite3.Connection) -> None:
+    """
+    Version 12: Add indexes to optimize query performance.
+    
+    Indexes added:
+    - results(is_correct): Filter by graded status
+    - results(pick_id): Join with picks
+    - player_stats(position, season): WR/RB leader queries
+    - player_stats(team): Team-based queries
+    - team_ratings(team, week): Recent team ratings
+    - market_odds(game_id, snapshot_time): Market history
+    """
+    cursor = conn.cursor()
+    
+    # Results table indexes
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_results_is_correct 
+        ON results(is_correct)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_results_pick_id 
+        ON results(pick_id)
+    ''')
+    
+    # Player stats indexes
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_player_stats_position_season 
+        ON player_stats(position, season)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_player_stats_team_season 
+        ON player_stats(team, season)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_player_stats_player_season 
+        ON player_stats(player_name, season)
+    ''')
+    
+    # Team ratings indexes
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_team_ratings_team_week 
+        ON team_ratings(team, week)
+    ''')
+    
+    # Market odds indexes (for future Polymarket/Kalshi integration)
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_market_odds_game_player 
+        ON market_odds(game_id, player_name)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_market_odds_timestamp 
+        ON market_odds(snapshot_time)
+    ''')
+    
+    conn.commit()
+    logger.info("Applied migration v12: Added performance indexes")
+
+
+def migration_v13_add_triggers(conn: sqlite3.Connection) -> None:
+    """
+    Version 13: Add database triggers for automatic updates.
+    
+    Triggers:
+    1. update_player_stats_on_result_insert: Increment first_td_count when pick graded
+    2. update_player_stats_on_result_delete: Decrement if grading reversed
+    
+    These triggers maintain the invariant:
+        player_stats.first_td_count = COUNT(results where is_correct=1)
+    """
+    cursor = conn.cursor()
+    
+    # Check if triggers already exist
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND name='update_player_stats_on_result_insert'")
+    if cursor.fetchone():
+        logger.info("Migration v13: triggers already exist, skipping")
+        return
+    
+    # Trigger 1: Insert
+    cursor.execute('''
+        CREATE TRIGGER IF NOT EXISTS update_player_stats_on_result_insert
+        AFTER INSERT ON results
+        FOR EACH ROW
+        WHEN NEW.is_correct = 1
+        BEGIN
+            -- Get the pick details and update player_stats
+            INSERT OR IGNORE INTO player_stats (player_name, season, team, position, first_td_count)
+            SELECT 
+                p.player_name,
+                w.season,
+                p.team,
+                'Unknown',
+                0
+            FROM picks p
+            JOIN weeks w ON p.week_id = w.id
+            WHERE p.id = NEW.pick_id;
+            
+            UPDATE player_stats SET
+                first_td_count = first_td_count + 1
+            WHERE player_name = (SELECT player_name FROM picks WHERE id = NEW.pick_id)
+              AND season = (SELECT season FROM weeks WHERE id = (SELECT week_id FROM picks WHERE id = NEW.pick_id))
+              AND team = (SELECT team FROM picks WHERE id = NEW.pick_id);
+        END
+    ''')
+    
+    # Trigger 2: Delete
+    cursor.execute('''
+        CREATE TRIGGER IF NOT EXISTS update_player_stats_on_result_delete
+        AFTER DELETE ON results
+        FOR EACH ROW
+        WHEN OLD.is_correct = 1
+        BEGIN
+            -- Decrement first_td_count
+            UPDATE player_stats SET
+                first_td_count = MAX(0, first_td_count - 1)
+            WHERE player_name = (SELECT player_name FROM picks WHERE id = OLD.pick_id)
+              AND season = (SELECT season FROM weeks WHERE id = (SELECT week_id FROM picks WHERE id = OLD.pick_id))
+              AND team = (SELECT team FROM picks WHERE id = OLD.pick_id);
+        END
+    ''')
+    
+    conn.commit()
+    logger.info("Applied migration v13: Added automation triggers")
+
+
+def migration_v14_backfill_player_positions(conn: sqlite3.Connection) -> None:
+    """
+    Version 14: Backfill player positions from rosters table.
+    
+    This migration looks up positions from rosters table and updates
+    player_stats entries that have position='Unknown'.
+    
+    Note: This only works AFTER rosters have been synced via the ingestion service.
+    """
+    cursor = conn.cursor()
+    
+    # Check if rosters table has data
+    cursor.execute("SELECT COUNT(*) FROM rosters")
+    roster_count = cursor.fetchone()[0]
+    
+    if roster_count == 0:
+        logger.info("Migration v14: No rosters data yet, skipping backfill. Run after roster sync.")
+        return
+    
+    # Update player_stats positions from rosters
+    cursor.execute('''
+        UPDATE player_stats
+        SET position = (
+            SELECT r.position 
+            FROM rosters r 
+            WHERE r.player_name = player_stats.player_name 
+              AND r.team = player_stats.team
+              AND r.season = player_stats.season
+            LIMIT 1
+        )
+        WHERE position = 'Unknown'
+          AND EXISTS (
+              SELECT 1 FROM rosters r 
+              WHERE r.player_name = player_stats.player_name 
+                AND r.team = player_stats.team
+                AND r.season = player_stats.season
+          )
+    ''')
+    
+    updated_count = cursor.rowcount
+    conn.commit()
+    
+    if updated_count > 0:
+        logger.info(f"Applied migration v14: Backfilled {updated_count} player positions")
+    else:
+        logger.info("Migration v14: No positions to backfill")
+
+
 MIGRATIONS: Dict[int, tuple[Callable[[sqlite3.Connection], None], str]] = {
     1: (migration_v1_initial_schema, "Initial database schema"),
     2: (migration_v2_add_game_id, "Add game_id to picks table"),
@@ -407,6 +783,12 @@ MIGRATIONS: Dict[int, tuple[Callable[[sqlite3.Connection], None], str]] = {
     6: (migration_v6_add_player_stats, "Add player_stats table for performance tracking"),
     7: (migration_v7_add_team_ratings, "Add team_ratings table for ELO system"),
     8: (migration_v8_add_prediction_market_odds, "Add prediction market odds tables"),
+    9: (migration_v9_create_games_table, "Create games table for NFL schedule"),
+    10: (migration_v10_create_rosters_table, "Create rosters table for player positions"),
+    11: (migration_v11_add_picks_unique_constraint, "Add unique constraint to picks"),
+    12: (migration_v12_add_performance_indexes, "Add performance indexes for queries"),
+    13: (migration_v13_add_triggers, "Add triggers for automatic player_stats updates"),
+    14: (migration_v14_backfill_player_positions, "Backfill player positions from rosters"),
 }
 
 

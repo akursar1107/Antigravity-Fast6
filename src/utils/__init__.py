@@ -4,7 +4,7 @@ Exports main utility functions for easy importing.
 """
 
 try:
-    from utils.nfl_data import (
+    from src.utils.nfl_data import (
         load_data,
         get_game_schedule,
         get_touchdowns,
@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 try:
-    from utils.name_matching import (
+    from src.utils.name_matching import (
         names_match,
         normalize_player_name,
         extract_last_name
@@ -25,7 +25,7 @@ except ImportError:
     pass
 
 try:
-    from utils.grading_logic import (
+    from src.utils.grading_logic import (
         auto_grade_season,
         grade_any_time_td_only
     )
@@ -33,7 +33,7 @@ except ImportError:
     pass
 
 try:
-    from utils.analytics import (
+    from src.utils.analytics import (
         get_team_first_td_counts,
         get_player_first_td_counts,
         get_position_first_td_counts
@@ -97,7 +97,7 @@ except ImportError:
     pass
 
 # Common utilities
-from utils.common import (
+from src.utils.common import (
     normalize_week_record,
     ensure_session_state,
     format_odds,
@@ -108,7 +108,7 @@ from utils.common import (
 )
 
 # Type utilities
-from utils.type_utils import (
+from src.utils.type_utils import (
     safe_int,
     safe_str,
     safe_float,

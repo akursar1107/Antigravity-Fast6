@@ -8,8 +8,8 @@ import pandas as pd
 import shutil
 from pathlib import Path
 from datetime import datetime
-from database import get_all_users, add_user, delete_user
-from utils.observability import log_event
+from src.database import get_all_users, add_user, delete_user
+from src.utils.observability import log_event
 
 
 def show_users_tab() -> None:

@@ -1,0 +1,89 @@
+"""
+FastAPI Dependencies
+
+Dependency injection for authentication, authorization, and database access.
+"""
+
+from typing import Optional
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+import logging
+
+from src.api.security import verify_token
+from src.api.config import get_settings
+from src.database import get_db_connection
+
+logger = logging.getLogger(__name__)
+
+# OAuth2 scheme - extracts token from Authorization header
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+    """
+    Get current authenticated user from JWT token.
+    
+    Args:
+        token: JWT token from Authorization header
+    
+    Returns:
+        User dict with id, name, role
+    
+    Raises:
+        HTTPException: 401 if token invalid/expired
+    """
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return {
+        "id": int(user_id),
+        "role": payload.get("role", "user"),
+        "name": payload.get("name", "")
+    }
+
+
+async def get_current_admin_user(current_user: dict = Depends(get_current_user)) -> dict:
+    """
+    Get current admin user. Raises exception if not admin.
+    
+    Args:
+        current_user: Current authenticated user
+    
+    Returns:
+        User dict (admin only)
+    
+    Raises:
+        HTTPException: 403 if not admin
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+
+def get_db():
+    """
+    Database connection dependency.
+    Yields connection and ensures it's closed.
+    """
+    settings = get_settings()
+    conn = get_db_connection()
+    try:
+        yield conn
+    finally:
+        conn.close()

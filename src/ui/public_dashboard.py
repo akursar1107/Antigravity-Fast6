@@ -6,8 +6,8 @@ Data sourced from NFL API and SQLite database.
 
 import streamlit as st
 import pandas as pd
-from utils.nfl_data import get_touchdowns, get_first_tds, load_rosters
-from utils import init_db
+from src.utils.nfl_data import get_touchdowns, get_first_tds, load_rosters
+from src.utils import init_db
 from views.tabs import (
     show_leaderboard_tab,
     show_schedule_tab,

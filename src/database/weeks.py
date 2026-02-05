@@ -9,8 +9,8 @@ from typing import Optional, List, Dict
 from datetime import datetime
 
 from .connection import get_db_connection, get_db_context
-from utils.type_utils import safe_int as _safe_int
-from utils.types import Week
+from src.utils.type_utils import safe_int as _safe_int
+from src.utils.types import Week
 
 logger = logging.getLogger(__name__)
 

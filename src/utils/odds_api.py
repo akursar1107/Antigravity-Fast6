@@ -9,10 +9,10 @@ import logging
 import os
 import time
 from typing import Dict, Tuple, Optional
-import config
-from utils.error_handling import log_exception, APIError, handle_exception
-from utils.observability import log_event
-from utils.resilience import CircuitBreakerOpen, get_circuit_breaker, request_with_retry
+from src import config
+from src.utils.error_handling import log_exception, APIError, handle_exception
+from src.utils.observability import log_event
+from src.utils.resilience import CircuitBreakerOpen, get_circuit_breaker, request_with_retry
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def get_first_td_odds(api_key: str, week_start_date: str, week_end_date: str) ->
         logger.warning("ODDS_API_KEY not available; skipping odds fetch")
         return {}
     
-    from utils.team_utils import get_team_abbr
+    from src.utils.team_utils import get_team_abbr
     
     # 1. Get Events
     events_url = f'{config.ODDS_API_BASE_URL}/sports/{config.ODDS_API_SPORT}/events?apiKey={api_key}'

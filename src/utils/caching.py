@@ -18,7 +18,7 @@ from typing import Optional, Callable, Any, Dict, TypeVar, Tuple
 from functools import wraps
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-import config
+from src import config
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ def invalidate_on_pick_change() -> None:
     if HAS_STREAMLIT:
         try:
             # Clear specific cached functions
-            from database.stats import get_leaderboard, get_user_stats, get_weekly_summary
+            from src.database.stats import get_leaderboard, get_user_stats, get_weekly_summary
             get_leaderboard.clear()
             get_user_stats.clear()
             get_weekly_summary.clear()
@@ -133,7 +133,7 @@ def invalidate_on_result_change() -> None:
     invalidate_cache("weekly_summary")
     if HAS_STREAMLIT:
         try:
-            from database.stats import get_leaderboard, get_user_stats, get_weekly_summary
+            from src.database.stats import get_leaderboard, get_user_stats, get_weekly_summary
             get_leaderboard.clear()
             get_user_stats.clear()
             get_weekly_summary.clear()

@@ -6,7 +6,7 @@ Validates picks before saving to ensure data integrity.
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 import pandas as pd
-from database import get_user_week_picks
+from src.database import get_user_week_picks
 
 
 class PickValidationError(Exception):

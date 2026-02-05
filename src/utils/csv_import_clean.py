@@ -11,8 +11,8 @@ import re
 
 from .nfl_data import get_game_schedule, load_rosters
 from .name_matching import names_match
-from database import get_db_connection, add_user, get_all_users, add_week, get_week_by_season_week, add_pick
-import config
+from src.database import get_db_connection, add_user, get_all_users, add_week, get_week_by_season_week, add_pick
+from src import config
 
 logger = logging.getLogger(__name__)
 

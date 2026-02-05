@@ -1,14 +1,37 @@
 import streamlit as st
 import pandas as pd
-from utils.nfl_data import load_data, get_game_schedule
-from database import run_migrations
+import logging
+from src.utils.nfl_data import load_data, get_game_schedule
+from src.database import run_migrations
 from views.public_dashboard import show_public_dashboard
 from views.admin_page import show_admin_interface
-from utils.theming import apply_global_theme
-import config
+from src.utils.theming import apply_global_theme
+from src import config
+
+logger = logging.getLogger(__name__)
 
 # Run database migrations (replaces old init_db + ensure_* functions)
 run_migrations()
+
+# NEW: Sync reference tables on startup (rosters and games)
+try:
+    from services.data_sync import sync_rosters, sync_games_for_season
+    
+    # Sync rosters for current season (cached for 24 hours)
+    roster_stats = sync_rosters(config.CURRENT_SEASON)
+    logger.info(f"Rosters synced: {roster_stats}")
+    
+    # Sync games for current season (cached for 1 hour)
+    game_stats = sync_games_for_season(config.CURRENT_SEASON)
+    logger.info(f"Games synced: {game_stats}")
+    
+    # Display sync status in sidebar (optional)
+    if roster_stats['errors'] > 0 or game_stats['errors'] > 0:
+        logger.warning("Some data sync errors occurred")
+    
+except Exception as e:
+    logger.warning(f"Failed to sync reference tables on startup: {e}")
+    # App continues to work even if sync fails
 
 # Initialize session state for persistent UI selections
 if 'selected_season' not in st.session_state:

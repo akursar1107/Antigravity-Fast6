@@ -3,9 +3,9 @@ CSV Import utilities for picks and first TD mapping.
 """
 from typing import Dict, Tuple, Optional
 import pandas as pd
-from utils.nfl_data import load_data, get_game_schedule, get_first_tds
-import config
-from database import users as db_users, weeks as db_weeks, picks as db_picks, stats as db_stats
+from src.utils.nfl_data import load_data, get_game_schedule, get_first_tds
+from src import config
+from src.database import users as db_users, weeks as db_weeks, picks as db_picks, stats as db_stats
 
 
 TEAM_CORRECTIONS = {

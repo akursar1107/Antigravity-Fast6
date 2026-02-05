@@ -6,7 +6,7 @@ Handles result management, leaderboards, and user statistics tracking.
 import sqlite3
 import logging
 from typing import Optional, List, Dict
-import config
+from src import config
 
 try:
     import streamlit as st
@@ -15,9 +15,9 @@ except ImportError:
     HAS_STREAMLIT = False
 
 from .connection import get_db_connection, get_db_context
-from utils.type_utils import safe_int as _safe_int
-from utils.caching import cached, CacheTTL, invalidate_on_result_change
-from utils.types import Result, LeaderboardEntry, WeekSummary, PickWithResult, BatchOperationResult
+from src.utils.type_utils import safe_int as _safe_int
+from src.utils.caching import cached, CacheTTL, invalidate_on_result_change
+from src.utils.types import Result, LeaderboardEntry, WeekSummary, PickWithResult, BatchOperationResult
 
 logger = logging.getLogger(__name__)
 

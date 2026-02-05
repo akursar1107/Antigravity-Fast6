@@ -5,9 +5,9 @@ Import CSV Tab - Upload and ingest picks from CSV files
 import streamlit as st
 import tempfile
 import os
-from utils.csv_import import ingest_picks_from_csv
+from src.utils.csv_import import ingest_picks_from_csv
 from views.admin.csv_import_clean import show_clean_csv_import
-from utils.observability import log_event
+from src.utils.observability import log_event
 
 
 def show_import_csv_tab(season: int) -> None:
