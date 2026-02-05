@@ -1,56 +1,50 @@
-# Fast6 - First TD Tracker
-# Streamlit application for NFL first touchdown tracking and analytics
+# Fast6 — NFL First TD Prediction Platform
+# Multi-stage build: Node (frontend) + Python (backend)
 
+# ── Stage 1: Build Next.js frontend ──────────────────────────────
+FROM node:20-slim AS frontend-build
+
+WORKDIR /build
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY web/ .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# ── Stage 2: Production image (FastAPI + static frontend) ────────
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# System deps
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better layer caching
+# Python deps (cached layer)
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy backend code
+COPY src/ src/
 
-# Create data directory for SQLite database
+# Copy built frontend
+COPY --from=frontend-build /build/.next/standalone web/
+COPY --from=frontend-build /build/.next/static web/.next/static
+COPY --from=frontend-build /build/public web/public
+
+# Data directory for SQLite
 RUN mkdir -p /app/data
 
-# Create .streamlit directory for config
-RUN mkdir -p /app/.streamlit
+# Expose FastAPI port
+EXPOSE 8000
 
-# Create Streamlit config for production
-RUN echo '[server]\n\
-headless = true\n\
-port = 8501\n\
-address = "0.0.0.0"\n\
-enableCORS = false\n\
-enableXsrfProtection = false\n\
-\n\
-[browser]\n\
-gatherUsageStats = false\n\
-\n\
-[theme]\n\
-base = "dark"' > /app/.streamlit/config.toml
+# Health check against FastAPI
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl --fail http://localhost:8000/health || exit 1
 
-# Expose Streamlit port
-EXPOSE 8501
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl --fail http://localhost:8501/_stcore/health || exit 1
-
-# Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV STREAMLIT_SERVER_HEADLESS=true
+ENV PYTHONPATH=/app
 
-# Run Streamlit
-ENTRYPOINT ["streamlit", "run", "src/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Run FastAPI
+CMD ["uvicorn", "src.api.fastapi_app:app", "--host", "0.0.0.0", "--port", "8000"]

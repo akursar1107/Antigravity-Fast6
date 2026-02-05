@@ -6,8 +6,8 @@
   },
   "deploy": {
     "numReplicas": 1,
-    "startCommand": "streamlit run src/app.py --server.port $PORT --server.address 0.0.0.0",
-    "healthcheckPath": "/_stcore/health",
+    "startCommand": "uvicorn src.api.fastapi_app:app --host 0.0.0.0 --port $PORT",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
