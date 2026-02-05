@@ -1,176 +1,172 @@
-# 🏈 Fast6 - NFL First TD Prediction Tool
+# 🏈 Fast6 — NFL First TD Prediction Platform
 
-A Streamlit web application for managing **first touchdown scorer predictions** across a friend group. Admin inputs picks, friends view leaderboard and ROI tracking. Integrates NFL game data with real-time betting odds.
-
-**Status:** v2.0.0 ✅ Clean Architecture Implemented | Production Ready
-
-> **Latest Update (Feb 3, 2026):** Complete architectural restructuring with clean architecture principles. Core business logic now independent of Streamlit/database, improved testability and maintainability. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+Full-stack web app for managing **first touchdown scorer predictions** across a friend group. Next.js dashboard backed by a FastAPI REST API, with NFL play-by-play integration, auto-grading, and advanced analytics.
 
 ## Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- Virtual environment (recommended)
 
-### Installation & Running
+| Component | Version |
+|-----------|---------|
+| Node.js   | 18+     |
+| Python    | 3.10+   |
+
+### 1. Backend (FastAPI)
 
 ```bash
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
+cd Fast6
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# Run the app (legacy architecture)
-streamlit run src/app.py
-
-# Or run with new clean architecture (v2.0.0)
-streamlit run src/app_v2.py
+# Start API server
+uvicorn src.api.fastapi_app:app --reload --port 8000
 ```
 
-The app will be available at **http://localhost:8501**
+Backend runs at **http://localhost:8000** — interactive docs at `/docs`.
 
-## Documentation
+### 2. Frontend (Next.js)
 
-**Architecture & Development**:
-- [Architecture Reference](docs/ARCHITECTURE.md) - Clean architecture design and principles
-- [Configuration Guide](docs/guides/CONFIG_GUIDE.md) - Settings and customization
-- [Deployment Guide](docs/deployment/DEPLOYMENT.md) - Production deployment
+```bash
+cd Fast6/web
+npm install
+cp .env.local.example .env.local   # then edit if needed
 
-**Project Status**:
-- [Changelog](docs/CHANGELOG.md) - Version history and updates
-- [Phase Completions](archive/completed-phases/) - Historical phase documentation
+npm run dev
+```
+
+Frontend runs at **http://localhost:3000**.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | FastAPI backend URL |
+| `NEXT_PUBLIC_CURRENT_SEASON` | `2025` | Active NFL season |
+| `NEXT_PUBLIC_TEST_USERNAME` | — | Dev-mode auto-login user |
 
 ## Features
 
-### Admin Interface
-- **👥 User Management**: Add/remove group members
-- **📝 Pick Input**: Select week and first TD scorer for each game
-- **✅ Update Results**: Mark picks correct/incorrect with ROI calculation
-- **🎯 Auto-Grade**: Grade picks using play-by-play data with fuzzy matching
-- **📥 CSV Import**: Bulk import picks with automatic game ID matching
-- **📊 Analytics**: ELO ratings, player performance, ROI trends
-
 ### Public Dashboard
-- **🏆 Leaderboard**: Group standings, ROI, efficiency metrics
-- **📝 Weekly Picks**: Browse picks with odds and actual returns
-- **🌟 Player Performance**: Hot/cold tracker, TD rates, position leaders
-- **💰 ROI Trends**: Profitability analysis, cumulative returns
-- **⚡ Power Rankings**: ELO-based team ratings and matchup analysis
-- **🛡️ Defense Matchups**: Defensive weakness analysis
-- **📅 Schedule**: Game schedules and results
+- **Overview** — season stats, top performer, leaderboard snapshot
+- **Leaderboard** — full standings with points, ROI, win %, correct picks
+- **Analytics** — ROI trends chart, player performance table
+- **Week Picks** — per-week picks table with grading status
+- **Matchup Analysis** — head-to-head team stats for any game
+- **About** — scoring rules and platform info
+
+### Admin Panel (`/admin`)
+- **Dashboard** — system KPIs (users, picks, grading progress)
+- **Users** — create / delete members
+- **Picks** — browse all picks by week
+- **Grading** — grading progress bar, batch-grade via API
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/auth/login` | Get JWT token |
+| `GET` | `/api/leaderboard/season/{season}` | Season standings |
+| `GET` | `/api/leaderboard/week/{week_id}` | Weekly standings |
+| `GET/POST` | `/api/picks` | List / create picks |
+| `GET/POST` | `/api/results` | List / create results |
+| `GET` | `/api/results/ungraded/list` | Ungraded picks (admin) |
+| `GET` | `/api/analytics/roi-trends` | ROI by week |
+| `GET` | `/api/analytics/player-stats` | Player TD stats |
+| `GET` | `/api/analytics/grading-status` | Grading progress |
+| `GET` | `/api/analytics/matchup/{game_id}` | Matchup breakdown |
+| `GET` | `/api/admin/stats` | System stats (admin) |
+| `POST` | `/api/admin/csv-import` | Bulk CSV import (admin) |
+
+Full interactive docs: **http://localhost:8000/docs**
 
 ## Tech Stack
 
-- **Streamlit** v1.52.2 - Interactive web UI
-- **SQLite** - Local database persistence with game_id foreign key
-- **nflreadpy** v0.1.5 - NFL game and player data, schedule matching
-- **pandas** v2.3.3 - Data processing and analysis
-- **Python 3.13** - Core language
-- **requests** - API calls for odds data
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind v4, Recharts |
+| Backend | FastAPI, Uvicorn, Pydantic, python-jose (JWT) |
+| Database | SQLite (WAL mode, foreign keys enforced) |
+| NFL Data | nflreadpy, pandas |
+| Testing | Vitest + React Testing Library (38 tests), pytest |
 
 ## Project Structure
 
 ```
 Fast6/
-├── src/                            # Main application code
-│   ├── app.py                      # Streamlit entry point
-│   ├── config.py                   # Configuration loader (JSON-based)
-│   ├── config.json                 # Centralized configuration
-│   ├── data_processor.py           # Data processing (deprecated)
-│   ├── database.py                 # Database operations (deprecated)
-│   ├── utils/                      # Utility modules (14 modules)
-│   │   ├── db_connection.py        # Database connection
-│   │   ├── db_users.py             # User CRUD
-│   │   ├── db_picks.py             # Pick CRUD
-│   │   ├── db_weeks.py             # Week CRUD
-│   │   ├── db_stats.py             # Statistics & leaderboards
-│   │   ├── theming.py              # Dynamic CSS generation
-│   │   ├── grading_logic.py        # Auto-grading
-│   │   ├── nfl_data.py             # NFL API integration
-│   │   ├── odds_api.py             # Odds API integration
-│   │   └── ...other utilities
-│   └── views/                      # View components
-│       ├── admin_page.py           # Admin router (74 lines)
-│       ├── public_dashboard.py     # Public router (74 lines)
-│       ├── admin/                  # Admin submodules (6 tabs)
-│       └── tabs/                   # Dashboard submodules (6 tabs)
-├── data/                           # Data directory
-│   └── fast6.db                    # SQLite database
-├── tests/                          # Test suite
-│   └── test_logic.py               # Unit tests
-├── archive/                        # Obsolete files (git-ignored)
-├── resources/                      # Reference projects (git-ignored)
-├── requirements.txt                # Dependencies
-├── DEPLOYMENT.md                   # Cloud deployment guide
-├── ROADMAP.md                      # Feature roadmap
-└── README.md                       # This file
+├── web/                          # Next.js frontend
+│   ├── src/app/                  # App Router pages
+│   │   ├── page.tsx              # Overview dashboard
+│   │   ├── leaderboard/          # Leaderboard page
+│   │   ├── analytics/            # ROI + player stats
+│   │   ├── weeks/[weekId]/       # Per-week picks
+│   │   ├── matchups/[gameId]/    # Matchup analysis
+│   │   ├── about/                # About page
+│   │   └── admin/                # Admin section
+│   │       ├── page.tsx          # Admin dashboard
+│   │       ├── users/            # User management
+│   │       ├── picks/            # Picks browser
+│   │       └── grading/          # Grading progress
+│   ├── src/components/           # Shared UI components
+│   ├── src/lib/                  # API client, cache, auth
+│   └── package.json
+├── src/                          # Python backend
+│   ├── api/                      # FastAPI application
+│   │   ├── fastapi_app.py        # App entry + lifespan
+│   │   ├── fastapi_config.py     # Settings (pydantic-settings)
+│   │   ├── fastapi_models.py     # Request/response schemas
+│   │   ├── fastapi_security.py   # JWT utilities
+│   │   ├── fastapi_dependencies.py # DB + auth dependencies
+│   │   └── routers/              # Route handlers
+│   ├── database/                 # SQLite layer (repository pattern)
+│   │   ├── connection.py         # Connection management
+│   │   └── migrations.py         # Versioned schema migrations
+│   ├── config.py                 # JSON config loader
+│   ├── config.json               # App settings
+│   └── utils/                    # NFL data, grading, odds
+├── tests/                        # Python test suite
+├── data/                         # SQLite database (gitignored)
+├── Dockerfile                    # Production container
+├── requirements.txt              # Python dependencies
+└── README.md
 ```
 
-## Implementation Status
+## Testing
 
-### ✅ Phase 1: Core Foundation (Complete)
-- Database integration with SQLite
-- Admin interface with 6 management tabs
-- Public dashboard with 6 data views
-- CSV import with game ID matching
-- Auto-grading with fuzzy name matching
+```bash
+# Frontend (38 tests)
+cd web && npm test
 
-### ✅ Phase 2: Configuration Refactoring (Complete)
-- JSON configuration system (`config.json`)
-- Centralized scoring, seasons, teams, API configuration
-- All hardcoded values replaced with config references
-- Configuration loader with st.secrets support
-
-### ✅ Phase 3: Dynamic UI Theming (Complete)
-- Dynamic CSS generation from configuration
-- Modern gradient backgrounds and animations
-- Glass-morphism UI effects
-- Theme customization via JSON (no code changes needed)
-- Full code modularization (34 Python modules)
-
-### ✅ Phase 4: Documentation & Testing (Complete)
-- CONFIG_GUIDE.md - Complete configuration reference
-- THEMING_GUIDE.md - Theme customization guide
-- 78 unit/integration tests (100% pass rate)
-- Code optimization: batch DB ops, caching, SQL extraction
-
-### ✅ Phase 5: Advanced Analytics (Complete)
-- **Player Performance Tracking**: Hot/cold indicators, TD rates, position leaders
-- **ROI & Profitability Trends**: Cumulative ROI, weekly performance, strategy analysis
-- **Team ELO Rating System**: Power rankings, matchup predictions, rating trends
-- **Defensive Matchup Analysis**: Weak defenses, position matchups, recommendations
-- 4 new dashboard tabs with 12+ interactive visualizations
-- 3,300+ lines of new analytics code
-
-See [ROADMAP.md](ROADMAP.md) for planned enhancements.
+# Backend
+cd Fast6 && python -m pytest tests/ -v
+```
 
 ## Deployment
 
-### 🚀 Deploy to Railway (Recommended)
-
-Railway is the recommended hosting platform - it offers a free tier, automatic Docker detection, and persistent storage.
+### Docker
 
 ```bash
-# Option 1: GitHub Integration (Easiest)
-# 1. Push to GitHub
-# 2. Connect repo at railway.app
-# 3. Railway auto-deploys!
-
-# Option 2: Railway CLI
-npm install -g @railway/cli
-railway login
-railway init
-railway up
+docker build -t fast6 .
+docker run -d -p 8000:8000 -v $(pwd)/data:/app/data fast6
 ```
 
-For detailed deployment instructions, see [DOCKER.md](DOCKER.md).
+### Railway (Recommended)
+
+1. Push to GitHub
+2. Connect repo at [railway.app](https://railway.app)
+3. Railway auto-detects the Dockerfile and deploys
+
+### Vercel (Frontend only)
+
+```bash
+cd web && npx vercel
+```
+
+Set `NEXT_PUBLIC_API_BASE_URL` to your deployed backend URL.
 
 ## Contributing
 
-Feel free to open issues and pull requests to improve the app!
+Open issues and pull requests welcome.
 
 ## License
 
-MIT License - see repository for details
+MIT
