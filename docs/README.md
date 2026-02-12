@@ -8,7 +8,7 @@ Documentation for the Fast6 NFL First TD Prediction Tracker.
 
 ## Guides
 
-- **[Analytics Guide](guides/ANALYTICS_GUIDE.md)** — Player performance, ROI trends, power rankings, defense matchups
+- **[Analytics Guide](guides/ANALYTICS_GUIDE.md)** — Analytics tabs, ROI trends, player stats, touchdowns table
 - **[Repository Pattern](guides/REPOSITORY_PATTERN_GUIDE.md)** — Database access patterns
 - **[Integration Tests](guides/INTEGRATION_TESTS.md)** — End-to-end testing guide
 
@@ -16,9 +16,16 @@ Documentation for the Fast6 NFL First TD Prediction Tracker.
 
 ## Design
 
-- **[Next.js Frontend Design](plans/2026-02-03-nextjs-frontend-design.md)** — UI architecture and component design
-- **[Implementation Plan](plans/2026-02-03-nextjs-frontend-implementation-plan.md)** — Next.js build plan
+- **[Design System](design/DESIGN_SYSTEM.md)** — Palette, typography, tabs, accessibility
 - **[Deployment](plans/NEXTJS_DEPLOYMENT.md)** — Production deployment guide
+
+---
+
+## Architecture
+
+- **[Architecture Diagrams](ARCHITECTURE_DIAGRAMS.md)** — Data flow, schema, grading pipeline
+- **[Data Pipeline Review](DATA_PIPELINE_REVIEW.md)** — Data sources and issues
+- **[Optimization Roadmap](OPTIMIZATION_ROADMAP.md)** — Best practices and implementation plan
 
 ---
 
@@ -26,11 +33,12 @@ Documentation for the Fast6 NFL First TD Prediction Tracker.
 
 Historical documentation is preserved in the [`../archive/`](../archive/) folder:
 
-- **`archive/phases/`** - Completed phase documentation (Phase 4, Phase 5)
-- **`archive/refactoring/`** - Refactoring summaries and dashboard improvements
-- **`archive/bugfixes/`** - ✨ NEW! Bug fix documentation and solutions
-- **`archive/sprints/`** - Sprint planning documents
-- **`archive/audits/`** - Code audits and reviews
+- **`archive/docs/plans/`** — Completed implementation plans (Next.js frontend, remediation)
+- **`archive/phases/`** — Completed phase documentation (Phase 4, Phase 5)
+- **`archive/refactoring/`** — Refactoring summaries and dashboard improvements
+- **`archive/bugfixes/`** — Bug fix documentation and solutions
+- **`archive/sprints/`** — Sprint planning documents
+- **`archive/audits/`** — Code audits and reviews
 
 ---
 
@@ -67,4 +75,4 @@ When adding new documentation:
 
 ---
 
-*Last Updated: February 11, 2026* | **Recent:** Next.js + FastAPI setup, Docker/Railway docs
+*Last Updated: February 11, 2026* | **Recent:** Analytics tabs, unified touchdowns table, docs refresh

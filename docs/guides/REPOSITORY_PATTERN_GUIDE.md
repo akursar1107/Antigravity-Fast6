@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Fast6 database layer now supports a **repository pattern** for cleaner, more maintainable database access. Repositories provide:
+The Fast6 database layer supports a **repository pattern** for cleaner, more maintainable database access. Repositories provide:
+
+**Note:** When importing from the backend package, use `from backend.database import ...` (e.g. in API routers, scripts, tests).
 
 - ✅ Standardized CRUD operations
 - ✅ Type-safe queries with TypedDict returns

@@ -175,7 +175,7 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`rounded-full border px-3 py-1.5 transition font-bold ${
+                    className={`rounded-full border min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-4 py-2 transition font-bold ${
                       active
                         ? "border-[#A2877D] bg-[#234058]/10 text-[#234058]"
                         : "border-[#d1d5db] text-[#78716c] hover:border-[#A2877D] hover:text-[#234058]"
@@ -188,7 +188,7 @@ export default function DashboardLayout({
             </nav>
           </div>
 
-          <div className="p-4 md:p-8">{children}</div>
+          <div className="p-4 pb-28 md:p-8 md:pb-8">{children}</div>
         </main>
 
         {/* 3. RIGHT PANEL - Yield Analysis */}
@@ -273,10 +273,10 @@ export default function DashboardLayout({
       </div>
 
       {/* Mobile Nav */}
-      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-[#234058] border-2 border-[#1a3348] rounded-full shadow-2xl flex justify-around items-center px-4 py-2 z-50">
+      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] bg-[#234058] border-2 border-[#1a3348] rounded-full shadow-2xl flex justify-around items-center px-2 py-3 z-50 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Link
           href="/"
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+          className={`flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center p-2 rounded-lg transition-all ${
             pathname === "/" ? "text-[#A2877D]" : "text-[#8faec7]"
           }`}
         >
@@ -287,7 +287,7 @@ export default function DashboardLayout({
         </Link>
         <Link
           href={"/schedule/" + currentWeek}
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+          className={`flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center p-2 rounded-lg transition-all ${
             pathname.startsWith("/schedule") ? "text-[#A2877D]" : "text-[#8faec7]"
           }`}
         >
@@ -298,7 +298,7 @@ export default function DashboardLayout({
         </Link>
         <Link
           href="/leaderboard"
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+          className={`flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center p-2 rounded-lg transition-all ${
             pathname.startsWith("/leaderboard") ? "text-[#A2877D]" : "text-[#8faec7]"
           }`}
         >
@@ -315,7 +315,7 @@ export default function DashboardLayout({
         </Link>
         <Link
           href="/analytics"
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+          className={`flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center p-2 rounded-lg transition-all ${
             pathname.startsWith("/analytics") ? "text-[#A2877D]" : "text-[#8faec7]"
           }`}
         >
@@ -326,7 +326,7 @@ export default function DashboardLayout({
         </Link>
         <Link
           href="/about"
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+          className={`flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center p-2 rounded-lg transition-all ${
             pathname.startsWith("/about") ? "text-[#A2877D]" : "text-[#8faec7]"
           }`}
         >

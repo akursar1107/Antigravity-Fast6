@@ -244,6 +244,106 @@ async def get_grading_status(
     }
 
 
+@router.get("/user-stats")
+async def get_user_stats(
+    season: int = Query(..., description="NFL season"),
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Get current user's performance stats: win rate, Brier score, etc."""
+    from backend.services.performance_service import PickerPerformanceService
+    service = PickerPerformanceService()
+    summary = service.get_user_performance_summary(current_user["id"], season)
+    return {
+        "user_id": current_user["id"],
+        "user_name": current_user["name"],
+        "season": season,
+        "total_picks": summary["total_picks"],
+        "wins": summary["wins"],
+        "losses": summary["losses"],
+        "win_rate": summary["win_rate"],
+        "brier_score": summary["brier_score"],
+        "current_streak": summary["streaks"]["current_streak"],
+        "longest_win_streak": summary["streaks"]["longest_win_streak"],
+        "is_hot": summary["streaks"]["is_hot"],
+    }
+
+
+@router.get("/performance-breakdown")
+async def get_performance_breakdown(
+    season: int = Query(..., description="NFL season"),
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> List[Dict[str, Any]]:
+    """Get per-user performance stats (win rate, Brier score) for multi-user comparison."""
+    from backend.database import get_all_users
+    from backend.services.performance_service import PickerPerformanceService
+
+    service = PickerPerformanceService()
+    users = get_all_users()
+    results = []
+
+    for u in users:
+        summary = service.get_user_performance_summary(u["id"], season)
+        results.append({
+            "user_id": u["id"],
+            "user_name": u["name"],
+            "total_picks": summary["total_picks"],
+            "wins": summary["wins"],
+            "losses": summary["losses"],
+            "win_rate": summary["win_rate"],
+            "brier_score": summary["brier_score"],
+            "current_streak": summary["streaks"]["current_streak"],
+            "is_hot": summary["streaks"]["is_hot"],
+        })
+
+    return sorted(results, key=lambda r: (-r["total_picks"], r["user_name"]))
+
+
+@router.get("/all-touchdowns")
+async def get_all_touchdowns(
+    season: int = Query(..., description="NFL season"),
+    week: int = Query(None, description="Filter by week (optional)"),
+    team: str = Query(None, description="Filter by team abbreviation (optional)"),
+    first_td_only: bool = Query(False, description="Only first TD of each game"),
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_db_async)
+) -> List[Dict[str, Any]]:
+    """Get all touchdowns for the season, optionally filtered by week/team. Data from touchdowns table; sync via Admin first."""
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='touchdowns'")
+    if not cursor.fetchone():
+        return []
+
+    query = "SELECT t.game_id, t.player_name, t.team, t.is_first_td, t.play_id, t.season FROM touchdowns t WHERE t.season = ?"
+    params: List[Any] = [season]
+
+    if week is not None:
+        query += " AND t.game_id LIKE ?"
+        params.append(f"{season}_{week:02d}_%")
+
+    if team:
+        query += " AND t.team = ?"
+        params.append(team.upper())
+
+    if first_td_only:
+        query += " AND t.is_first_td = 1"
+
+    query += " ORDER BY t.game_id, t.play_id"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    return [
+        {
+            "game_id": str(r[0] or ""),
+            "player_name": str(r[1] or "").strip(),
+            "team": str(r[2] or "").strip(),
+            "is_first_td": bool(r[3]),
+            "play_id": r[4],
+            "season": r[5],
+        }
+        for r in rows
+    ]
+
+
 def _get_td_scorers_from_db(conn: sqlite3.Connection, game_id: str) -> List[Dict[str, Any]]:
     """Get touchdown scorers from touchdowns table. Returns [] if empty."""
     cursor = conn.cursor()

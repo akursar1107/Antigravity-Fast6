@@ -399,6 +399,67 @@ export async function getTeamDefenseServer(
   return request(`/api/analytics/team-defense?season=${season}`, token);
 }
 
+export type TouchdownRow = {
+  game_id: string;
+  player_name: string;
+  team: string;
+  is_first_td: boolean;
+  play_id: number | null;
+  season: number;
+};
+
+export async function getAllTouchdownsServer(
+  season: number,
+  token: string,
+  opts?: { week?: number; team?: string; first_td_only?: boolean }
+): Promise<ApiResponse<TouchdownRow[]>> {
+  let path = `/api/analytics/all-touchdowns?season=${season}`;
+  if (opts?.week != null) path += `&week=${opts.week}`;
+  if (opts?.team) path += `&team=${encodeURIComponent(opts.team)}`;
+  if (opts?.first_td_only) path += "&first_td_only=true";
+  return request(path, token);
+}
+
+export type UserStatsPerformance = {
+  user_id: number;
+  user_name: string;
+  season: number;
+  total_picks: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  brier_score: number;
+  current_streak: number;
+  longest_win_streak: number;
+  is_hot: boolean;
+};
+
+export async function getUserStatsPerformanceServer(
+  season: number,
+  token: string
+): Promise<ApiResponse<UserStatsPerformance>> {
+  return request(`/api/analytics/user-stats?season=${season}`, token);
+}
+
+export type PerformanceBreakdownRow = {
+  user_id: number;
+  user_name: string;
+  total_picks: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  brier_score: number;
+  current_streak: number;
+  is_hot: boolean;
+};
+
+export async function getPerformanceBreakdownServer(
+  season: number,
+  token: string
+): Promise<ApiResponse<PerformanceBreakdownRow[]>> {
+  return request(`/api/analytics/performance-breakdown?season=${season}`, token);
+}
+
 export type UserStats = {
   user_id: number;
   user_name: string;

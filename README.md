@@ -66,7 +66,7 @@ This creates users (Phil, Alice, Bob), weeks, games, picks, and graded results. 
 ### Public Dashboard
 - **Overview** — season stats, top performer, leaderboard snapshot
 - **Leaderboard** — full standings with points, ROI, win %, correct picks
-- **Analytics** — ROI trends chart, player performance table
+- **Analytics** — tabbed: Overview (your stats, ROI), Performance (player stats, odds accuracy, team defense), Touchdowns (all/first TD with filters)
 - **Week Picks** — per-week picks table with grading status
 - **Matchup Analysis** — head-to-head team stats for any game
 - **About** — scoring rules and platform info
@@ -89,6 +89,11 @@ This creates users (Phil, Alice, Bob), weeks, games, picks, and graded results. 
 | `GET` | `/api/results/ungraded/list` | Ungraded picks (admin) |
 | `GET` | `/api/analytics/roi-trends` | ROI by week |
 | `GET` | `/api/analytics/player-stats` | Player TD stats |
+| `GET` | `/api/analytics/odds-accuracy` | Accuracy by odds range |
+| `GET` | `/api/analytics/team-defense` | Team matchup accuracy |
+| `GET` | `/api/analytics/user-stats` | User win rate, Brier score, streaks |
+| `GET` | `/api/analytics/performance-breakdown` | Per-user stats for multi-user comparison |
+| `GET` | `/api/analytics/all-touchdowns` | All touchdowns (filter: season, week, team, first_td_only) |
 | `GET` | `/api/analytics/grading-status` | Grading progress |
 | `GET` | `/api/analytics/matchup/{game_id}` | Matchup breakdown |
 | `GET` | `/api/admin/stats` | System stats (admin) |

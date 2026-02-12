@@ -23,11 +23,13 @@ flowchart TB
     subgraph Sync["Admin Sync (manual)"]
         game_sync["Sync Games"]
         roster_sync["Sync Rosters"]
+        td_sync["Sync Touchdowns"]
     end
 
     subgraph DB["SQLite Database"]
         games["games"]
         rosters["rosters"]
+        touchdowns["touchdowns"]
         users["users"]
         weeks["weeks"]
         picks["picks"]
@@ -36,9 +38,8 @@ flowchart TB
         team_ratings["team_ratings"]
     end
 
-    subgraph OTF["On-the-Fly (not stored)"]
+    subgraph OTF["On-the-Fly (fallback)"]
         td_cache["TDLookupCache"]
-        matchup_tds["Matchup TD Scorers"]
     end
 
     subgraph Consumers["API / Frontend"]
@@ -54,14 +55,14 @@ flowchart TB
 
     load_sched --> game_sync
     load_rosters --> roster_sync
+    load_pbp --> td_sync
     game_sync --> games
     roster_sync --> rosters
+    td_sync --> touchdowns
 
-    load_pbp --> td_cache
-    load_pbp --> matchup_tds
+    touchdowns --> matchup
+    touchdowns --> analytics
     td_cache --> grading
-    td_cache --> analytics
-    matchup_tds --> matchup
 
     games --> matchup
     games --> analytics
@@ -88,23 +89,25 @@ flowchart LR
 
     subgraph Storage["Storage"]
         DB["SQLite DB"]
-        CACHE["Memory Cache\n(5 min TTL)"]
+        CACHE["Memory Cache\n5 min TTL"]
     end
 
     subgraph Sinks["Consumers"]
         M["Matchup"]
         L["Leaderboard"]
         G["Grading"]
+        A["Analytics"]
     end
 
     S1 -->|"sync_games"| DB
     S2 -->|"sync_rosters"| DB
-    S3 -->|" Never stored"| CACHE
-    CACHE --> M
+    S3 -->|"sync_touchdowns"| DB
+    S3 -->|"fallback"| CACHE
     CACHE --> G
     DB --> M
     DB --> L
     DB --> G
+    DB --> A
 ```
 
 ---
@@ -207,7 +210,18 @@ erDiagram
         float implied_probability
     }
 
+    touchdowns {
+        int id PK
+        string game_id
+        string player_name
+        string team
+        bool is_first_td
+        int play_id
+        int season
+    }
+
     games ||--o{ kickoff_decisions : "game_id"
+    games ||--o{ touchdowns : "game_id"
 ```
 
 ---
