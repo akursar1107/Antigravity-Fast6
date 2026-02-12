@@ -4,19 +4,17 @@ interface BadgeProps {
 }
 
 const toneStyles: Record<NonNullable<BadgeProps["tone"]>, string> = {
-  default: "bg-indigo-500/15 text-indigo-200 border-indigo-500/40",
-  success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  warning: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  danger: "bg-red-500/10 text-red-400 border-red-500/20",
-  info: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  default: "bg-[#234058]/10 text-[#234058] border-[#234058]/30",
+  success: "bg-[#15803d]/10 text-[#15803d] border-[#15803d]/30",
+  warning: "bg-[#A2877D]/20 text-[#A2877D] border-[#A2877D]/40",
+  danger: "bg-[#8C302C]/10 text-[#8C302C] border-[#8C302C]/30",
+  info: "bg-[#8faec7]/20 text-[#234058] border-[#8faec7]/40",
 };
 
 export default function Badge({ label, tone = "default" }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs uppercase tracking-[0.2em] ${
-        toneStyles[tone]
-      }`}
+      className={`inline-flex items-center rounded-sm border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] font-mono ${toneStyles[tone]}`}
     >
       {label}
     </span>

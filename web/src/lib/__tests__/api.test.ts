@@ -36,7 +36,10 @@ describe("api request", () => {
 
     expect(result).toEqual({
       ok: false,
-      error: { message: "Request failed", status: 502 },
+      error: {
+        message: "Request failed. Ensure the backend is running and reachable.",
+        status: 502,
+      },
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -86,7 +89,7 @@ describe("api request", () => {
 
     expect(result).toEqual({ ok: true, data: [] });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://example.test/api/leaderboard/season/2025",
+      "http://example.test/api/v1/leaderboard/season/2025",
       expect.any(Object)
     );
 
@@ -104,7 +107,7 @@ describe("api request", () => {
 
     expect(result).toEqual({ ok: true, data: [] });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://example.test/api/analytics/roi-trends?season=2025",
+      "http://example.test/api/v1/analytics/roi-trends?season=2025",
       expect.any(Object)
     );
   });

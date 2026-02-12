@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import DashboardLayoutWrapper from "@/components/layout/DashboardLayoutWrapper";
 import MatchupCard from "@/components/matchups/MatchupCard";
 import ErrorBanner from "@/components/ui/ErrorBanner";
 import Skeleton from "@/components/ui/Skeleton";
@@ -47,31 +47,30 @@ export default async function MatchupPage(props: PageProps) {
 
   if (!gameId || gameId.trim() === "") {
     return (
-      <DashboardLayout>
+      <DashboardLayoutWrapper>
         <ErrorBanner message="Invalid game ID. Please provide a valid game ID." />
-      </DashboardLayout>
+      </DashboardLayoutWrapper>
     );
   }
 
-  // Get server-side token
   const token = await getServerToken(TEST_USERNAME);
   if (!token) {
     return (
-      <DashboardLayout>
+      <DashboardLayoutWrapper>
         <ErrorBanner message="Failed to authenticate with backend" />
-      </DashboardLayout>
+      </DashboardLayoutWrapper>
     );
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayoutWrapper>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-50">
+          <h1 className="text-2xl font-black tracking-widest text-[#234058] uppercase font-mono">
             Matchup Analysis
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Game {gameId} - Team statistics and first TD probability
+          <p className="mt-2 text-sm text-[#78716c] font-mono">
+            Game {gameId} — Team statistics and first TD probability
           </p>
         </div>
 
@@ -79,6 +78,6 @@ export default async function MatchupPage(props: PageProps) {
           <MatchupData gameId={gameId} token={token} />
         </Suspense>
       </div>
-    </DashboardLayout>
+    </DashboardLayoutWrapper>
   );
 }

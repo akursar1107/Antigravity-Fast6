@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+/* Fast6 Ticket Office Design System */
 :root {
-  --background: #020617;
-  --foreground: #f1f5f9;
+  --background: #f1eee6;
+  --foreground: #234058;
+  --salty-dog: #234058;
+  --salty-dog-dark: #1a3348;
+  --cream: #f1eee6;
+  --tanager: #8c302c;
+  --bronze: #a2877d;
+  --muted-blue: #8faec7;
+  --border-gray: #d1d5db;
+  --text-muted: #78716c;
 }
 
 @theme inline {
@@ -13,5 +22,5 @@
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }

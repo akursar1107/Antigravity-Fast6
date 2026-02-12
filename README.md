@@ -13,13 +13,15 @@ Full-stack web app for managing **first touchdown scorer predictions** across a 
 
 ### 1. Backend (FastAPI)
 
+From the project root (directory containing `backend/`, `web/`, `requirements.txt`):
+
 ```bash
-cd Fast6
+cd <project-root>
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # Start API server
-uvicorn src.api.fastapi_app:app --reload --port 8000
+uvicorn backend.api.fastapi_app:app --reload --port 8000
 ```
 
 Backend runs at **http://localhost:8000** — interactive docs at `/docs`.
@@ -27,9 +29,9 @@ Backend runs at **http://localhost:8000** — interactive docs at `/docs`.
 ### 2. Frontend (Next.js)
 
 ```bash
-cd Fast6/web
+cd web
 npm install
-cp .env.local.example .env.local   # then edit if needed
+cp .env.example .env.local   # then edit if needed
 
 npm run dev
 ```
@@ -40,9 +42,24 @@ Frontend runs at **http://localhost:3000**.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | FastAPI backend URL |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://127.0.0.1:8000` | FastAPI backend URL |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Public app URL |
 | `NEXT_PUBLIC_CURRENT_SEASON` | `2025` | Active NFL season |
 | `NEXT_PUBLIC_TEST_USERNAME` | — | Dev-mode auto-login user |
+
+Backend: `.env.example` (copy to `.env`) documents `SECRET_KEY`, `CORS_ORIGINS`, `DATABASE_PATH`, etc.
+
+### 3. Populate sample data (optional)
+
+If the site shows "No data yet" or empty leaderboards, seed the database:
+
+```bash
+cd <project-root>
+source .venv/bin/activate
+python -m backend.scripts.seed_all
+```
+
+This creates users (Phil, Alice, Bob), weeks, games, picks, and graded results. The frontend uses `NEXT_PUBLIC_TEST_USERNAME` (default: Phil) for dev-mode auth—ensure that user exists.
 
 ## Features
 
@@ -79,6 +96,14 @@ Frontend runs at **http://localhost:3000**.
 
 Full interactive docs: **http://localhost:8000/docs**
 
+### Security & Auth
+
+**Intended for private use:** Fast6 uses **username-only authentication** (no password). This is suitable for a trusted friend group sharing one device or a private network. Do **not** expose this app to the public internet without adding password auth or OAuth.
+
+- Login is rate-limited (5 requests/minute)
+- JWT tokens expire after 30 days; set `SECRET_KEY` to a secure value in production
+- See `.env.example` for `SECRET_KEY`, `CORS_ORIGINS`, and other deployment settings
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -109,7 +134,7 @@ Fast6/
 │   ├── src/components/           # Shared UI components
 │   ├── src/lib/                  # API client, cache, auth
 │   └── package.json
-├── src/                          # Python backend
+├── backend/                      # Python backend
 │   ├── api/                      # FastAPI application
 │   │   ├── fastapi_app.py        # App entry + lifespan
 │   │   ├── fastapi_config.py     # Settings (pydantic-settings)
@@ -123,7 +148,7 @@ Fast6/
 │   ├── config.py                 # JSON config loader
 │   ├── config.json               # App settings
 │   └── utils/                    # NFL data, grading, odds
-├── tests/                        # Python test suite
+├── backend/tests/                # Python test suite
 ├── data/                         # SQLite database (gitignored)
 ├── Dockerfile                    # Production container
 ├── requirements.txt              # Python dependencies
@@ -137,17 +162,23 @@ Fast6/
 cd web && npm test
 
 # Backend
-cd Fast6 && python -m pytest tests/ -v
+cd <project-root> && python -m pytest backend/tests/ -v
 ```
 
 ## Deployment
 
-### Docker
+### Docker (Backend Only)
+
+The Dockerfile builds both frontend and backend, but **runs FastAPI only**.
+The Next.js app is built but not served in the container.
 
 ```bash
 docker build -t fast6 .
 docker run -d -p 8000:8000 -v $(pwd)/data:/app/data fast6
 ```
+
+Deploy the frontend separately (Vercel, Railway, etc.) and set `NEXT_PUBLIC_API_BASE_URL`
+to this backend's URL. See `docs/plans/NEXTJS_DEPLOYMENT.md`.
 
 ### Railway (Recommended)
 

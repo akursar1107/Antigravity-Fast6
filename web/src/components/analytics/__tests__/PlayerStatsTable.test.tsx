@@ -68,9 +68,9 @@ describe("PlayerStatsTable", () => {
   it("applies correct color class for accuracy above 50%", () => {
     const { container } = render(<PlayerStatsTable data={mockData} />);
     
-    // Find accuracy cells with emerald color (>= 50%)
-    const emeraldCells = container.querySelectorAll(".text-emerald-400");
-    expect(emeraldCells.length).toBeGreaterThan(0);
+    // Find accuracy cells with success color (>= 50%)
+    const successCells = container.querySelectorAll(".text-\\[\\#15803d\\]");
+    expect(successCells.length).toBeGreaterThan(0);
   });
 
   it("handles 0% accuracy edge case", () => {
@@ -85,13 +85,13 @@ describe("PlayerStatsTable", () => {
     ];
     const { container } = render(<PlayerStatsTable data={zeroAccuracyData} />);
     
-    // Verify 0% accuracy is rendered with slate color (< 50%)
-    const accuracyCell = container.querySelector("td:last-child .text-slate-400");
+    // Verify 0% accuracy is rendered with muted color (< 50%)
+    const accuracyCell = container.querySelector("td:last-child .text-\\[\\#78716c\\]");
     expect(accuracyCell).toBeInTheDocument();
     expect(accuracyCell?.textContent).toBe("0%");
   });
 
-  it("applies emerald color for exactly 50% accuracy boundary", () => {
+  it("applies success color for exactly 50% accuracy boundary", () => {
     const boundaryData: PlayerStat[] = [
       {
         player_name: "Boundary Player",
@@ -103,28 +103,28 @@ describe("PlayerStatsTable", () => {
     ];
     const { container } = render(<PlayerStatsTable data={boundaryData} />);
     
-    // 50% should get emerald (>= 50)
-    const emeraldCells = container.querySelectorAll(".text-emerald-400");
-    expect(emeraldCells.length).toBe(1);
+    // 50% should get success color (>= 50)
+    const successCells = container.querySelectorAll(".text-\\[\\#15803d\\]");
+    expect(successCells.length).toBe(1);
   });
 
-  it("applies emerald color to specific rows with >= 50% accuracy", () => {
+  it("applies success color to specific rows with >= 50% accuracy", () => {
     const { container } = render(<PlayerStatsTable data={mockData} />);
     
     const rows = screen.getAllByRole("row");
     const dataRows = Array.from(rows).slice(1); // Skip header
     
-    // Tyreek Hill: 62.5% - should be emerald
+    // Tyreek Hill: 62.5% - should be success
     const tyreekRow = dataRows[0];
-    expect(tyreekRow.querySelector(".text-emerald-400")).toBeInTheDocument();
+    expect(tyreekRow.querySelector(".text-\\[\\#15803d\\]")).toBeInTheDocument();
     
-    // Christian McCaffrey: 55% - should be emerald
+    // Christian McCaffrey: 55% - should be success
     const cmcRow = dataRows[1];
-    expect(cmcRow.querySelector(".text-emerald-400")).toBeInTheDocument();
+    expect(cmcRow.querySelector(".text-\\[\\#15803d\\]")).toBeInTheDocument();
     
-    // A.J. Brown: 48% - should NOT be emerald
+    // A.J. Brown: 48% - should NOT be success
     const ajRow = dataRows[2];
-    expect(ajRow.querySelector(".text-emerald-400")).not.toBeInTheDocument();
-    expect(ajRow.querySelector(".text-slate-400")).toBeInTheDocument();
+    expect(ajRow.querySelector(".text-\\[\\#15803d\\]")).not.toBeInTheDocument();
+    expect(ajRow.querySelector(".text-\\[\\#78716c\\]")).toBeInTheDocument();
   });
 });

@@ -41,24 +41,23 @@ describe("LeaderboardTable", () => {
     render(<LeaderboardTable data={mockData} />);
 
     // Check column headers
-    expect(screen.getByText("Rank")).toBeInTheDocument();
-    expect(screen.getByText("User")).toBeInTheDocument();
-    expect(screen.getByText("Points")).toBeInTheDocument();
+    expect(screen.getByText("#")).toBeInTheDocument();
+    expect(screen.getByText("Agent")).toBeInTheDocument();
+    expect(screen.getByText("Pts")).toBeInTheDocument();
     expect(screen.getByText("ROI")).toBeInTheDocument();
-    expect(screen.getByText("Win %")).toBeInTheDocument();
-    expect(screen.getByText("Correct")).toBeInTheDocument();
+    expect(screen.getByText("Rec")).toBeInTheDocument();
 
     // Check first row data
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("21")).toBeInTheDocument();
     expect(screen.getByText("$150.5")).toBeInTheDocument();
-    expect(screen.getByText("70%")).toBeInTheDocument();
+    expect(screen.getByText("7-3")).toBeInTheDocument();
 
     // Check second row data
     expect(screen.getByText("Bob")).toBeInTheDocument();
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(screen.getByText("$-25.3")).toBeInTheDocument();
-    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText("4-4")).toBeInTheDocument();
 
     // Check medals for top 3
     expect(screen.getByText("🥇")).toBeInTheDocument();
@@ -83,7 +82,7 @@ describe("LeaderboardTable", () => {
     expect(screen.getByText("$123.5")).toBeInTheDocument();
   });
 
-  it("formats win percentage with zero decimal places", () => {
+  it("displays record (W-L) in Rec column", () => {
     const mockData: LeaderboardEntry[] = [
       {
         rank: 1,
@@ -99,7 +98,7 @@ describe("LeaderboardTable", () => {
     ];
 
     render(<LeaderboardTable data={mockData} />);
-    expect(screen.getByText("76%")).toBeInTheDocument();
+    expect(screen.getByText("3-1")).toBeInTheDocument();
   });
 
   it("displays medals for top 3 ranks", () => {
@@ -162,9 +161,9 @@ describe("LeaderboardTable", () => {
 
     render(<LeaderboardTable data={mockData} />);
     expect(screen.getByText("NoPicks")).toBeInTheDocument();
-    // Points column shows "0" and Correct column shows "0/0", so multiple matches
+    // Points column shows "0", Rec column shows "0-0"
     expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("0%")).toBeInTheDocument();
+    expect(screen.getByText("0-0")).toBeInTheDocument();
   });
 
   it("applies text-red-400 color for negative ROI", () => {
@@ -184,10 +183,10 @@ describe("LeaderboardTable", () => {
 
     const { container } = render(<LeaderboardTable data={mockData} />);
     const roiElement = screen.getByText("$-45.8");
-    expect(roiElement).toHaveClass("text-red-400");
+    expect(roiElement).toHaveClass("text-[#8C302C]");
   });
 
-  it("displays correct picks ratio in the Correct column", () => {
+  it("displays correct record (W-L) in the Rec column", () => {
     const mockData: LeaderboardEntry[] = [
       {
         rank: 1,
@@ -215,12 +214,11 @@ describe("LeaderboardTable", () => {
 
     const { container } = render(<LeaderboardTable data={mockData} />);
 
-    // Correct column renders "correct/total" ratio — verify via the table rows
+    // Rec column renders "correct-incorrect" (e.g. 3-1, 1-3)
     const rows = container.querySelectorAll("tbody tr");
-    // First row: 3/4, second row: 1/4
     expect(rows[0]?.textContent).toContain("3");
-    expect(rows[0]?.textContent).toContain("/4");
+    expect(rows[0]?.textContent).toContain("1"); // 3-1
     expect(rows[1]?.textContent).toContain("1");
-    expect(rows[1]?.textContent).toContain("/4");
+    expect(rows[1]?.textContent).toContain("3"); // 1-3
   });
 });

@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import DashboardLayoutWrapper from "@/components/layout/DashboardLayoutWrapper";
 import Badge from "@/components/ui/Badge";
 import ChartCard from "@/components/ui/ChartCard";
 import StatCard from "@/components/ui/StatCard";
@@ -13,9 +13,9 @@ export default async function Home() {
   const token = await getServerToken(testUsername);
   if (!token) {
     return (
-      <DashboardLayout>
+      <DashboardLayoutWrapper>
         <ErrorBanner message="Failed to authenticate with backend" />
-      </DashboardLayout>
+      </DashboardLayoutWrapper>
     );
   }
 
@@ -42,16 +42,16 @@ export default async function Home() {
   const hasError = !leaderboardRes.ok && !statsRes.ok;
 
   return (
-    <DashboardLayout>
-      <header className="flex flex-wrap items-center justify-between gap-4">
+    <DashboardLayoutWrapper>
+      <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#78716c] font-mono">
             fast6 analytics
           </p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-50">
+          <h1 className="mt-2 text-2xl font-black tracking-widest text-[#234058] uppercase font-mono">
             Weekly overview
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-[#78716c] font-mono">
             Track picks, ROI, and player trends in one place.
           </p>
         </div>
@@ -65,7 +65,7 @@ export default async function Home() {
         />
       )}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8">
         <StatCard label="Total picks" value={totalPicks} helper="All active weeks" />
         <StatCard
           label="Accuracy"
@@ -78,7 +78,7 @@ export default async function Home() {
           value={topPerformer?.user_name ?? "\u2014"}
           helper={
             topPerformer
-              ? `${topPerformer.total_points} pts \u00b7 ${topPerformer.win_percentage.toFixed(0)}% win rate`
+              ? `${topPerformer.total_points} pts · ${topPerformer.win_percentage.toFixed(0)}% win rate`
               : "No data yet"
           }
         />
@@ -87,33 +87,33 @@ export default async function Home() {
       <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <ChartCard title="Leaderboard snapshot" subtitle="Current season standings">
           {leaderboard.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">
+            <p className="py-8 text-center text-sm text-[#78716c] font-mono">
               No leaderboard data yet
             </p>
           ) : (
-            <ul className="space-y-3 text-sm text-slate-300">
+            <ul className="space-y-3 text-sm font-mono">
               {leaderboard.slice(0, 5).map((entry) => (
                 <li
                   key={entry.user_id}
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between py-2 border-b border-dashed border-[#e5e7eb] last:border-0"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="font-medium text-slate-200">
-                      {entry.rank === 1 && "\ud83e\uddc5 "}
-                      {entry.rank === 2 && "\ud83e\uddc6 "}
-                      {entry.rank === 3 && "\ud83e\uddc7 "}
+                    <span className="font-bold text-[#234058]">
+                      {entry.rank === 1 && "🥇 "}
+                      {entry.rank === 2 && "🥈 "}
+                      {entry.rank === 3 && "🥉 "}
                       {entry.user_name}
                     </span>
                   </span>
                   <span className="flex items-center gap-4">
-                    <span className="text-slate-400">
+                    <span className="text-[#78716c]">
                       {entry.total_points} pts
                     </span>
                     <span
                       className={
                         entry.roi_dollars >= 0
-                          ? "text-emerald-400"
-                          : "text-red-400"
+                          ? "font-bold text-[#15803d]"
+                          : "font-bold text-[#8C302C]"
                       }
                     >
                       ${entry.roi_dollars.toFixed(1)}
@@ -125,22 +125,22 @@ export default async function Home() {
           )}
         </ChartCard>
         <ChartCard title="Quick stats" subtitle="Season at a glance">
-          <ul className="space-y-3 text-sm text-slate-300">
-            <li className="flex items-center justify-between">
-              <span>Total weeks</span>
-              <span className="text-slate-400">
+          <ul className="space-y-3 text-sm font-mono">
+            <li className="flex items-center justify-between py-2 border-b border-dashed border-[#e5e7eb] last:border-0">
+              <span className="text-[#78716c]">Total weeks</span>
+              <span className="font-bold text-[#234058]">
                 {stats?.total_weeks ?? "\u2014"}
               </span>
             </li>
-            <li className="flex items-center justify-between">
-              <span>Total correct</span>
-              <span className="text-slate-400">
+            <li className="flex items-center justify-between py-2 border-b border-dashed border-[#e5e7eb] last:border-0">
+              <span className="text-[#78716c]">Total correct</span>
+              <span className="font-bold text-[#234058]">
                 {stats?.total_correct ?? "\u2014"}
               </span>
             </li>
-            <li className="flex items-center justify-between">
-              <span>Best ROI</span>
-              <span className="text-emerald-400">
+            <li className="flex items-center justify-between py-2 border-b border-dashed border-[#e5e7eb] last:border-0">
+              <span className="text-[#78716c]">Best ROI</span>
+              <span className="font-bold text-[#15803d]">
                 {topPerformer
                   ? `$${topPerformer.roi_dollars.toFixed(1)}`
                   : "\u2014"}
@@ -149,6 +149,6 @@ export default async function Home() {
           </ul>
         </ChartCard>
       </section>
-    </DashboardLayout>
+    </DashboardLayoutWrapper>
   );
 }

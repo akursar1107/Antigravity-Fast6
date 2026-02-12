@@ -60,7 +60,7 @@ describe("WeekPicksTable", () => {
     expect(screen.getByText("-110")).toBeInTheDocument();
   });
 
-  it("displays Correct status badge with emerald color", () => {
+  it("displays Correct status badge with success color", () => {
     const mockPicks: WeekPick[] = [
       {
         id: 1,
@@ -77,10 +77,10 @@ describe("WeekPicksTable", () => {
 
     render(<WeekPicksTable picks={mockPicks} />);
     const badge = screen.getByText("Correct");
-    expect(badge).toHaveClass("text-emerald-400");
+    expect(badge).toHaveClass("text-[#15803d]");
   });
 
-  it("displays Incorrect status badge with red color", () => {
+  it("displays Incorrect status badge with danger color", () => {
     const mockPicks: WeekPick[] = [
       {
         id: 1,
@@ -97,10 +97,10 @@ describe("WeekPicksTable", () => {
 
     render(<WeekPicksTable picks={mockPicks} />);
     const badge = screen.getByText("Incorrect");
-    expect(badge).toHaveClass("text-red-400");
+    expect(badge).toHaveClass("text-[#8C302C]");
   });
 
-  it("displays Pending status badge with slate color", () => {
+  it("displays Pending status badge with muted color", () => {
     const mockPicks: WeekPick[] = [
       {
         id: 1,
@@ -117,7 +117,7 @@ describe("WeekPicksTable", () => {
 
     render(<WeekPicksTable picks={mockPicks} />);
     const badge = screen.getByText("Pending");
-    expect(badge).toHaveClass("text-slate-400");
+    expect(badge).toHaveClass("text-[#78716c]");
   });
 
   it("formats odds correctly with + for positive and plain for negative", () => {

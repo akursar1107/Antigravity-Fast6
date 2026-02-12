@@ -1,5 +1,12 @@
 # Fast6 — NFL First TD Prediction Platform
 # Multi-stage build: Node (frontend) + Python (backend)
+#
+# DEPLOYMENT: This image runs FastAPI only. The Next.js frontend is built but
+# NOT served by this container. For production:
+#   - Option A: Deploy Next.js separately (Vercel, Railway, etc.) and set
+#     NEXT_PUBLIC_API_BASE_URL to this backend's URL.
+#   - Option B: Use two containers: one for FastAPI (this), one for Next.js.
+# See docs/plans/NEXTJS_DEPLOYMENT.md for frontend deployment.
 
 # ── Stage 1: Build Next.js frontend ──────────────────────────────
 FROM node:20-slim AS frontend-build
@@ -26,9 +33,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
-COPY src/ src/
+COPY backend/ backend/
 
-# Copy built frontend
+# Copy built frontend (for potential future static serving; not used by CMD)
 COPY --from=frontend-build /build/.next/standalone web/
 COPY --from=frontend-build /build/.next/static web/.next/static
 COPY --from=frontend-build /build/public web/public
@@ -47,4 +54,4 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
 # Run FastAPI
-CMD ["uvicorn", "src.api.fastapi_app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "backend.api.fastapi_app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -29,10 +29,10 @@ export default async function AdminUsersPage() {
     <>
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#78716c] font-mono">
             admin · users
           </p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-50">
+          <h1 className="mt-2 text-2xl font-black tracking-widest text-[#234058] uppercase font-mono">
             Manage Users
           </h1>
         </div>

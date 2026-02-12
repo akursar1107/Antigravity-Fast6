@@ -1,6 +1,7 @@
 import ErrorBanner from "@/components/ui/ErrorBanner";
 import StatCard from "@/components/ui/StatCard";
 import Badge from "@/components/ui/Badge";
+import AdminSyncButtons from "@/components/admin/AdminSyncButtons";
 import { getAdminStatsServer } from "@/lib/api";
 import { getServerToken } from "@/lib/server-token";
 
@@ -29,13 +30,13 @@ export default async function AdminDashboard() {
     <>
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#78716c] font-mono">
             admin center
           </p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-50">
+          <h1 className="mt-2 text-2xl font-black tracking-widest text-[#234058] uppercase font-mono">
             Dashboard
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-[#78716c] font-mono">
             System overview and management tools.
           </p>
         </div>
@@ -66,16 +67,16 @@ export default async function AdminDashboard() {
       </section>
 
       {s.ungraded_picks > 0 && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-900/10 p-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
+        <div className="rounded-lg border-2 border-[#A2877D] bg-[#A2877D]/10 p-5">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#8C302C] font-mono">
             Action needed
           </p>
-          <p className="mt-2 text-sm text-amber-200/80">
+          <p className="mt-2 text-sm text-[#234058] font-mono">
             {s.ungraded_picks} pick{s.ungraded_picks !== 1 ? "s" : ""} awaiting
             grading. Head to the{" "}
             <a
               href="/admin/grading"
-              className="underline hover:text-amber-100"
+              className="underline font-bold text-[#8C302C] hover:text-[#234058]"
             >
               Grading
             </a>{" "}
@@ -83,6 +84,10 @@ export default async function AdminDashboard() {
           </p>
         </div>
       )}
+
+      <section>
+        <AdminSyncButtons />
+      </section>
     </>
   );
 }

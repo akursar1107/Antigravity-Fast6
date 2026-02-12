@@ -24,7 +24,7 @@ resources/
 
 # Build artifacts
 .next/
-web/node_modules/
+node_modules/
 web/.next/
 *.bak
 
@@ -40,10 +40,12 @@ web/.next/
 Thumbs.db
 
 # Secrets & keys
-.streamlit/secrets.toml
 *.pem
 *.key
 id_rsa*
+
+# Runtime logs
+uvicorn.log
 
 # Git worktrees
 .worktrees/

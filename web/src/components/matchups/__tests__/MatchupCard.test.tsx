@@ -22,13 +22,13 @@ describe("MatchupCard", () => {
           team: "KC",
           picks_count: 10,
           correct_count: 7,
-          accuracy: 0.7,
+          accuracy: 70,
         },
         {
           team: "SF",
           picks_count: 8,
           correct_count: 5,
-          accuracy: 0.625,
+          accuracy: 62.5,
         },
       ],
     };
@@ -63,13 +63,13 @@ describe("MatchupCard", () => {
           team: "KC",
           picks_count: 5,
           correct_count: 3,
-          accuracy: 0.6,
+          accuracy: 60,
         },
         {
           team: "SF",
           picks_count: 5,
           correct_count: 3,
-          accuracy: 0.6,
+          accuracy: 60,
         },
       ],
     };
@@ -86,13 +86,13 @@ describe("MatchupCard", () => {
           team: "KC",
           picks_count: 10,
           correct_count: 7,
-          accuracy: 0.7,
+          accuracy: 70,
         },
         {
           team: "SF",
           picks_count: 8,
           correct_count: 5,
-          accuracy: 0.625,
+          accuracy: 62.5,
         },
       ],
     };
@@ -101,6 +101,6 @@ describe("MatchupCard", () => {
     
     // Correct count should be in emerald
     const correctElements = screen.getAllByText("7");
-    expect(correctElements.some(el => el.className.includes("text-emerald-400"))).toBe(true);
+    expect(correctElements.some(el => el.className.includes("15803d"))).toBe(true);
   });
 });

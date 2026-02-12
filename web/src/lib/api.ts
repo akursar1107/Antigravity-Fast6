@@ -5,7 +5,7 @@ const CACHE_TTL_MS = 60_000;
 const AUTH_STORAGE_KEY = "fast6_auth_token";
 
 function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 }
 
 function getStoredToken(): string | null {
@@ -17,7 +17,7 @@ function getStoredToken(): string | null {
   }
 }
 
-function setStoredToken(token: string): void {
+export function setStoredToken(token: string): void {
   try {
     if (typeof window === "undefined") return;
     localStorage.setItem(AUTH_STORAGE_KEY, token);
@@ -28,13 +28,18 @@ function setStoredToken(token: string): void {
 
 export type ApiError = { ok: false; error: { message: string; status?: number } };
 
-function normalizeError(status?: number): ApiError {
+function normalizeError(status?: number, detail?: string): ApiError {
+  const message =
+    detail && typeof detail === "string" && detail.length > 0
+      ? detail
+      : status === 401
+        ? "Session expired. Please sign in again."
+        : status === 403
+          ? "Access denied."
+          : "Request failed. Ensure the backend is running and reachable.";
   return {
     ok: false,
-    error: {
-      message: "Request failed",
-      status,
-    },
+    error: { message, status },
   };
 }
 export type ApiSuccess<T> = { ok: true; data: T };
@@ -44,13 +49,17 @@ function buildUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
-
-  return `${getBaseUrl()}${path}`;
+  const fullPath = path.startsWith("/api/v1/") ? path : path.replace("/api/", "/api/v1/");
+  return `${getBaseUrl()}${fullPath}`;
 }
 
-async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  options?: RequestInit,
+  timeoutMs: number = TIMEOUT_MS
+): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     return await fetch(url, { ...options, signal: controller.signal });
@@ -68,7 +77,7 @@ export async function request<T>(path: string, serverToken?: string): Promise<Ap
 
   const token = serverToken ?? getStoredToken();
   const headers: HeadersInit = {};
-  
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -78,7 +87,7 @@ export async function request<T>(path: string, serverToken?: string): Promise<Ap
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       response = await fetchWithTimeout(url, { headers });
-    } catch (error) {
+    } catch {
       return normalizeError();
     }
 
@@ -97,7 +106,15 @@ export async function request<T>(path: string, serverToken?: string): Promise<Ap
       continue;
     }
 
-    return normalizeError(response.status);
+    let detail: string | undefined;
+    try {
+      const errBody = (await response.json()) as { detail?: string; error?: string; message?: string };
+      const d = errBody?.detail ?? errBody?.error ?? errBody?.message;
+      detail = typeof d === "string" ? d : undefined;
+    } catch {
+      detail = undefined;
+    }
+    return normalizeError(response.status, detail);
   }
 
   return normalizeError(response?.status);
@@ -180,9 +197,29 @@ export type MatchupTeamStat = {
   accuracy: number;
 };
 
+export type TdScorer = {
+  player_name: string;
+  team: string;
+  is_first_td?: boolean;
+};
+
+export type MatchupPick = {
+  id: number;
+  user_name: string;
+  team: string;
+  player_name: string;
+  odds: number;
+  is_correct: boolean | null;
+  actual_scorer: string | null;
+  any_time_td: boolean | null;
+};
+
 export type MatchupResponse = {
   game_id: string;
+  status?: string | null;
   teams: MatchupTeamStat[];
+  td_scorers?: TdScorer[];
+  picks?: MatchupPick[];
 };
 
 export type WeekPick = {
@@ -214,53 +251,42 @@ export async function getWeekLeaderboard(
   return request(`/api/leaderboard/week/${weekId}`);
 }
 
-export async function getSeasonStats(
-  season: number
-): Promise<ApiResponse<SeasonStats>> {
-  return request(`/api/leaderboard/season/${season}/stats`);
-}
-
 export async function getRoiTrends(
   season: number
 ): Promise<ApiResponse<RoiTrend[]>> {
   return request(`/api/analytics/roi-trends?season=${season}`);
 }
 
-export async function getOddsAccuracy(
-  season: number
-): Promise<ApiResponse<OddsAccuracy[]>> {
-  return request(`/api/analytics/odds-accuracy?season=${season}`);
-}
+export type Game = {
+  id: string;
+  season: number;
+  week: number;
+  game_date: string;
+  home_team: string;
+  away_team: string;
+  home_score: number | null;
+  away_score: number | null;
+  status: 'scheduled' | 'in_progress' | 'final';
+};
 
-export async function getPlayerStats(
+// Server-side helper
+export async function getGamesServer(
   season: number,
-  limit = 50
-): Promise<ApiResponse<PlayerStat[]>> {
-  return request(`/api/analytics/player-stats?season=${season}&limit=${limit}`);
+  token: string,
+  week?: number,
+  status?: "scheduled" | "in_progress" | "final"
+): Promise<ApiResponse<Game[]>> {
+  let path = `/api/games?season=${season}`;
+  if (week) path += `&week=${week}`;
+  if (status) path += `&status=${status}`;
+  return request(path, token);
 }
 
-export async function getDefenseStats(
-  season: number
-): Promise<ApiResponse<DefenseStat[]>> {
-  return request(`/api/analytics/team-defense?season=${season}`);
-}
-
-export async function getGradingStatus(
-  season: number
-): Promise<ApiResponse<GradingStatus>> {
-  return request(`/api/analytics/grading-status?season=${season}`);
-}
-
-export async function getWeekPicks(
-  weekId: number
-): Promise<ApiResponse<WeekPicksResponse>> {
-  return request(`/api/weeks/${weekId}/picks`);
-}
-
-export async function getMatchupAnalysis(
-  gameId: string
-): Promise<ApiResponse<MatchupResponse>> {
-  return request(`/api/analytics/matchup/${gameId}`);
+export async function getGamesWeeksServer(
+  season: number,
+  token: string
+): Promise<ApiResponse<number[]>> {
+  return request(`/api/games/weeks?season=${season}`, token);
 }
 
 // Authentication
@@ -335,6 +361,19 @@ export async function getRoiTrendsServer(
   return request(`/api/analytics/roi-trends?season=${season}`, token);
 }
 
+export type RoiTrendByUser = {
+  week: number;
+  user_name: string;
+  roi_dollars: number;
+};
+
+export async function getRoiTrendsByUserServer(
+  season: number,
+  token: string
+): Promise<ApiResponse<RoiTrendByUser[]>> {
+  return request(`/api/analytics/roi-trends-by-user?season=${season}`, token);
+}
+
 export async function getPlayerStatsServer(
   season: number,
   token: string,
@@ -344,6 +383,64 @@ export async function getPlayerStatsServer(
     `/api/analytics/player-stats?season=${season}&limit=${limit}`,
     token
   );
+}
+
+export async function getOddsAccuracyServer(
+  season: number,
+  token: string
+): Promise<ApiResponse<OddsAccuracy[]>> {
+  return request(`/api/analytics/odds-accuracy?season=${season}`, token);
+}
+
+export async function getTeamDefenseServer(
+  season: number,
+  token: string
+): Promise<ApiResponse<DefenseStat[]>> {
+  return request(`/api/analytics/team-defense?season=${season}`, token);
+}
+
+export type UserStats = {
+  user_id: number;
+  user_name: string;
+  weeks_participated: number;
+  total_picks: number;
+  correct_picks: number;
+  any_time_td_hits: number;
+  total_points: number;
+  roi_dollars: number;
+  win_percentage: number;
+  avg_points_per_pick: number;
+};
+
+export async function getUserStatsServer(
+  userId: number,
+  token: string
+): Promise<ApiResponse<UserStats>> {
+  return request(`/api/leaderboard/user/${userId}/stats`, token);
+}
+
+export type GradedPick = {
+  pick_id: number;
+  player_name: string;
+  team: string;
+  odds: number | null;
+  week: number;
+  season: number;
+  is_correct: boolean;
+  any_time_td: boolean;
+  actual_scorer: string | null;
+  roi: number;
+};
+
+export async function getUserGradedPicksServer(
+  userId: number,
+  token: string,
+  season?: number
+): Promise<ApiResponse<GradedPick[]>> {
+  const path = season
+    ? `/api/leaderboard/user/${userId}/picks?season=${season}&limit=100`
+    : `/api/leaderboard/user/${userId}/picks?limit=100`;
+  return request(path, token);
 }
 
 export async function getWeekPicksServer(
@@ -377,7 +474,47 @@ export type User = {
   name: string;
   email: string | null;
   is_admin: boolean;
+  base_bet?: number | null;
 };
+
+export type CurrentUser = {
+  id: number;
+  name: string;
+  role: string;
+};
+
+export async function getCurrentUserServer(
+  token: string
+): Promise<ApiResponse<CurrentUser>> {
+  return request("/api/auth/me", token);
+}
+
+export async function updateUserBaseBet(
+  userId: number,
+  baseBet: number,
+  token?: string
+): Promise<ApiResponse<User>> {
+  const path = `/api/users/${userId}/base-bet`;
+  const url = buildUrl(path);
+  const t = token ?? getStoredToken();
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (t) headers["Authorization"] = `Bearer ${t}`;
+  try {
+    const response = await fetchWithTimeout(url, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ base_bet: baseBet }),
+    });
+    if (!response.ok) {
+      const errBody = (await response.json()) as { detail?: string };
+      return normalizeError(response.status, errBody?.detail);
+    }
+    const data = (await response.json()) as User;
+    return { ok: true, data };
+  } catch {
+    return normalizeError();
+  }
+}
 
 export type Week = {
   id: number;
@@ -397,6 +534,12 @@ export type Pick = {
   game_id: string | null;
 };
 
+export type PickWithResult = Pick & {
+  result_id: number | null;
+  is_correct: boolean | null;
+  any_time_td: boolean | null;
+};
+
 // Admin server-side helpers
 export async function getAdminStatsServer(
   token: string
@@ -410,18 +553,71 @@ export async function getUsersServer(
   return request("/api/users", token);
 }
 
+export async function getUserServer(
+  userId: number,
+  token: string
+): Promise<ApiResponse<User>> {
+  return request(`/api/users/${userId}`, token);
+}
+
+export async function getAdminUserPicksWithResultsServer(
+  userId: number,
+  token: string
+): Promise<ApiResponse<PickWithResult[]>> {
+  const path = `/api/admin/users/${userId}/picks-with-results`;
+  const url = buildUrl(path);
+  try {
+    const response = await fetchWithTimeout(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const errBody = (await response.json()) as { detail?: string };
+      return normalizeError(response.status, errBody?.detail);
+    }
+    const data = (await response.json()) as PickWithResult[];
+    return { ok: true, data };
+  } catch {
+    return normalizeError();
+  }
+}
+
 export async function getWeeksServer(
   season: number,
   token: string
 ): Promise<ApiResponse<Week[]>> {
-  return request(`/api/weeks/season/${season}`, token);
+  const res = await request<Week[]>(`/api/weeks?season=${season}`, token);
+  if (res.ok) return res;
+  return request<Week[]>(`/api/weeks/season/${season}/weeks`, token);
 }
 
 export async function getPicksServer(
   token: string,
-  weekId?: number
+  weekId?: number,
+  userId?: number
 ): Promise<ApiResponse<Pick[]>> {
-  const path = weekId ? `/api/picks?week_id=${weekId}` : "/api/picks";
+  const params = new URLSearchParams();
+  if (weekId != null) params.set("week_id", String(weekId));
+  if (userId != null) params.set("user_id", String(userId));
+  const qs = params.toString();
+  const path = qs ? `/api/picks?${qs}` : "/api/picks";
+
+  // Bypass cache for filtered requests (user_id/week_id) to avoid stale cross-user data
+  if (qs) {
+    const url = buildUrl(path);
+    const headers: HeadersInit = { Authorization: `Bearer ${token}` };
+    try {
+      const response = await fetchWithTimeout(url, { headers });
+      if (!response.ok) {
+        const errBody = (await response.json()) as { detail?: string };
+        return normalizeError(response.status, errBody?.detail);
+      }
+      const data = (await response.json()) as Pick[];
+      return { ok: true, data };
+    } catch {
+      return normalizeError();
+    }
+  }
+
   return request(path, token);
 }
 
@@ -450,22 +646,135 @@ export async function postRequest<T>(
   }
 }
 
-export async function deleteRequest<T>(
-  path: string,
+export type PickCreate = {
+  week_id: number;
+  team: string;
+  player_name: string;
+  odds: number;
+  game_id: string;
+};
+
+export async function submitPick(
+  pick: PickCreate
+): Promise<ApiResponse<Pick>> {
+  const token = getStoredToken();
+  if (!token) return { ok: false, error: { message: "Not authenticated" } };
+  return postRequest("/api/picks", pick, token);
+}
+
+export type PickUpdate = {
+  team?: string;
+  player_name?: string;
+  odds?: number;
+};
+
+export async function updatePickServer(
+  pickId: number,
+  updates: PickUpdate,
   token: string
-): Promise<ApiResponse<T>> {
-  const url = buildUrl(path);
+): Promise<ApiResponse<Pick>> {
+  const url = buildUrl(`/api/picks/${pickId}`);
+  try {
+    const response = await fetchWithTimeout(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(updates),
+    });
+    if (response.ok) {
+      const data = (await response.json()) as Pick;
+      return { ok: true, data };
+    }
+    const errBody = (await response.json()) as { detail?: string };
+    return normalizeError(response.status, errBody?.detail);
+  } catch {
+    return normalizeError();
+  }
+}
+
+export async function updateResultServer(
+  pickId: number,
+  isCorrect: boolean,
+  token: string
+): Promise<ApiResponse<{ is_correct: boolean }>> {
+  const url = buildUrl(`/api/results/by-pick/${pickId}`);
+  try {
+    const response = await fetchWithTimeout(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ is_correct: isCorrect }),
+    });
+    if (response.ok) {
+      const data = (await response.json()) as { is_correct: boolean };
+      return { ok: true, data };
+    }
+    const errBody = (await response.json()) as { detail?: string };
+    return normalizeError(response.status, errBody?.detail);
+  } catch {
+    return normalizeError();
+  }
+}
+
+export async function deletePickServer(
+  pickId: number,
+  token: string
+): Promise<ApiResponse<void>> {
+  const url = buildUrl(`/api/picks/${pickId}`);
   try {
     const response = await fetchWithTimeout(url, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (response.ok) {
-      const data = (await response.json()) as T;
-      return { ok: true, data };
+    if (response.status === 204 || response.ok) {
+      return { ok: true, data: undefined as void };
     }
-    return normalizeError(response.status);
+    const errBody = (await response.json()) as { detail?: string };
+    return normalizeError(response.status, errBody?.detail);
   } catch {
     return normalizeError();
   }
+}
+
+// Rosters
+export type RosterPlayer = {
+  player_name: string;
+  team: string;
+  position: string;
+};
+
+export async function getRosterPlayers(
+  team: string,
+  season: number,
+  token?: string | null
+): Promise<ApiResponse<RosterPlayer[]>> {
+  const t = token ?? getStoredToken();
+  if (!t) return { ok: false, error: { message: "Not authenticated" } };
+  return request(
+    `/api/rosters?team=${encodeURIComponent(team)}&season=${season}`,
+    t
+  );
+}
+
+// Admin create pick
+export type AdminPickCreate = {
+  user_id: number;
+  week_id: number;
+  team: string;
+  player_name: string;
+  odds: number | null;
+  game_id: string | null;
+};
+
+export async function createAdminPick(
+  pick: AdminPickCreate,
+  token?: string | null
+): Promise<ApiResponse<Pick>> {
+  const t = token ?? getStoredToken();
+  if (!t) return { ok: false, error: { message: "Not authenticated" } };
+  return postRequest<Pick>("/api/admin/picks", pick, t);
 }

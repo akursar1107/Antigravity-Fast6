@@ -1,3 +1,5 @@
+"use client";
+
 interface ErrorBannerProps {
   title?: string;
   message: string;
@@ -12,18 +14,18 @@ export default function ErrorBanner({
   onAction,
 }: ErrorBannerProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-red-500/30 bg-red-900/20 p-5 text-red-50">
+    <div className="flex flex-col gap-3 rounded-lg border-2 border-[#8C302C]/40 bg-[#8C302C]/10 p-5">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#8C302C] font-mono">
           {title}
         </p>
-        <p className="mt-2 text-sm text-red-300/90">{message}</p>
+        <p className="mt-2 text-sm text-[#234058] font-mono">{message}</p>
       </div>
       {actionLabel && onAction ? (
         <button
           type="button"
           onClick={onAction}
-          className="w-fit rounded-full border border-red-400/60 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-50 transition hover:bg-red-500/20"
+          className="w-fit rounded-sm border-2 border-[#8C302C]/60 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#8C302C] font-mono transition hover:bg-[#8C302C]/20"
         >
           {actionLabel}
         </button>

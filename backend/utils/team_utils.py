@@ -1,0 +1,167 @@
+"""
+Team Utilities
+Helper functions for team name and abbreviation mapping
+"""
+
+import backend.config as config
+
+
+def get_team_abbr(full_name: str) -> str:
+    """
+    Maps full team names (Odds API format) to abbreviations (nflreadpy format).
+    
+    Args:
+        full_name: Full team name (e.g., "Kansas City Chiefs")
+        
+    Returns:
+        Team abbreviation (e.g., "KC")
+    """
+    return config.TEAM_ABBR_MAP.get(full_name, full_name)
+
+
+def get_team_full_name(abbr: str) -> str:
+    """
+    Maps abbreviation (nflreadpy format) to full team name (Odds API format).
+    
+    Args:
+        abbr: Team abbreviation (e.g., "KC")
+        
+    Returns:
+        Full team name (e.g., "Kansas City Chiefs")
+    """
+    for name, a in config.TEAM_ABBR_MAP.items():
+        if a == abbr:
+            return name
+    return abbr
+
+
+def backfill_team_for_picks(season: int) -> dict:
+    """
+    Auto-fix picks with team='Unknown' by looking up player teams from roster.
+    
+    Queries the database for picks with Unknown team, looks up each player
+    in the NFL roster to find their team, then updates the pick record.
+    
+    Args:
+        season: NFL season year to process picks for
+        
+    Returns:
+        dict with keys:
+            - 'updated': number of picks successfully updated
+            - 'failed': number of picks that couldn't be resolved
+            - 'duplicates': number of duplicate picks removed
+            - 'error': error message if operation failed (optional)
+            
+    Example:
+        >>> result = backfill_team_for_picks(2025)
+        >>> print(f"Updated {result['updated']} picks")
+    """
+    import logging
+    from backend.database import get_db_connection
+    from backend.analytics.nfl_data import load_rosters
+    from backend.utils.name_matching import names_match
+    
+    logger = logging.getLogger(__name__)
+    updated = 0
+    failed = 0
+    duplicates = 0
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get all picks with Unknown team for this season
+        cursor.execute("""
+            SELECT p.id, p.player_name, p.team, u.name as user_name
+            FROM picks p
+            JOIN users u ON p.user_id = u.id
+            JOIN weeks w ON p.week_id = w.id
+            WHERE w.season = ? AND p.team = 'Unknown'
+            ORDER BY p.player_name
+        """, (season,))
+        
+        unknown_picks = cursor.fetchall()
+        
+        if not unknown_picks:
+            return {'updated': 0, 'failed': 0, 'duplicates': 0}
+        
+        # Load NFL rosters for team lookup (returns DataFrame)
+        rosters_df = load_rosters(season)
+        
+        if rosters_df.empty:
+            logger.error(f"No roster data available for season {season}")
+            return {'updated': 0, 'failed': len(unknown_picks), 'duplicates': 0}
+        
+        for pick in unknown_picks:
+            pick_id, player_name, _, user_name = pick
+            
+            # Search for player in rosters to find their team
+            found_team = None
+            
+            for _, roster_player in rosters_df.iterrows():
+                roster_full_name = roster_player.get('full_name', '')
+                if not roster_full_name:
+                    continue
+                
+                # Use our existing name matching logic
+                if names_match(player_name, roster_full_name, threshold=0.70):
+                    found_team = roster_player.get('team')
+                    logger.info(f"Matched '{player_name}' → '{roster_full_name}' ({found_team})")
+                    break  # Take first match
+            
+            # Update pick if team was found
+            if found_team:
+                try:
+                    cursor.execute(
+                        "UPDATE picks SET team = ? WHERE id = ?",
+                        (found_team, pick_id)
+                    )
+                    updated += 1
+                except Exception as e:
+                    logger.error(f"Failed to update pick {pick_id}: {e}")
+                    failed += 1
+            else:
+                failed += 1
+                logger.warning(f"Could not find team for {player_name} (user: {user_name})")
+        
+        # Remove duplicate picks (keep first, delete rest)
+        cursor.execute("""
+            SELECT p.id, p.user_id, p.week_id, COUNT(*) as count
+            FROM picks p
+            JOIN weeks w ON p.week_id = w.id
+            WHERE w.season = ?
+            GROUP BY p.user_id, p.week_id, p.player_name, p.team
+            HAVING count > 1
+        """, (season,))
+        
+        duplicate_groups = cursor.fetchall()
+        for group in duplicate_groups:
+            pick_id, user_id, week_id, count = group
+            # Get all picks in this duplicate group and delete the later ones
+            cursor.execute("""
+                SELECT p.id FROM picks p
+                WHERE p.user_id = ? AND p.week_id = ?
+                ORDER BY p.created_at DESC
+            """, (user_id, week_id))
+            
+            picks_to_delete = cursor.fetchall()[1:]  # Keep first, delete rest
+            for dup_pick in picks_to_delete:
+                cursor.execute("DELETE FROM picks WHERE id = ?", (dup_pick[0],))
+                duplicates += 1
+        
+        conn.commit()
+        
+        return {
+            'updated': updated,
+            'failed': failed,
+            'duplicates': duplicates
+        }
+        
+    except Exception as e:
+        logger.error(f"Error backfilling teams: {e}")
+        return {'error': str(e), 'updated': 0, 'failed': 0, 'duplicates': 0}
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
