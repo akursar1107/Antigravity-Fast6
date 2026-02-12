@@ -145,9 +145,10 @@ Fast6/
 │   ├── database/                 # SQLite layer (repository pattern)
 │   │   ├── connection.py         # Connection management
 │   │   └── migrations.py         # Versioned schema migrations
-│   ├── config.py                 # JSON config loader
-│   ├── config.json               # App settings
-│   └── utils/                    # NFL data, grading, odds
+│   ├── config/                   # App configuration
+│   │   ├── config.py             # JSON config loader
+│   │   └── config.json           # Teams, scoring, theme, features
+│   └── services/                 # Analytics, grading, sync
 ├── backend/tests/                # Python test suite
 ├── data/                         # SQLite database (gitignored)
 ├── Dockerfile                    # Production container
@@ -177,22 +178,28 @@ docker build -t fast6 .
 docker run -d -p 8000:8000 -v $(pwd)/data:/app/data fast6
 ```
 
-Deploy the frontend separately (Vercel, Railway, etc.) and set `NEXT_PUBLIC_API_BASE_URL`
-to this backend's URL. See `docs/plans/NEXTJS_DEPLOYMENT.md`.
+- Mount a volume at `/app/data` for persistent SQLite storage
+- Set `DATABASE_PATH=/app/data/fast6.db` and `SECRET_KEY` via `-e` if needed
+- Deploy the frontend separately (Vercel, Railway) and set `NEXT_PUBLIC_API_BASE_URL` to this backend's URL
+- See `docs/plans/NEXTJS_DEPLOYMENT.md`
 
-### Railway (Recommended)
+### Railway (Backend)
 
-1. Push to GitHub
-2. Connect repo at [railway.app](https://railway.app)
-3. Railway auto-detects the Dockerfile and deploys
+1. Push to GitHub and connect repo at [railway.app](https://railway.app)
+2. Railway auto-detects the Dockerfile (see `railway.json`) and deploys
+3. **Required env vars** in Railway dashboard:
+   - `DATABASE_PATH` — `/app/data/fast6.db` (or path to mounted volume)
+   - `SECRET_KEY` — secure random string (e.g. `openssl rand -hex 32`)
+   - `CORS_ORIGINS` — comma-separated frontend URLs (e.g. `https://your-app.vercel.app`)
+4. Add a **volume** mounted at `/app/data` for persistent SQLite data
 
-### Vercel (Frontend only)
+### Vercel (Frontend)
 
 ```bash
 cd web && npx vercel
 ```
 
-Set `NEXT_PUBLIC_API_BASE_URL` to your deployed backend URL.
+Set `NEXT_PUBLIC_API_BASE_URL` to your deployed backend URL (Railway, Docker host, etc.).
 
 ## Contributing
 

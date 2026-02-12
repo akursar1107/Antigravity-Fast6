@@ -19,37 +19,28 @@ Next.js frontend for the Fast6 NFL first touchdown scorer prediction app. Provid
 
 ## Installation
 
-### 1. Clone or checkout the worktree
-```bash
-# If using git worktree
-cd /var/home/akursar/Documents/Year\ of\ Vibe/1.\ Jan/Fast6/.worktrees/nextjs-frontend
-
-# Or checkout the branch directly
-git checkout nextjs-frontend
-```
-
-### 2. Navigate to web directory
+### 1. Navigate to web directory
 ```bash
 cd web
 ```
 
-### 3. Install dependencies
+### 2. Install dependencies
 ```bash
 npm install
 # or
 yarn install
 ```
 
-### 4. Setup environment variables
+### 3. Setup environment variables
 ```bash
 # Copy example to local config
-cp .env.local.example .env.local
+cp .env.example .env.local
 
-# Edit .env.local if needed (update API_BASE_URL if running on different host)
-# Default: NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+# Edit .env.local if needed (update API URL if backend runs on different host)
+# Default: NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-### 5. Start development server
+### 4. Start development server
 ```bash
 npm run dev
 # or
@@ -102,9 +93,9 @@ Runs tests once and exits.
 ## Troubleshooting
 
 ### Error: "API not responding"
-- Ensure Python backend is running: `streamlit run Fast6/src/app.py`
+- Ensure FastAPI backend is running: `uvicorn backend.api.fastapi_app:app --reload --port 8000`
 - Check `NEXT_PUBLIC_API_BASE_URL` in `.env.local` matches backend host
-- Verify backend is accessible: `curl http://localhost:8000/health` (if endpoint exists)
+- Verify backend is accessible: `curl http://localhost:8000/health`
 
 ### Error: "Port 3000 already in use"
 ```bash
@@ -124,7 +115,7 @@ npm run build
 ```
 
 ### Environment variables not loading
-- Ensure `.env.local` exists (not `.env.local.example`)
+- Ensure `.env.local` exists (copy from `.env.example`)
 - Variables must start with `NEXT_PUBLIC_` to be exposed to browser
 - Restart dev server after changing `.env.local`
 
@@ -140,10 +131,10 @@ web/
 │   └── styles/           # Global styles and CSS modules
 ├── public/               # Static assets
 ├── tests/                # Test files (Vitest)
-├── .env.local.example    # Environment variables template
+├── .env.example           # Environment variables template
 ├── package.json          # Dependencies and scripts
 ├── tsconfig.json         # TypeScript configuration
-├── next.config.js        # Next.js configuration
+├── next.config.ts        # Next.js configuration
 └── vitest.config.ts      # Vitest configuration
 ```
 
@@ -152,13 +143,13 @@ web/
 The frontend communicates with the Fast6 backend API running on port 8000.
 
 ### Required Backend Endpoints
-- `GET /api/leaderboard` - Fetch leaderboard data
-- `GET /api/picks/:week` - Fetch picks for a week
-- `POST /api/picks` - Submit new pick
-- `GET /api/analytics/:user_id` - Fetch user analytics
-- `GET /api/market-odds` - Fetch prediction market odds
+- `GET /api/leaderboard/season/{season}` - Season standings
+- `GET /api/picks` - List/create picks
+- `GET /api/weeks` - Week list
+- `GET /api/analytics/:user_id` - User analytics
+- `GET /api/games` - Game schedule
 
-Refer to [Fast6 Backend API Documentation](../docs/ARCHITECTURE.md) for complete endpoint specifications.
+API docs: **http://localhost:8000/docs** when backend is running.
 
 ## Performance
 
@@ -173,7 +164,7 @@ See [NEXTJS_DEPLOYMENT.md](../docs/plans/NEXTJS_DEPLOYMENT.md) for production de
 
 ## Contributing
 
-1. Create feature branch from `nextjs-frontend`
+1. Create feature branch from `main`
 2. Make changes and test locally
 3. Run `npm run build` to verify production build
 4. Submit pull request with clear description

@@ -9,16 +9,12 @@ Ignored examples
 - *.sqlite, *.sqlite3, *.db, *.bak
 
 Recreating the database
-- Run the Streamlit app; the app calls init_db() on startup to create schema if missing.
-- Alternatively, import and run init_db() manually:
-
+- Run the FastAPI backend; migrations run automatically on startup to create schema if missing.
+- Alternatively, from project root:
   ```bash
-  "/home/akursar/Documents/Antigravity Projects/Fast6/.venv/bin/python" - <<'PY'
-  import sys; sys.path.append('src')
-  from database import init_db
-  init_db()
-  print('DB initialized')
-  PY
+  source .venv/bin/activate
+  python -m backend.scripts.run_migrations
+  python -m backend.scripts.seed_all   # optional: add sample data
   ```
 
 Notes

@@ -4,9 +4,9 @@
 
 Comprehensive integration test suite covering end-to-end workflows in Fast6. Tests ensure data flows correctly through the application and critical operations maintain data integrity.
 
-**Location**: `tests/test_workflows_integration.py`  
+**Location**: `backend/tests/test_workflows_integration.py`  
 **Total Tests**: 20+ test cases across 7 test classes  
-**Run Command**: `python -m pytest tests/test_workflows_integration.py -v`
+**Run Command**: `python -m pytest backend/tests/test_workflows_integration.py -v` (from project root)
 
 ---
 
@@ -157,31 +157,24 @@ Delete Pick → Cascade to Results
 
 ## Running the Tests
 
-### Using unittest (built-in)
+### Using pytest (recommended)
 ```bash
-cd Fast6
+cd <project-root>
 source .venv/bin/activate
 
 # Run all integration tests
-python -m unittest tests.test_workflows_integration -v
+python -m pytest backend/tests/test_workflows_integration.py -v
 
 # Run specific test class
-python -m unittest tests.test_workflows_integration.TestCSVImportWorkflow -v
+python -m pytest backend/tests/test_workflows_integration.py::TestCSVImportWorkflow -v
 
 # Run specific test
-python -m unittest tests.test_workflows_integration.TestCSVImportWorkflow.test_import_workflow_basic_picks -v
+python -m pytest backend/tests/test_workflows_integration.py::TestCSVImportWorkflow::test_import_workflow_basic_picks -v
 ```
 
-### Using pytest (if installed)
+### With coverage
 ```bash
-pytest tests/test_workflows_integration.py -v
-pytest tests/test_workflows_integration.py::TestCSVImportWorkflow -v
-pytest tests/test_workflows_integration.py::TestCSVImportWorkflow::test_import_workflow_basic_picks -v
-```
-
-### With coverage (if installed)
-```bash
-pytest tests/test_workflows_integration.py --cov=src --cov-report=html
+python -m pytest backend/tests/test_workflows_integration.py --cov=backend --cov-report=html
 ```
 
 ---
@@ -195,8 +188,8 @@ def setUp(self):
     # Remove old test database
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
-    # Initialize fresh schema
-    init_db()
+    # Initialize fresh schema (backend.database.migrations.run_migrations)
+    run_migrations()
 ```
 
 **Benefits**:
@@ -268,17 +261,18 @@ class TestMyWorkflow(unittest.TestCase):
         """Reset database before each test."""
         if os.path.exists(DB_PATH):
             os.remove(DB_PATH)
-        from database.connection import init_db
-        init_db()
+        from backend.database.migrations import run_migrations
+        run_migrations()
     
     def test_my_workflow(self):
         """Test description."""
         # Arrange - Set up data
+        from backend.database import add_user, add_week, add_pick, get_pick
         user_id = add_user("Test User", "test@example.com")
         week_id = add_week(2025, 1)
         
         # Act - Perform operation
-        pick_id = add_pick(user_id, week_id, 'KC', 'Mahomes', 150)
+        pick_id = add_pick(user_id, week_id, 'KC', 'Mahomes', odds=150)
         
         # Assert - Verify results
         pick = get_pick(pick_id)
@@ -292,15 +286,15 @@ class TestMyWorkflow(unittest.TestCase):
 ### Test Database Lock
 If you get "database is locked" errors:
 ```bash
-rm Fast6/data/fast6.db
-python -m unittest tests.test_workflows_integration -v
+rm data/fast6.db
+python -m pytest backend/tests/test_workflows_integration.py -v
 ```
 
 ### Import Errors
-Ensure you're in the correct directory:
+Ensure you're in the project root (directory containing `backend/`, `web/`):
 ```bash
-cd Fast6
-python -m unittest tests.test_workflows_integration -v
+cd <project-root>
+python -m pytest backend/tests/test_workflows_integration.py -v
 ```
 
 ### Missing Dependencies

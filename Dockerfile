@@ -7,6 +7,9 @@
 #     NEXT_PUBLIC_API_BASE_URL to this backend's URL.
 #   - Option B: Use two containers: one for FastAPI (this), one for Next.js.
 # See docs/plans/NEXTJS_DEPLOYMENT.md for frontend deployment.
+#
+# Build: docker build -t fast6 .
+# Run:   docker run -p 8000:8000 -v $(pwd)/data:/app/data fast6
 
 # ── Stage 1: Build Next.js frontend ──────────────────────────────
 FROM node:20-slim AS frontend-build
@@ -43,15 +46,18 @@ COPY --from=frontend-build /build/public web/public
 # Data directory for SQLite
 RUN mkdir -p /app/data
 
-# Expose FastAPI port
+# Expose FastAPI port (Railway overrides with $PORT)
 EXPOSE 8000
 
-# Health check against FastAPI
+# Health check (uses $PORT when set by Railway/k8s)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl --fail http://localhost:8000/health || exit 1
+    CMD ["sh", "-c", "curl -f http://localhost:${PORT:-8000}/health || exit 1"]
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Run FastAPI
+# Default DB path (override with DATABASE_PATH; mount volume at /app/data for persistence)
+ENV DATABASE_PATH=/app/data/fast6.db
+
+# Run FastAPI (Railway uses startCommand with $PORT)
 CMD ["uvicorn", "backend.api.fastapi_app:app", "--host", "0.0.0.0", "--port", "8000"]

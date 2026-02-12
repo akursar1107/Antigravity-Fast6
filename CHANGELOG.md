@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Pinned backend dependencies in requirements.txt for reproducible builds
 - Improved production error handling (no exception details in response when debug=false)
 - Config validation at startup (database path consistency)
+- **Documentation**: Updated README, docs, web/README, data/README, and deployment guide for Next.js + FastAPI; Docker/Railway env vars and volume instructions
+- **Dockerfile**: Health check uses `${PORT}` for Railway; `DATABASE_PATH` default; build/run notes
+- **railway.json**: Formatted for readability
 
 ### Security
 - Documented auth posture: username-only auth intended for private friend groups only

@@ -37,22 +37,21 @@ Historical documentation is preserved in the [`../archive/`](../archive/) folder
 ## 🚀 Quick Links
 
 ### Getting Started
-- [Main README](../README.md) - Project overview and setup
-- [TODO List](../TODO.md) - Current tasks and priorities
-- [Documentation Index](../DOCS_INDEX.md) - ✨ Complete guide to all documentation
+- [Main README](../README.md) - Project overview, setup, and deployment
+- [Configuration Guide](guides/CONFIG_GUIDE.md) - App settings and env vars
+- [Deployment Guide](plans/NEXTJS_DEPLOYMENT.md) - Frontend & backend deployment
 
 ### For New Developers
 1. Read [Main README](../README.md) for project overview
-2. Follow [Deployment Guide](deployment/DEPLOYMENT.md) to get running locally
+2. Follow [Deployment Guide](plans/NEXTJS_DEPLOYMENT.md) for production setup
 3. Check [Configuration Guide](guides/CONFIG_GUIDE.md) for settings
 4. Review [Analytics Guide](guides/ANALYTICS_GUIDE.md) to understand features
-5. Check [Changelog](CHANGELOG.md) for recent changes
+5. Check [Changelog](../CHANGELOG.md) for recent changes
 
 ### For Users
-1. [Quick Start - UI](guides/QUICK_START_UI.md) - ✨ NEW! Guide to the new UI
+1. [Quick Start](../README.md#quick-start) - Run backend and frontend locally
 2. [Analytics Guide](guides/ANALYTICS_GUIDE.md) - How to use analytics features
-3. [Theming Guide](guides/THEMING_GUIDE.md) - Customize the look and feel
-4. [Changelog](CHANGELOG.md) - See what's new
+3. [Changelog](../CHANGELOG.md) - See what's new
 
 ---
 
@@ -60,23 +59,12 @@ Historical documentation is preserved in the [`../archive/`](../archive/) folder
 
 When adding new documentation:
 - User guides → `docs/guides/`
-- Deployment docs → `docs/deployment/`
-- Technical docs → `docs/technical/`
-- Planning docs → `docs/planning/`
-- Changelogs/Info → `docs/` (root)
+- Deployment docs → `docs/plans/`
+- Technical docs → `docs/`
+- Planning docs → `docs/plans/`
+- Changelogs/Info → root `CHANGELOG.md`
 - Historical/completed → `archive/` (appropriate subfolder)
 
-**Keep the root directory clean!** Only these files belong in root:
-- `README.md` - Main project documentation
-- `TODO.md` - Current task list
-- `DOCS_INDEX.md` - Documentation navigation guide
-
 ---
 
-## 🔍 Can't Find Something?
-
-Check the **[Documentation Index](../DOCS_INDEX.md)** for a complete guide to all documentation, including archived files.
-
----
-
-*Last Updated: January 27, 2026* | **Recent:** Markdown cleanup, new UI documentation, bugfix archives
+*Last Updated: February 11, 2026* | **Recent:** Next.js + FastAPI setup, Docker/Railway docs

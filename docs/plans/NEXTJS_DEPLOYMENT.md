@@ -1,6 +1,38 @@
-# Next.js Frontend Deployment Guide
+# Fast6 Deployment Guide
 
-Production deployment guide for the Fast6 Next.js frontend.
+Production deployment for the Fast6 platform: **FastAPI backend** + **Next.js frontend**.
+
+---
+
+## Backend (FastAPI)
+
+The project `Dockerfile` and `railway.json` deploy the **backend only**. The Next.js app is built during the Docker image build but not served by the container.
+
+### Docker
+
+```bash
+docker build -t fast6 .
+docker run -d -p 8000:8000 -v $(pwd)/data:/app/data fast6
+```
+
+- Mount a volume at `/app/data` for persistent SQLite
+- Set `DATABASE_PATH`, `SECRET_KEY`, `CORS_ORIGINS` via `-e` if needed
+
+### Railway
+
+1. Connect repo at [railway.app](https://railway.app)
+2. Railway uses `railway.json` and the Dockerfile
+3. **Required env vars:**
+   - `DATABASE_PATH` — `/app/data/fast6.db` (or path to mounted volume)
+   - `SECRET_KEY` — secure random string
+   - `CORS_ORIGINS` — comma-separated frontend URLs (e.g. `https://your-app.vercel.app`)
+4. Add a **volume** at `/app/data` for persistent storage
+
+---
+
+## Frontend (Next.js)
+
+Deploy the frontend separately (Vercel, Railway, etc.) and set `NEXT_PUBLIC_API_BASE_URL` to your backend URL.
 
 ## Building for Production
 
@@ -60,61 +92,31 @@ NEXT_PUBLIC_API_BASE_URL=https://api.fast6.app
 NEXT_PUBLIC_CURRENT_SEASON=2025
 ```
 
-## Docker Deployment
+## Frontend Docker (Optional)
 
-### Build Docker Image
+To run the Next.js app in its own container:
 
 ```dockerfile
-# Dockerfile
-FROM node:18-alpine AS builder
-
+# Dockerfile.web (example - create in web/ or use root with -f)
+FROM node:20-slim AS builder
 WORKDIR /app
-
-COPY package*.json ./
+COPY web/package*.json ./
 RUN npm ci
-
-COPY . .
+COPY web/ .
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
-
+FROM node:20-slim
 WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY next.config.js ./
-
-EXPOSE 3000
 ENV NODE_ENV=production
-
-CMD ["npm", "start"]
+EXPOSE 3000
+CMD ["node", "server.js"]
 ```
 
-### Run Docker Container
-
-```bash
-# Build image
-docker build -t fast6-web:latest .
-
-# Run container
-docker run -d \
-  -p 3000:3000 \
-  -e NEXT_PUBLIC_API_BASE_URL=https://api.fast6.app \
-  -e NEXT_PUBLIC_CURRENT_SEASON=2025 \
-  --name fast6-web \
-  fast6-web:latest
-
-# View logs
-docker logs -f fast6-web
-
-# Stop container
-docker stop fast6-web
-docker rm fast6-web
-```
+Requires `output: "standalone"` in `next.config.ts` (already set).
 
 ## Railway Deployment
 
@@ -127,7 +129,7 @@ docker rm fast6-web
 
 1. Push code to GitHub:
 ```bash
-git push origin nextjs-frontend
+git push origin main
 ```
 
 2. In Railway dashboard:
@@ -144,8 +146,10 @@ git push origin nextjs-frontend
    ```
 
 4. Deploy:
-   - Railway auto-deploys on push to main branch
+   - Railway auto-deploys on push to connected branch
    - Or manually trigger from Railway dashboard
+
+**Note:** The backend uses the root `Dockerfile` (FastAPI). For frontend-only, set root directory to `web` and use Nixpacks or a separate Dockerfile.
 
 ### Option 2: Railway CLI
 
